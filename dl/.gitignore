@@ -1,2 +1,5 @@
 *.xz
 *.gz
+*.zip
+*.bz2
+*.tgz
