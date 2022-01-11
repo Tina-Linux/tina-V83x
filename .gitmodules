@@ -16,9 +16,6 @@
 [submodule "target"]
 	path = target
 	url = https://github.com/Tina-V833/target
-[submodule "script"]
-	path = script
-	url = https://github.com/Tina-V833/script
 [submodule "config"]
 	path = config
 	url = https://github.com/Tina-V833/config
@@ -40,3 +37,6 @@
 [submodule "package"]
 	path = package
 	url = https://github.com/Tina-V833/package
+[submodule "scripts"]
+	path = scripts
+	url = https://github.com/Tina-V833/scripts
