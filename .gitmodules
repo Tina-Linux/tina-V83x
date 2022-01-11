@@ -1,0 +1,39 @@
+[submodule "device"]
+	path = device
+	url = https://github.com/Tina-V833/device
+[submodule "docs"]
+	path = docs
+	url = https://github.com/Tina-V833/docs
+[submodule "build"]
+	path = build
+	url = https://github.com/Tina-V833/build
+[submodule "toolchain"]
+	path = toolchain
+	url = https://github.com/Tina-V833/toolchain
+[submodule "softwinner"]
+	path = softwinner
+	url = https://github.com/Tina-V833/softwinner
+[submodule "target"]
+	path = target
+	url = https://github.com/Tina-V833/target
+[submodule "script"]
+	path = script
+	url = https://github.com/Tina-V833/script
+[submodule "config"]
+	path = config
+	url = https://github.com/Tina-V833/config
+[submodule "tools"]
+	path = tools
+	url = https://github.com/Tina-V833/tools
+[submodule "prebuilt"]
+	path = prebuilt
+	url = https://github.com/Tina-V833/prebuilt
+[submodule "lichee/brandy-2.0/u-boot-2018"]
+	path = lichee/brandy-2.0/u-boot-2018
+	url = https://github.com/Tina-V833/u-boot-2018
+[submodule "lichee/brandy-2.0/tools"]
+	path = lichee/brandy-2.0/tools
+	url = https://github.com/Tina-V833/brandy-tools
+[submodule "lichee/linux-4.9"]
+	path = lichee/linux-4.9
+	url = https://github.com/Tina-V833/linux-4.9
