@@ -10,6 +10,8 @@ git clone --recursive https://github.com/Tina-V833/tina-V833
 cd tina-V833 
 ```
 
+After clone you'll have a 4.7GB source code directory, after download all packages you'll have a 16GB directory. Make sure you have enough space for the source code.
+
 ## Install requirement
 
 Recommend Host OS: Ubuntu 16.04
