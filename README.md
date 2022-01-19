@@ -1,3 +1,5 @@
+> [V831/V833 的 SDK 的 kernel & package 的开发方法](https://www.cnblogs.com/juwan/p/15226245.html)
+
 # tina-V833
 
 This repo aim to integrate the codes for V833 Tina from https://github.com/orgs/lindenis-org/ and try to build a full image.
