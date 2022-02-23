@@ -22,6 +22,10 @@ Recommend Host OS: Ubuntu 16.04
 sudo apt-get install build-essential subversion git-core libncurses5-dev zlib1g-dev gawk flex quilt libssl-dev xsltproc libxml-parser-perl mercurial bzr ecj cvs unzip lib32z1 lib32z1-dev lib32stdc++6 libstdc++6 -y
 ```
 
+## Download dl/ files
+链接：https://pan.baidu.com/s/17DilyerV0pBrK7j0lEkhsA 
+提取码：yz8a 
+
 ## Build and Pack
 ```shell
 source build/envsetup.sh
