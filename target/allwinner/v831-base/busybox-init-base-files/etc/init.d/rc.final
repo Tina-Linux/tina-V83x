@@ -1,0 +1,35 @@
+#!/bin/sh
+
+echo "------run rc.final file-----"
+#echo "insmod wifi modules"
+#insmod  /lib/modules/3.4.39/8723ds.ko
+#insmod  /lib/modules/3.4.39/bcmdhd.ko
+#insmod  /lib/modules/3.4.39/xradio_mac.ko
+#insmod  /lib/modules/3.4.39/xradio_core.ko
+#insmod  /lib/modules/3.4.39/xradio_wlan.ko
+
+export LD_LIBRARY_PATH=/usr/lib/eyesee-mpp:${LD_LIBRARY_PATH}
+ulimit -c unlimited
+echo /mnt/extsd/core.exe[%e].pid[%p].sig[%s] > /proc/sys/kernel/core_pattern
+
+for i in /etc/init.d/S??* ;do
+
+     # Ignore dangling symlinks (if any).
+     [ ! -f "$i" ] && continue
+
+     case "$i" in
+    *.sh)
+        # Source shell script for speed.
+        (
+        trap - INT QUIT TSTP
+        set start
+        . $i
+        )
+        ;;
+    *)
+        # No sh extension, so fork subprocess.
+        $i start
+        ;;
+    esac
+done
+

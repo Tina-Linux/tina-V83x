@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# Load mpp modules....
+#
+
+MODULES_DIR="/lib/modules/`uname -r`"
+
+start() {
+    printf "Load mpp modules\n"
+    insmod $MODULES_DIR/videobuf2-core.ko
+    insmod $MODULES_DIR/videobuf2-memops.ko
+    insmod $MODULES_DIR/videobuf2-dma-contig.ko
+    insmod $MODULES_DIR/videobuf2-v4l2.ko
+    insmod $MODULES_DIR/vin_io.ko
+    insmod $MODULES_DIR/sc2232_mipi.ko
+    insmod $MODULES_DIR/vin_v4l2.ko
+    insmod $MODULES_DIR/sunxi_aio.ko
+    insmod $MODULES_DIR/sunxi_ise.ko
+}
+
+stop() {
+    printf "Unload mpp modules\n"
+    rmmod $MODULES_DIR/sunxi_ise.ko
+    rmmod $MODULES_DIR/sunxi_aio.ko
+    rmmod $MODULES_DIR/vin_v4l2.ko
+    rmmod $MODULES_DIR/sc2232_mipi.ko
+    rmmod $MODULES_DIR/vin_io.ko
+    rmmod $MODULES_DIR/videobuf2-v4l2.ko
+    rmmod $MODULES_DIR/videobuf2-dma-contig.ko
+    rmmod $MODULES_DIR/videobuf2-memops.ko
+    rmmod $MODULES_DIR/videobuf2-core.ko
+}
+
+case "$1" in
+    start)
+	start
+	;;
+    stop)
+	stop
+	;;
+    restart|reload)
+	stop
+	start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

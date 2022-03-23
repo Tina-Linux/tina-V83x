@@ -1,0 +1,59 @@
+#!/bin/sh
+
+MODULES_DIR="/lib/modules/`uname -r`"
+
+mod_status="`lsmod | awk '$1="8189fs" {print $1}'`"
+
+[ ! -e /va/run ] && mkdir -p /var/run
+
+do_insmod() {
+	# if [ x$mod_status == x"" ]; then
+		# echo "insert 8189fs"
+		insmod $MODULES_DIR/8189fs.ko
+	# fi
+}
+
+do_rmmod() {
+	# if [ x$mod_status != x"" ]; then
+		# echo "remove 8189fs"
+		rmmod 8189fs
+	# fi
+}
+
+do_start_ftp() {
+  tcpsvd -E 0.0.0.0 21 ftpd -w / &
+}
+
+do_stop_ftp() {
+  killall tcpsvd &
+}
+
+case "$1" in
+  start)
+        echo "Starting network..."
+        do_insmod
+        sleep 1
+        /sbin/ifconfig wlan0 up
+        sleep 1
+        wpa_supplicant -c /etc/wpa_supplicant.conf -iwlan0 -B
+        udhcpc -iwlan0 -b &
+        do_start_ftp
+        ;;
+  stop)
+        echo "Stopping network..."
+        /sbin/ifconfig wlan0 down
+        killall udhcpc
+        killall wpa_supplicant
+        do_rmmod
+        do_stop_ftp
+        ;;
+  restart|reload)
+        "$0" stop
+        "$0" start
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $?

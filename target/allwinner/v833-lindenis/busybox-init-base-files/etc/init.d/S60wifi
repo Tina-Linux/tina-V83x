@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# insmod wifi module.
+#
+
+
+start_service(){
+	echo "insmod wifi modules ..."
+
+	echo 0x07000160 0x083f10f7 > /sys/class/sunxi_dump/write
+
+	insmod /lib/modules/4.9.118/xradio_mac.ko
+	insmod /lib/modules/4.9.118/xradio_core.ko
+	insmod /lib/modules/4.9.118/xradio_wlan.ko macaddr=EC:1A:45:7D:FB:B5
+}
+
+stop_service(){
+
+	echo "rmmod wifi modules ..."
+	rmmod xradio_wlan
+	rmmod xradio_core
+	rmmod xradio_mac
+}
+
+case "$1" in
+  start)
+	start_service
+	;;
+  stop)
+	stop_service
+	;;
+  restart|reload)
+	"$0" stop
+	"$0" start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+

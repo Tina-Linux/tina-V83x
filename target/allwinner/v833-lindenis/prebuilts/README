@@ -1,0 +1,17 @@
+This folder is used to customize the rootfs template
+
+usage:
+1.Add your own package or application to the corresponding directory,
+  ---But this package or application needs to be compiled in advance;
+2.Execute the command "add-prebuilts-to-rootfs [nor|ext4]"
+
+eg:
+-->source build/envsetup.sh
+-->lunch platform(r40_m2ultra-tina/r18_d1-tina/r6_perf1-tina...)
+-->cdevice
+-->cd prebuilts
+-->create your own file tree
+-->add-prebuilts-to-rootfs [nor|ext4]
+-->croot && pack
+
+ps:The files in this folder will overlay the same exsit files in the rootfs folder.

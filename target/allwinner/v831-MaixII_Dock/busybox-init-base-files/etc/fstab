@@ -1,0 +1,5 @@
+# /etc/fstab: static file system information.
+#
+# <file system>		<mount pt>	<type>	<options>			<dump>		<pass>
+devpts			/dev/pts	devpts	defaults,gid=5,mode=620		0		0
+#dev/mmcblk0		/mnt/extsd	vfat	defaults			0		0

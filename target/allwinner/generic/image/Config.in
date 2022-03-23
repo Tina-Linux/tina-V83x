@@ -1,0 +1,120 @@
+config SUNXI_SD_BOOT_PART
+	bool "Build filesystem for Boot (SD Card) partition"
+	default n
+
+config SUNXI_SD_BOOT_PARTSIZE
+	int "Boot (SD Card) filesystem partition size (in MB)"
+	depends on SUNXI_SD_BOOT_PART
+	default 4
+
+choice
+	prompt "Boot (SD Card) Kernel format"
+	default uImage
+
+	config SUNXI_SD_BOOT_KERNEL_FORMAT_UIMAGE
+	bool "uImage"
+
+	config SUNXI_SD_BOOT_KERNEL_FORMAT_BOOTIMG
+	bool "boot.img"
+endchoice
+
+config SUNXI_MKBOOTIMG_ADD_DTB
+	bool "mkbootimge add dtb to boot.img"
+	depends on SUNXI_SD_BOOT_KERNEL_FORMAT_BOOTIMG
+	default n
+
+config SUNXI_SMALL_STORAGE_OTA
+	bool "For storage less than 32M, enable this when using ota"
+	default n
+
+config SUNXI_RECOVERY_INITRAMFS_PART
+	bool "Build filesystem for Boot-Recovery initramfs partition"
+	default n
+
+config SUNXI_RECOVERY_INITRAMFS_PARTSIZE
+	int "Boot-Recovery initramfs filesystem partition size (in MB)"
+	depends on SUNXI_RECOVERY_INITRAMFS_PART
+	default 7
+
+
+choice
+	prompt "Boot-Recovery initramfs Kernel format"
+	default uImage
+
+	config SUNXI_RECOVERY_INITRAMFS_KERNEL_FORMAT_UIMAGE
+	bool "uImage"
+
+	config SUNXI_RECOVERY_INITRAMFS_KERNEL_FORMAT_BOOTIMG
+	bool "boot.img"
+endchoice
+
+config SUNXI_SEPARATE_APP_FROM_ROOTFS
+	bool "Separate /mnt/app from rootfs"
+	default n
+
+config SUNXI_SEPARATE_DATA_FROM_ROOTFS
+	bool "Separate /data from rootfs"
+	default n
+
+menuconfig CUSTOMIZE_IMAGE_NAME
+	bool "customize image name"
+	default n
+	help
+	   Customize image name
+
+	choice
+		prompt "Boot Image(kernel) name suffix"
+		default CONFIG_BOOT_IMAGE_NAME_SUFFIX_NONE
+		depends on CUSTOMIZE_IMAGE_NAME
+		help
+		   Customize Boot image(kernel) name
+
+		config SUNXI_BOOT_IMAGE_NAME_SUFFIX_NONE
+		bool "boot.img/boot_initramfs.img"
+
+		config SUNXI_BOOT_IMAGE_NAME_SUFFIX_RECOVERY
+		bool "boot_recovery.img/boot_initramfs_recovery.img"
+
+		config SUNXI_BOOT_IMAGE_NAME_SUFFIX_RAMFS
+		bool "boot_ramfs.img/boot_initramfs_ramfs.img"
+	endchoice
+
+	choice
+		prompt "Rootfs Image name suffix"
+		default CONFIG_ROOTFS_IMAGE_NAME_SUFFIX_NONE
+		depends on CUSTOMIZE_IMAGE_NAME
+		help
+		   Customize rootfs image name
+
+		config SUNXI_ROOTFS_IMAGE_NAME_SUFFIX_NONE
+		bool "rootfs.img"
+
+		config SUNXI_ROOTFS_IMAGE_NAME_SUFFIX_RECOVERY
+		bool "rootfs_recovery.img"
+
+		config SUNXI_ROOTFS_IMAGE_NAME_SUFFIX_RAMFS
+		bool "rootfs_ramfs.img"
+	endchoice
+
+menuconfig CUSTOMIZE_CONFIG_FILE
+	bool "customize config file"
+	default n
+	help
+	   Customize image config file
+
+	choice
+		prompt "Kernel config file suffix"
+		default KERNEL_CONFIG_FILE_SUFFIX_NONE
+		depends on CUSTOMIZE_CONFIG_FILE
+		help
+		  Customize kernel config file
+
+		config KERNEL_CONFIG_FILE_SUFFIX_NONE
+		bool "config-x.x"
+
+		config KERNEL_CONFIG_FILE_SUFFIX_RECOVERY
+		bool "config-x.x_recovery"
+
+		config KERNEL_CONFIG_FILE_SUFFIX_RAMFS
+		bool "config-x.x_ramfs"
+	endchoice

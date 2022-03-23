@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Load ctp modules....
+#
+
+MODULES_DIR="/lib/modules/`uname -r`"
+ONLINE=""
+
+start() {
+    local CTP_CONN=`i2cdetect -y 0 0x5d 0x5d | grep 5d | awk '{print $2}'`
+
+    if [ -n "$CTP_CONN" ];then
+        insmod $MODULES_DIR/gt9xx_ts.ko
+		ONLINE=yes
+        printf "Load ctp gt9xx_ts ...\n"
+    fi
+}
+
+stop() {
+    if [ x"$ONLINE" = x"yes" ];then
+        rmmod gt9xx_ts
+        printf "Unload ctp modules\n"
+	fi
+}
+
+case "$1" in
+    start)
+	start
+	;;
+    stop)
+	stop
+	;;
+    restart|reload)
+	stop
+	start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

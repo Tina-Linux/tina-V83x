@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# Start the dropbear SSH2 server....
+#
+
+HOST_KEY=/etc/dropbear/dropbear_rsa_host_key
+
+start_service(){
+	echo "Starting dropbear SSH2 Server .."
+
+	[ -d /etc/dropbear/ ] || mkdir -p /etc/dropbear/
+
+	if [ -f $HOST_KEY ];then
+
+		local iskey=`grep ssh-rsa $HOST_KEY`
+
+		[ -z "$iskey" ] && rm -rf $HOST_KEY && dropbearkey -t rsa -f $HOST_KEY > /dev/null
+	else
+    	dropbearkey -t rsa -f $HOST_KEY > /dev/null
+	fi
+
+	dropbear
+}
+
+stop_service(){
+	local id=`pidof dropbear`
+	echo "killing dropbear PID is $id ..."
+	kill $id
+}
+
+case "$1" in
+  start)
+	start_service
+	;;
+  stop)
+	stop_service
+	;;
+  restart|reload)
+	"$0" stop
+	"$0" start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+
