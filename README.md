@@ -2,7 +2,8 @@
 
 # tina-V833
 
-![GitHub repo size in bytes](https://img.shields.io/github/repo-size/Tina-V833/tina-V833.svg)
+![GitHub repo size in bytes](https://img.shields.io/github/repo-size/Tina-V833/tina-V833?style=for-the-badge)
+![GitHub language count](https://img.shields.io/github/languages/count/Tina-V833/tina-V833?style=for-the-badge)
 
 This repo aim to integrate the codes for V833 Tina from https://github.com/orgs/lindenis-org/ and try to build a full image.
 
