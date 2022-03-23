@@ -10,9 +10,6 @@
 [submodule "softwinner"]
 	path = softwinner
 	url = https://github.com/Tina-V833/softwinner
-[submodule "target"]
-	path = target
-	url = https://github.com/Tina-V833/target
 [submodule "config"]
 	path = config
 	url = https://github.com/Tina-V833/config
