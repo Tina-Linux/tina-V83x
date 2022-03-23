@@ -1,0 +1,144 @@
+#!/bin/bash
+#
+# pack/pack
+# (c) Copyright 2013
+# Allwinner Technology Co., Ltd. <www.allwinnertech.com>
+# flord wang <wangflord@allwinnertech.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+ROOT_DIR=$TINA_BUILD_TOP/out/$TARGET_BOARD
+echo "$ROOT_DIR"
+
+SELECT_CHIP=
+
+HOST_DIR=$TINA_BUILD_TOP/out/host/bin
+export PATH=${HOST_DIR}:$PATH
+
+PLATFORM_LIST="r18 c200s r30 r311 r328s2 r328s3 mr112"
+
+function pack_error()
+{
+    echo -e "\033[47;31mERROR: $*\033[0m"
+}
+
+function pack_warn()
+{
+    echo -e "\033[47;34mWARN: $*\033[0m"
+}
+
+function pack_info()
+{
+    echo -e "\033[0;31;1mINFO: $*\033[0m"
+}
+
+show_help()
+{
+	echo "build.sh - this script is used to create all keys defined in the dragon_toc.cfg"
+	echo "OPTIONS"
+	echo "-h                  Display help message"
+	echo "-c [chip_type]      Chip type, e.g. sun50iw6p1,sun50iw3p1..."
+}
+
+build_select_chip()
+{
+	local count=0
+	printf "All valid chip:\n"
+	for chip in $PLATFORM_LIST; do
+		chips[$count]=$chip
+		printf "$count. ${chips[$count]}\n"
+		let count=$count+1
+	done
+
+	while true; do
+		read -p "Please select a chip:"
+		RES=`expr match $REPLY "[0-9][0-9]*$"`
+		if [ "$RES" -le 0 ]; then
+			echo "please use index number"
+			continue
+		fi
+		if [ "$REPLY" -ge $count ]; then
+			echo "too big"
+			continue
+		fi
+		if [ "$REPLY" -lt "0" ]; then
+			echo "too small"
+			continue
+		fi
+		break
+	done
+
+	SELECT_CHIP=${chips[$REPLY]}
+}
+
+createkeys()
+{
+	printf "ready to create keys\n"
+	echo $PLATFORM_LIST | grep "$SELECT_CHIP"
+	if [ $? -ne 0 ]
+	then
+		pack_error "plat: $SELECT_CHIP is not exist"
+		exit 1
+	fi
+
+	pack_info "SELECT_CHIP is $SELECT_CHIP\n"
+
+	  echo "$TINA_BUILD_TOP/target/allwinner/$SELECT_CHIP-common/sign_config/dragon_toc.cfg"
+
+	if [ -f $TINA_BUILD_TOP/target/allwinner/$SELECT_CHIP-common/sign_config/dragon_toc.cfg ]
+	then
+		cp $TINA_BUILD_TOP/target/allwinner/$SELECT_CHIP-common/sign_config/dragon_toc.cfg $ROOT_DIR/dragon_toc.cfg
+	else
+		cp $TINA_BUILD_TOP/target/allwinner/generic/sign_config/dragon_toc.cfg $ROOT_DIR/dragon_toc.cfg
+	fi
+
+	if [ $? -ne 0 ]
+	then
+		pack_error "dragon toc config file is not exist"
+		exit 1
+	fi
+
+	echo "$ROOT_DIR/keys"
+
+	dragonsecboot -key $ROOT_DIR/dragon_toc.cfg $ROOT_DIR/keys
+	if [ $? -ne 0 ]
+	then
+		pack_error "dragon toc run error"
+		rm -rf dragon_toc.cfg
+
+		exit 1
+	fi
+
+	printf "\n"
+	if [ -f $TINA_BUILD_TOP/target/allwinner/$SELECT_CHIP-common/configs/default/dragon_toc.cfg ]
+	then
+		pack_info "use platform[$SELECT_CHIP] toc config to creat keys"
+	else
+		pack_info "use default toc config to creat keys"
+	fi
+	printf "\n"
+
+	rm -rf $ROOT_DIR/dragon_toc.cfg
+}
+
+while getopts hc: OPTION
+do
+	case $OPTION in
+	h) show_help
+	exit 0
+	;;
+	c) SELECT_CHIP=$OPTARG
+	createkeys
+	exit 0
+	;;
+	*) show_help
+	exit 0
+	;;
+esac
+done
+
+build_select_chip
+createkeys

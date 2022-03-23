@@ -1,0 +1,50 @@
+###################################################
+#   personnal set                                 #
+###################################################
+KERNEL_VERSION="$(grep "KERNEL_PATCHVER" ${TINA_BUILD_TOP}/target/allwinner/${TARGET_BOARD}/Makefile \
+				| awk -F'=' '{print $2}')"
+KERNEL_VERSION="linux-${KERNEL_VERSION}"
+case "${KERNEL_VERSION}" in
+    linux-3.4)
+        UBOOT_VERSION="u-boot-2011.09"
+        ;;
+    linux-3.10)
+        UBOOT_VERSION="u-boot-2014.07"
+        ;;
+esac
+
+###################################################
+#   label format                                  #
+###################################################
+#   eg. ,work-1
+gmpy_cdirs_first_symbol=','
+gmpy_cdirs_label_symbol='-'
+
+
+###################################################
+#   system config                                 #
+###################################################
+gmpy_cdirs_default="$(gettop)/scripts/cdirs/cdirs_default.tina"
+
+
+###################################################
+#   key path                                      #
+###################################################
+gmpy_cdirs_search_max_depth=2
+gmpy_cdirs_default_key="package"
+gmpy_cdirs_key=(
+"root       = ${TINA_BUILD_TOP};"
+"target     = ${TINA_BUILD_TOP}/target/allwinner/${TARGET_BOARD};"
+"package    = ${TINA_BUILD_TOP}/package;"
+"out        = ${TINA_BUILD_TOP}/out/${TARGET_BOARD};"
+"prebuilt   = ${TINA_BUILD_TOP}/prebuilt/gcc/linux-x86;"
+"kernel     = ${TINA_BUILD_TOP}/lichee/${KERNEL_VERSION};"
+"boot       = ${TINA_BUILD_TOP}/lichee/brandy;"
+"dl         = ${TINA_BUILD_TOP}/dl;"
+"docs       = ${TINA_BUILD_TOP}/docs;"
+"scripts    = ${TINA_BUILD_TOP}/scripts;"
+"tools      = ${TINA_BUILD_TOP}/tools;"
+"toolchain  = ${TINA_BUILD_TOP}/toolchain;"
+"build      = ${TINA_BUILD_TOP}/build;"
+"logs       = ${TINA_BUILD_TOP}/logs/package"
+)
