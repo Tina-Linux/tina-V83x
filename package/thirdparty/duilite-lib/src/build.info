@@ -1,0 +1,27 @@
+835df64cf727be80e9face3f6e65cad3  duilite-r328-sdk-v0.11.0/libduilite-r328-0.11.0-39-20190506153403-release.so
+
+000142f4 T duilite_asr_cancel
+00014310 T duilite_asr_delete
+000142bc T duilite_asr_feed
+0001411c T duilite_asr_new
+000142a0 T duilite_asr_start
+000142d8 T duilite_asr_stop
+00014670 T duilite_fespl_delete
+0001461c T duilite_fespl_feed
+00014334 T duilite_fespl_new
+000144a0 T duilite_fespl_register
+00014654 T duilite_fespl_set
+00014600 T duilite_fespl_start
+00014638 T duilite_fespl_stop
+00013d30 T duilite_get_version
+000140fc T duilite_gram_delete
+00013f64 T duilite_gram_new
+000140e0 T duilite_gram_start
+00013b9c T duilite_library_load
+00013d0c T duilite_library_release
+00013f18 T duilite_vad_cancel
+00013f34 T duilite_vad_delete
+00013ee0 T duilite_vad_feed
+00013d40 T duilite_vad_new
+00013ec4 T duilite_vad_start
+00013efc T duilite_vad_stop

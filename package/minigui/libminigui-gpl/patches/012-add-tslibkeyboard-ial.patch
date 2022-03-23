@@ -1,0 +1,331 @@
+--- a/src/ial/ial.c	2018-03-19 21:22:56.435866813 +0800
++++ b/src/ial/ial.c	2018-03-19 21:17:09.503876822 +0800
+@@ -28,6 +28,7 @@
+     #include "qvfb.h"
+ #endif
+ #include "sunxikey.h"
++#include "tslibkeyboard.h"
+ #ifdef _MGIAL_JZ4740
+     #include "jz4740.h"
+ #endif
+@@ -102,6 +103,7 @@ static INPUT inputs [] =
+     {"qvfb", InitQVFBInput, TermQVFBInput},
+ #endif
+     {"sunxikey", InitSUNXIKeyInput, TermSUNXIKeyInput},
++    {"tslibkeyboard", InitTslibKeyboardInput, TermTslibKeyboardInput},
+ #ifdef _MGIAL_JZ4740
+     {"jz4740", InitJZ4740Input, TermJZ4740Input},
+ #endif
+--- a/src/ial/Makefile.am	2018-03-19 21:23:01.955866654 +0800
++++ b/src/ial/Makefile.am	2018-03-19 21:17:19.227876541 +0800
+@@ -49,6 +49,7 @@ MSTAR_SRCS = mstarial.h mstarial.c
+ DFB_SRCS = dfb.h dfb.c
+ 
+ SUNXIKey_SRCS = sunxikey.c sunxikey.h
++TSLIBKEYBOARD = tslibkeyboard.c tslibkeyboadr.h
+ if MGIAL_CONSOLE
+ native_libial_la_LIBADD = native/libnative.la
+ endif
+@@ -75,4 +76,4 @@ libial_la_SOURCES = $(COMMON_SRCS) $(DUM
+ 					$(QEMU_SRCS) $(IPAQ_H3600_SRCS) $(IPAQ_H5400_SRCS) \
+ 					$(TSLIB_SRCS) $(SHANDONG_LIDE_SRCS) $(CISCO_TOUCHPAD_SRCS) \
+ 					$(MSTAR_SRCS) $(DFB_SRCS) \
+-					$(SUNXIKey_SRCS)
++					$(SUNXIKey_SRCS) $(TSLIBKEYBOARD)
+--- a/dev/null	1970-01-01 08:00:00.000000000 +0800
++++ b/src/ial/tslibkeyboard.c	2018-03-19 21:16:57.171877178 +0800
+@@ -0,0 +1,277 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <tslib.h>
++#include <signal.h>
++#include <linux/kd.h>
++#include <linux/keyboard.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <linux/input.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++
++#include <unistd.h>
++#include <fcntl.h>
++#include <sys/ioctl.h>
++#include <sys/poll.h>
++
++#include "common.h"
++#include "minigui.h"
++
++#define _MGIAL_TALIBKEYBOARD
++#ifdef _MGIAL_TALIBKEYBOARD
++
++#include "ial.h"
++#include "tslibial.h"
++#include "tslibkeyboard.h"
++#include "native/native.h"
++
++static short KEYCODE = 0, KEYSTATUS = 0;
++static int kbd_fd;
++static unsigned char state [NR_KEYS];
++static KBDDEVICE * kbddev = &kbddev_tty;
++static char keyboard_engine[1024] = "tty";
++static char keyboard_device[PATH_MAX] = "";
++
++static struct tsdev *ts = NULL;
++static int mousex = 0;
++static int mousey = 0;
++static int button = 0;
++
++static int reversed = 0;
++static int screen_width  = 0;
++static int screen_height = 0;
++
++static int mouse_update(void)
++{
++    struct ts_sample samp;
++    if (ts_read (ts, &samp, 1) > 0){
++        if (samp.pressure > 0){
++            if (reversed){
++                mousex = screen_width  - samp.x;
++                mousey = screen_height - samp.y;
++            }else{
++                mousex = samp.x;
++                mousey = samp.y;
++            }
++        }
++        button = (samp.pressure > 0) ? IAL_MOUSE_LEFTBUTTON : 0;
++        return 1;
++    }else{
++    return 0;
++    }
++}
++
++static void mouse_getxy(int *x, int* y)
++{
++    *x = mousex;
++    *y = mousey;
++}
++
++static int mouse_getbutton(void)
++{
++    return button;
++}
++
++//static unsigned char kbd_state [NR_KEYS];
++
++static int keyboard_update (void)
++{
++    unsigned char buf;
++    int modifier;
++    int ch;
++    int is_pressed;
++    int retvalue;
++    retvalue = kbddev->Read (&buf, &modifier);
++    if (retvalue == 0)
++        return 0;
++
++    else{ /* retvalue > 0 */
++            is_pressed = !(buf & 0x80);
++        ch = buf & 0x7f;
++        if (is_pressed) {
++            state[ch] = 1;
++        }else{
++            state[ch] = 0;
++        }
++        return NR_KEYS;
++    }
++}
++
++static const char* keyboard_getstate (void)
++{
++    return (char*)state;
++}
++
++static void keyboard_suspend(void)
++{
++    kbddev->Suspend();
++    kbd_fd = -1;
++}
++
++static int keyboard_resume(void)
++{
++    memset(state, 0, NR_KEYS);
++    kbd_fd = kbddev->Resume ();
++    if (kbd_fd < 0) {
++        fprintf (stderr, "IAL Native Engine: Can not open keyboard!\n");
++    }
++    return kbd_fd;
++}
++
++static int keyboard_open(const char *device) {
++    int fd;
++    fd = kbddev->Open(device);
++    if (fd < 0) {
++        return -1;
++    }
++    fprintf(stderr, "IAL Native Engine: keyboard device has been connected.\n");
++    return fd;
++}
++
++static int wait_event (int which, int maxfd, fd_set *in, fd_set *out, fd_set *except, struct timeval *timeout)
++{
++    struct input_event key;
++    int retvalue = 0;
++    fd_set rfds, wfds;
++    int ret = 0;
++    int tsfd;
++    int fd;
++    int e;
++    if (!in) {
++            in = &rfds;
++            FD_ZERO (in);
++        }
++    if (! out) {
++            out = &wfds;
++            FD_ZERO (out);
++        }
++    /*tslib*/
++        tsfd = ts_fd (ts);
++    if ((which & IAL_MOUSEEVENT) && tsfd >= 0) {
++        fd = tsfd;
++            FD_SET (fd, in);
++            if (fd > maxfd){
++            maxfd = fd;
++        }
++    }
++    /*keyboard*/
++    if(which & IAL_KEYEVENT && kbd_fd >= 0){
++        if(!in)
++            {
++                    in = &rfds;
++                    FD_ZERO(in);
++            }
++        fd = kbd_fd;
++        FD_SET (kbd_fd, in);
++        if (fd > maxfd) maxfd = fd;
++            if (kbddev == &kbddev_event) {
++                        FD_SET (fd, in);
++                }
++    }
++    e = select (MAX (tsfd, kbd_fd) + 1, in, out, except, timeout) ;
++    if(e > 0){
++        fd = tsfd;
++        if(fd > 0 && FD_ISSET (fd, in)){
++            retvalue |= IAL_MOUSEEVENT;
++        }
++        fd = kbd_fd;
++        if (fd >= 0) {
++                    if (kbddev == &kbddev_event && FD_ISSET (fd, out)){
++                        FD_CLR (fd, out);
++                        kbddev->Close();
++                        kbd_fd = -1;
++                        fprintf(stderr, "IAL Native Engine: keyboard device has been disconnected.\n");
++                    }else if (FD_ISSET (kbd_fd, in)) {
++                        retvalue |= IAL_KEYEVENT;
++                    }
++            }else if(e < 0){
++            return -1;
++        }
++    }
++
++    return retvalue;
++}
++
++BOOL InitTslibKeyboardInput(INPUT* input, const char* mdev, const char* mtype)
++{
++    const char* tsdevice;
++    if ((tsdevice = getenv ("TSLIB_TSDEVICE")) == NULL) {
++        tsdevice = mdev;
++    }
++    if (tsdevice == NULL) {
++        _MG_PRINTF ("IAL>TSLib: Please specify the ts device\n");
++    return FALSE;
++}
++    ts = ts_open (tsdevice, 0);
++    if (!ts) {
++         _MG_PRINTF ("IAL>TSLib: can not open ts device\n");
++        return FALSE;
++    }
++
++    if (ts_config (ts)) {
++        _MG_PRINTF ("IAL>TSLib: can not config ts device\n");
++        return FALSE;
++    }
++
++    if (GetMgEtcValue("console", "kbd_interface", keyboard_engine, sizeof(keyboard_engine)) != 0){
++        GetMgEtcValue("ial_console", "keyboard_engine", keyboard_engine, sizeof(keyboard_engine));
++    }
++    if (strcasecmp(keyboard_engine, "input") == 0 || strcasecmp(keyboard_engine, "event") == 0){
++        kbddev = &kbddev_event;
++    }else if(strcasecmp(keyboard_engine, "tty") == 0){
++        kbddev = &kbddev_tty;
++    }else{
++        fprintf(stderr, "IAL: [warning] unknown keyboard_engine '%s'\n", keyboard_engine);
++    }
++    if (GetMgEtcValue ("console", "kbd_device", keyboard_device, sizeof(keyboard_device)) != 0){
++        GetMgEtcValue ("ial_console", "keyboard_device", keyboard_device, sizeof(keyboard_device));
++    }
++        fprintf(stderr, "IAL: use '%s' native keyboard engine, with the device file '%s'\n", keyboard_engine, keyboard_device);
++        kbd_fd = keyboard_open(keyboard_device);
++        if (kbd_fd < 0){
++            fprintf (stderr, "[WARNING] IAL Native Engine: Can not init keyboard right now, %s(%s).\nPlease plug in the KEYBOARD!\n", strerror(errno), keyboard_device);
++        }
++        if (strcasecmp (mtype, "none") == 0){
++            goto found;
++        }
++        fprintf (stderr, "IAL Native Engine: Can not init pointing device!\n");
++            return FALSE;
++
++found:
++    input->update_mouse = mouse_update;
++    input->get_mouse_xy = mouse_getxy;
++    input->set_mouse_xy = NULL;
++    input->get_mouse_button = mouse_getbutton;
++    input->set_mouse_range = NULL;
++
++    input->update_keyboard = keyboard_update;
++    input->get_keyboard_state = keyboard_getstate;
++    input->suspend_keyboard = keyboard_suspend;
++    input->resume_keyboard = keyboard_resume;
++    input->set_leds = NULL;
++
++    input->wait_event = wait_event;
++    screen_width  = __gal_screen->w;
++    screen_height = __gal_screen->h;
++    const char *need_reversed = NULL;
++    if ((need_reversed = getenv ("MG_TS_REVERSED")) != NULL) {
++        reversed = 1;
++    }
++    fprintf(stderr, "InitTSLibInput finish\n");
++    return TRUE;
++}
++
++void TermTslibKeyboardInput(void)
++{
++    if (ts) {
++            ts_close(ts);
++            ts = NULL;
++        }
++    kbddev->Close();
++}
++
++#endif /* _MGIAL_TALIBKEYBOARD */
++
++
+--- a/dev/null/	1970-01-01 08:00:00.000000000 +0800
++++ b/src/ial/tslibkeyboard.h	2018-03-19 21:15:51.059879085 +0800
+@@ -0,0 +1,14 @@
++#ifndef GUI_IAL_TSLIBKEYBOARD_H
++#define GUI_IAL_TSLIBKEYBOARD_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif /* __cplusplus */
++
++BOOL  InitTslibKeyboardInput (INPUT* input, const char* mdev, const char* mtype);
++void  TermTslibKeyboardInput (void);
++
++#ifdef __cplusplus
++}
++#endif  /* __cplusplus */
++#endif /* GUI_IAL_TSLIBKEYBOARD_H */

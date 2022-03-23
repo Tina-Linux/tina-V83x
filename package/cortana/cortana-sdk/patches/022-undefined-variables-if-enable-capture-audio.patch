@@ -1,0 +1,18 @@
+--- a/c/cortana-core/SpeechAPI.c
++++ b/c/cortana-core/SpeechAPI.c
+@@ -493,6 +493,7 @@ static void KwsOnStatus(void* pContext, const KWS_STATUS* pStatus)
+             Unlock(pSC->mSpeechRequestLock);
+ 
+ #if defined(IOT_CORTANA_CAPTURE_AUDIO)
++            int bufferSamples = (int)(pStatus->detectionBufferSize / sizeof(int16_t));
+             write_wave_file("capture_kws.wav", pStatus->detectionBuffer, bufferSamples);
+             LogInfo("write_wave_file: start %.6lf s duration %.6lf s", pSC->kw_startoffset, pSC->kw_duration);
+ #endif
+@@ -595,6 +596,7 @@ static void KwsOnStatusSkype(void* pContext, const KWS_STATUS* pStatus)
+             Unlock(pSC->mSpeechRequestLock);
+ 
+ #if defined(IOT_CORTANA_CAPTURE_AUDIO)
++            int bufferSamples = (int)(pStatus->detectionBufferSize / sizeof(int16_t));
+             write_wave_file("capture_kws.wav", pStatus->detectionBuffer, bufferSamples);
+             LogInfo("write_wave_file: start %.6lf s duration %.6lf s", pSC->kw_startoffset, pSC->kw_duration);
+ #endif

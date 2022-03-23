@@ -1,0 +1,10 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_CSV_ENABLE
+    bool "collectd_csv"
+    select PACKAGE_collectd-mod-csv
+    default y
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_CSV_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_CSV_OUTDIR
+        string "outdir"
+        default "/mnt/UDISK/collectd"
+endif

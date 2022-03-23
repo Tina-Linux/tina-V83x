@@ -1,0 +1,27 @@
+diff --git a/src/device.c b/src/device.c
+index d2aa68e..ea01733 100755
+--- a/src/device.c
++++ b/src/device.c
+@@ -1772,8 +1772,21 @@ static DBusMessage *dev_connect(DBusConnection *conn, DBusMessage *msg,
+ 	struct btd_device *dev = user_data;
+ 	uint8_t bdaddr_type;
+ 
+-	if (dev->bredr_state.connected)
++	if (dev->bredr_state.connected){
++		/*
++		  * Check if services have been resolved and there is at list
++		  * one connected before switching to connect LE.
++		  */
++	    if (dev->bredr_state.svc_resolved &&
++			find_service_with_state(dev->services,
++				BTD_SERVICE_STATE_CONNECTED)){
++		DBG("bredr connected\n");
+ 		bdaddr_type = dev->bdaddr_type;
++            } else {
++		DBG("set bdaddr_type BDADDR_BREDR");
++                bdaddr_type = BDADDR_BREDR;
++	    }
++	}
+ 	else if (dev->le_state.connected && dev->bredr)
+ 		bdaddr_type = BDADDR_BREDR;
+ 	else

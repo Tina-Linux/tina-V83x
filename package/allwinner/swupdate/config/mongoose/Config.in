@@ -1,0 +1,39 @@
+menuconfig WEBSERVER
+	bool "Web Server"
+	select SWUPDATE_CONFIG_MONGOOSE
+	help
+	  Enable update from remote using a web server on the target.
+
+if WEBSERVER
+choice
+	prompt "Web Server Type"
+	default SWUPDATE_CONFIG_MONGOOSE
+	help
+	  Choose the web server
+
+config SWUPDATE_CONFIG_MONGOOSE
+	bool "mongoose"
+	help
+	  Mongoose embeddded web server
+
+endchoice
+
+config SWUPDATE_CONFIG_MONGOOSEIPV6
+	bool "IPv6 support"
+	default SWUPDATE_DEFAULT_MONGOOSEIPV6
+	depends on SWUPDATE_CONFIG_MONGOOSE
+	help
+	   It enables ipv6 support into mongoose
+
+config SWUPDATE_CONFIG_MONGOOSESSL
+	bool "SSL support"
+	depends on SWUPDATE_CONFIG_MONGOOSE
+	depends on SWUPDATE_CONFIG_HAVE_LIBSSL
+	depends on SWUPDATE_CONFIG_HAVE_LIBCRYPTO
+	help
+	   It enables SSL support into mongoose
+
+comment "SSL support needs libcrypto, libssl"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBSSL || !SWUPDATE_CONFIG_HAVE_LIBCRYPTO
+
+endif

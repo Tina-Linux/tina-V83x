@@ -1,0 +1,308 @@
+** 此文件指导添加测试用例 **
+
+目录:
+1. 简介
+2. 添加源码/脚本(可选)
+3. 注册新用例(必选)
+4. 添加量产默认配置(可选)
+5. 注销旧用例
+6. 测试用例API
+
+============================分割线===========================
+
+1. 简介
+----------------------------------------------
+   1. 测试用例按功能分类,分别为demo/base/spec/stress,新测试用例务必在对应分类中添加
+   2. tinatest/testcase目录存放所有测试用例,一个测试用例一个单独文件夹,
+      且对应测试用例的配置路径存放,例如:
+      测试用例为 /stress/rw/rw-auto , 则测试用例源码目录路径为 tinatest/testcase/stress/rw/rw-auto .
+   3. 通过测试用例目录下的 private.conf 文件配置测试用例路径和默认配置值.
+      通过 tools/add_testcase.sh 和 tools/del_testcase.sh 脚本注册和注销测试用例.
+   4. 注册测试用例后,需要进入menuconfig中选择测试用例,然后在tinatest根目录或者其子目录执行 'mm -B' 来
+      重新编译测试用例,在编译过程中会根据menuconfig的配置生成新的tinatest.json.
+
+   新测试用例有如下5个相关文件:
+       (1) tinatest/testcase/<class>/<testcase>/private.conf
+           创建用例属性配置文件,包括用例路径,调用测试用例命令,默认配置等.
+
+       (2) tinatest/testcase/<class>/list
+           添加新用例到用例列表
+
+       (3) tinatest/config/<class>/Config-<testcase>.in
+           创建新用例的menuconfig配置文件
+
+       (4) tinatest/config/<class>/Config.in
+           添加用例配置文件到menuconfig的配置列表
+
+       (5) tinatest/Depends.mk
+           添加用例依赖,当测试用例有依赖时才会修改
+
+   用 tools/add_testcase.sh 自动注册测试用例,只需自行编写第1个文件(private.conf),
+   且知道其他文件的作用, 以便提交代码时,验证5个相关的文件,然后把此5个相关文件的修改一并提交.
+
+
+2. 添加源码/脚本(可选)
+----------------------------------------------
+   (1) 为什么此步骤可选?
+       例如:
+       "reboot" : {
+           "enable" : false,
+           "command" : "echo \"Going to reboot\"; reboot -f",
+           "may_reboot" : true,
+           "run_times" : 1000
+       },
+       "CPU" : {
+           "run_alone" : true,
+           "command" : "stress --cpu 5 --timeout 1m"
+       }
+       --------------
+       a. reboot节点并不需要任何脚本,仅仅是依据"reboot -f"命令即可实现
+       b. CPU节点调用的是外部的应用,因此并不需要额外添加脚本/源码,一句shell命令就足够了
+
+   (2) 如何添加源码/脚本?
+       tinatest/testcase目录存放所有测试用例,一个测试用例一个单独文件夹,且对应测试用例的配置路径存放,
+       例如:
+         新用例为 /stress/rw/rw-auto , 则测试用例源码目录路径为 tinatest/testcase/stress/rw/rw-auto
+
+   (3) 编译源码
+       编译源码的操作分两种情况:
+           (a)源码目录无Makefile
+           (b)源码目录有Makefile
+       --------------
+       (a)源码目录无Makefile
+          把源码目录的每个 c/cpp 文件逐个编译链接为对应执行文件.例如 demo-c.c 编译为 demo-c
+          把源码目录的所有 sh 文件拷贝安装
+       (b)源码目录有Makefile
+          执行源码目录的Makefile来编译测试用例.
+          编写Makefile时需要注意:
+            *) 上级Makefile只会调用源码Makefile的 all 目标,因此必须存在 all 目标
+            *) 编译出来的可执行文件/脚本必须拷贝安装到变量 PREFIX 指定的路径
+               例如: cp $(TARGET) $(PREFIX)
+            *) 传递的其他变量: CC/CXX/ARCH/AR/CFLAGS/LDFLAGS
+
+3. 注册新用例(必选)
+----------------------------------------------
+   (1) 自动添加(推荐):
+       (a) 添加新用例属性配置文件
+           配置文件保存路径: tinatest/testcase/<class>/<testcase>/private.conf
+           --------------
+           执行 tinatest/tools/add_testcase.sh 不带任何参数即可获取下面的说明
+           --------------
+
+           记录新用例的路径以及默认配置值,一行一条键值对,格式为:
+               <配置项>[:类型] = <配置值>
+           [配置项]: 包含PATH/ENABLE/INFO/LIMIT/DEPENDS和测试用例的所有配置项(例如:command,run_times,run_alone等)
+           其中:
+               PATH: 测试用例在配置树中的绝对路径(字符串)
+               ENABLE: 默认是否使能此用例(bool)
+               INFO: 默认是否使能所有的 局部信息 配置项(bool)
+               LIMIT: 默认是否使能所有的 局部限制 配置项(bool)
+               DEPENDS: 测试用例依赖的第三方应用包(string)
+                        格式: +TINATEST_<测试用例路径>_ENABLE:<依赖的软件包>
+                        例如 /stress/rw/rw-auto 依赖 rwcheck 软件包, 则 DEPENDS="+TINATEST_STRESS_RW_RW_AUTO_ENABLE:rwcheck"
+           [大写字母为特定配置项][无指定类型的小写字母为用例属性项][指定类型的小写字母为私有配置项]
+           [类型]: (私有配置项才需要)为mjson支持的数据类型,包括:int/double/true/false/string/array
+           [配置值]: 支持字符串/字符串数组/整数/浮点数/bool(见示例)
+           其中:
+               1) 字符串必须用双引号括起来
+               2) 字符串数组以字符串形式表示,字符串之间以空格间隔
+               4) 字符串内若双引号\转义字符等,需要有双重转义, 例如: command = "echo \\\"test\\\"" 表示echo "test"
+               4) 每一行开头不能有空格/Tab等
+
+           示例如下:
+               |PATH = /demo/demo-c
+               |ENABLE = false
+               |INFO = true
+               |command = "demo-c"
+               |run_times = 10
+               |run_alone = false
+               |workers:int = 2
+               |words:string = "test"
+               |right:bool = true
+               |str_array:array = "one two three"
+
+       (b) 执行自动创建脚本 (tinatest/tools/add_testcase.sh)
+           Usage: add_testcase.sh <配置文件1> [配置文件2] ...
+           示例:
+               ./tools/add_testcase.sh  testcase/stress/io/private.conf
+
+           Note: 当无参数时,显示帮助说明
+           示例:
+               ./tools/add_testcase.sh
+
+   (2) 手动添加(不推荐):
+       以手动添加新用例base-demo为例,配置文件节点路径为: /base/base-demo
+       (a) 文件1: tinatest/testcase/base/list <<== 添加用例到convert_json.sh的处理列表
+           在tinatest/testcase/base/list中添加一行：/base/base-demo
+           注意的是,要单独一行,且为配置树的绝对路径
+       (b) tinatest/testcase/<class>/<testcase>/private.conf <<== 创建用例属性配置文件
+           见 (1) 自动添加 -> (a) 添加用例属性配置文件
+       (c) tinatest/config/<class>/Config-<testcase>.in <<== 创建新的menuconfig用例配置文件
+           (c.1) 拷贝用例配置文件模板(注意新配置模板文件名格式)
+               $ cd tinatest/config && cp demo/Config-demo-c.in base/Config-base-demo.in
+           (c.2) 修改配置模板的菜单名
+               把Config-base-demo.in第一行的menu 'demo-c'改为menu 'base-demo'
+           (c.3) 修改配置模板的配置项名(注意替换名,新用例为/base/base-demo,则替换为_BASE_BASE_DEMO_
+               $ sed -i 's/_DEMO_DEMO_C_/_BASE_BASE_DEMO_/g' Config-base-demo.in
+           (d.4) 定制默认配置值,把各个配置项的'default'改为新用例的对应配置值即可
+               例如: 新用例command的默认值为"echo base-demo",则把command配置项的配置默认值修改为:
+                     config TINATEST_BASE_DEMO_COMMAND
+                         string "command"
+                         default "echo base-demo"
+       (d) tinatest/config/<class>/Config.in  <<== 添加用例配置文件到menuconfig的配置列表
+           添加到文件 tinatest/config/base/Config.in
+           例如:
+           config TINATEST_BASE
+               bool "Enable"
+
+               if TINATEST_BASE
+                   source Config-base-demo.in  <<< 添加此行
+               endif
+       (e) tinatest/Depends.mk  <<== 添加用例依赖
+           当测试用例依赖第三方应用时才需要的操作,在指定文件中按指定格式添加行
+           格式: +[menuconfig中指定测试用例使能配置项:]依赖名
+           例如: 新应用 /stress/readwrite 依赖其他应用: rwcheck
+                 +TINATEST_STRESS_READWRITE_ENABLE:rwcheck
+                 (当menuconfig中使能了/stress/readwrite测试用例才依赖rwcheck)
+                 (TINATEST_STRESS_READWRITE_ENABLE: 参考3. 添加menuconfig的可视化配置)
+
+       此5个文件修改完成后即可在menuconfig中看到新的用例配置,以及自动生成tinatest.json配置文件
+
+4. 添加量产默认配置(可选)
+----------------------------------------------
+   (1) 为什么可选?
+       一般情况下,通过配置menucofnig即可自动生成配置文件,但为了节省客户配置tinatest的麻烦,
+       特提供一份默认的配置文件tinatest/src/config/tinatest.json.此配置文件只使能量产需要的
+       base(基础功能测试)用例,作为客户量产的默认功能测试配置,因此非客户量产需要的测试用例不
+       建议添加到默认tinatest.json中.
+
+   (2) 如何添加?
+    eg. /stress/IO/newdemo
+    | "/" : {
+    |     "stress" : {
+    |         "enable" : true,                 (使能控制,默认true,影响此节点及树叉下的所有子节点)
+    |         "reboot" : {
+    |             .... (/stress/reboot)
+    |         },
+    |         "IO" : {
+    |             "newdemo" : {                (添加新测试用例节点)
+    |                 "command" : "newdemo.sh" (shell调用测试用例的命令)
+    |             }
+    |         }
+    |     }
+    | }
+    Note: 新测试用例节点必须有"command"项,为shell调用测试用例的命令,
+          其他的高级配置参考Config.txt
+
+5. 注销旧用例
+----------------------------------------------
+   (1) 注销用例使用脚本路径如下:
+               tinatest/tools/del_testcase.sh
+   (2) 使用场景
+       *) 需要修改用例属性(修改private.conf,不包括源码/脚本),
+          在修改private.conf前先注销,修改后再重新注册,避免残留
+       *) 删除无用测试用例
+   (3) 使用方法
+       与 < 3. 注册新用例 - (1) 自动添加 > 一致.
+
+6. 测试用例API
+----------------------------------------------
+   (一) 获取配置文件的配置值
+       例子见 testcase/demo/demo-c  testcase/demo/demo-sh
+
+       (1) C语言API: (头文件: #include "mjson.h")
+       ___________________________                          _________________________________
+       |struct mjson_value mjson_fetch(const char *keypath);                                |
+       |               int mjson_fetch_int(const char *keypath);                            |
+       |               int mjson_fetch_boolean(const char *keypath);                        |
+       |            double mjson_fetch_double(const char *keypath);                         |
+       |            char * mjson_fetch_string(const char *keypath);                         |
+       |               int mjson_fetch_array(const char *keypath, char *array[], int max);  |
+       ---------------------------                          ---------------------------------
+       (a) 接口: struct mjson_value mjson_fetch(const char *keypath);
+           参数: 配置项在配置树上的绝对路径
+           返回: 失败则 mjson_value.type = mjson_type_error
+           功能: 获取任意类型配置项的值,务必检查mjson_value.type,
+                 当为mjson_type_error时,此结构体无效,使用会导致段错误
+       (b) 接口: int mjson_fetch_int(const char *keypath);
+           参数: 配置项在配置树上的绝对路径
+           返回: 成功返回相应的值,失败返回-1
+           功能: 获取int型配置项的值
+       (c) 接口: int mjson_fetch_boolean(const char *keypath);
+           参数: 配置项在配置树上的绝对路径
+           返回: 成功返回true|false(1|0),失败返回-1
+           功能: 获取bool型配置项的值
+       (d) 接口: double mjson_fetch_double(const char *keypath);
+           参数: 配置项在配置树上的绝对路径
+           返回: 成功返回相应的值,失败返回-1
+           功能: 获取double型配置项的值
+       (e) 接口: char * mjson_fetch_string(const char *keypath);
+           参数: 配置项在配置树上的绝对路径
+           返回: 成功返回相应的字符串指针,失败返回NULL
+           功能: 获取字符串型配置项的值,务必检查返回,否则引发段错误
+                 指针内存不需要(不能)释放
+       (f) 接口: int mjson_fetch_array(const char *keypath, char *array[], int max);
+           参数: keypath: 配置项在配置树上的绝对路径
+                 array: 字符串二维指针的地址，用于保存字符串数组
+				 max: 字符串二维指针元素个数
+           返回: 返回获取到的字符串数量
+           功能: 获取字符串数组型配置项的值,务必检查返回,否则引发段错误
+
+       (2) Shell脚本API: (直接使用,无需包含任何文件)
+       __________________                          __________________
+       |    mjson_fetch <keypath1> [keypath2 ...]                   |
+       ------------------                          ------------------
+       (a) 例如:
+           $ mjson_fetch /demo/demo-c/run_times
+             3  <<== 返回
+           $ mjson_fetch /demo/demo-sh/command
+             demo-sh  <<== 返回
+
+   (二) 获取系统相关信息
+       例子见 testcase/demo/demo-c  testcase/demo/demo-sh
+
+       (1) C语言API: (头文件: #include "sysinfo.h")
+       __________________                   __________________
+       |    char *get_kernel_version(void);                  |
+       |    char *get_target(void);                          |
+       |    char *get_platform(void);                        |
+       |    char *get_boot_media(void);                      |
+       ------------------                   ------------------
+       (a) 接口: char *get_kernel_version(void);
+           功能: 获取内核版本字符串,务必检查返回是否为NULL
+                 指针内存由测试用例释放
+           返回示例: 3.10.65
+       (b) 接口: char *get_target(void);
+           功能: 获取方案代号,务必检查返回是否为NULL
+                 指针内存由测试用例释放
+           返回示例: r40-m2ultra
+       (c) 接口: char *get_platform(void);
+           功能: 获取平台编号,务必检查返回是否为NULL
+                 指针内存由测试用例释放
+           返回示例: R40
+       (d) 接口: char *get_boot_media(void);
+           功能: 获取引导系统的存储设备,务必检查返回是否为NULL
+                 指针内存由测试用例释放
+           返回: emmc|sdcard|nand|nor-flash
+                 其中,sdcard代表是卡启动
+
+       (2) Shell脚本API: (直接使用,无需包含任何文件)
+       __________________       __________________
+       |    get_kernel_version                   |
+       |    get_target                           |
+       |    get_platform                         |
+       |    get_boot_media                       |
+       ------------------       ------------------
+       (a) 接口: get_kernel_version
+           功能: 获取内核版本字符串,务必检查返回是否为NULL
+           返回示例: 3.10.65
+       (b) 接口: get_target
+           功能: 获取方案代号,务必检查返回是否为NULL
+           返回示例: r40-m2ultra
+       (c) 接口: get_platform
+           功能: 获取平台编号,务必检查返回是否为NULL
+           返回示例: R40
+       (d) 接口: get_boot_media
+           功能: 获取引导系统的存储设备,务必检查返回是否为NULL
+           返回: emmc|sdcard|nand|nor-flash
+                 其中,sdcard代表是卡启动

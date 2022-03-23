@@ -1,0 +1,36 @@
+type cron, domain, mlstrustedsubject;
+
+type cron_exec, exec_type, file_type;
+# permissive cron;
+domain_auto_trans(init,cron_exec,cron)
+# domain_auto_trans(cron,busybox_exec,busybox)
+# domain_auto_trans(cron,ubusd_exec,ubusd)
+
+# allow cron cron_exec:file rwx_file_perms;
+# allow cron cron_exec:lnk_file r_file_perms;
+
+# # allow cron self:system module_load;
+# # allow cron self:capability sys_module;
+
+# allow cron console_device:chr_file rw_file_perms;
+# allow cron init:fifo_file { read write };
+
+# allow cron tmpfs:sock_file write;
+
+# allow cron system_file:file { execute execute_no_trans open execmod };
+# allow cron { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow cron { mount_exec temp_exec }:lnk_file { getattr open read execute };
+# allow cron shell_exec:file rx_file_perms;
+
+# allow cron etc_initd:dir search;
+# allow cron etc_initd:file r_file_perms;
+# allow cron etc_selinux:dir { search open read getattr };
+# allow cron etc_selinux:{ file lnk_file } { open read getattr };
+
+# allow cron dbusd:unix_stream_socket connectto;
+# allow cron ubusd:unix_stream_socket connectto;
+
+# allow cron domain:dir { search open read getattr };
+# allow cron domain:{ file lnk_file } { open read getattr };
+
+

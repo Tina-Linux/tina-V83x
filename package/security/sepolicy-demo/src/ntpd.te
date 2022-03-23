@@ -1,0 +1,41 @@
+# ntp daemon
+type ntpd, domain;
+type ntpd_exec, exec_type, file_type;
+# permissive ntpd;
+domain_auto_trans(init,ntpd_exec,ntpd)
+domain_auto_trans(ntpd,busybox_exec,busybox)
+# domain_auto_trans(ntpd,ubusd_exec,ubusd)
+# domain_auto_trans(ntpd,hotplug-call_exec,hotplug-call)
+
+# # Create and use network sockets.
+# net_domain(ntpd)
+
+# # domain_auto_trans(adbd,adbd_exec,adbd)
+# allow ntpd ntpd_exec:file rwx_file_perms;
+# allow ntpd ntpd_exec:lnk_file r_file_perms;
+
+# allow ntpd console_device:chr_file rw_file_perms;
+
+# allow ntpd init:fifo_file { read write };
+
+# # allow ntpd ubusd:unix_stream_socket connectto;
+
+allow ntpd self:capability net_raw;
+allow ntpd self:udp_socket create_socket_perms;
+allow ntpd node:udp_socket node_bind;
+
+allow ntpd tmpfs:sock_file write;
+allow ntpd tmpfs:file create_file_perms;
+allow ntpd tmpfs:dir rw_dir_perms;
+
+allow ntpd system_file:file { execute execute_no_trans open execmod };
+# allow ntpd { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow ntpd { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+# allow ntpd shell_exec:file rx_file_perms;
+
+# allow ntpd etc_initd:dir search;
+# allow ntpd etc_initd:file r_file_perms;
+# allow ntpd etc_selinux:dir { search open read getattr };
+# allow ntpd etc_selinux:{ file lnk_file } { open read getattr };
+

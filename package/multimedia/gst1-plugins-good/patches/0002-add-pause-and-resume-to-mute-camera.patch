@@ -1,0 +1,196 @@
+diff --git a/sys/v4l2/gstv4l2bufferpool.c b/sys/v4l2/gstv4l2bufferpool.c
+index 86d5c8b..b3f973a 100644
+--- a/sys/v4l2/gstv4l2bufferpool.c
++++ b/sys/v4l2/gstv4l2bufferpool.c
+@@ -2013,3 +2013,89 @@ gst_v4l2_buffer_pool_flush (GstBufferPool * bpool)
+
+   return ret;
+ }
++
++gboolean
++gst_v4l2_buffer_pool_resume (GstBufferPool * bpool)
++{
++  GstV4l2BufferPool *pool = GST_V4L2_BUFFER_POOL (bpool);
++  GstV4l2Object *obj = pool->obj;
++
++  if (pool->streaming) {
++    GST_ERROR_OBJECT (pool, "Streaming had been resmued or started");
++    return FALSE;
++  }
++
++  switch (obj->mode) {
++    case GST_V4L2_IO_MMAP:
++    case GST_V4L2_IO_USERPTR:
++    case GST_V4L2_IO_DMABUF:
++    case GST_V4L2_IO_DMABUF_IMPORT:
++      if (!V4L2_TYPE_IS_OUTPUT (pool->obj->type)) {
++        /* For captures, we need to enqueue buffers before we start streaming,
++         * so the driver don't underflow immediatly. As we have put then back
++         * into the base class queue, resurect them, then releasing will queue
++         * them back. */
++        while (gst_v4l2_buffer_pool_resurect_buffer (pool) == GST_FLOW_OK)
++          continue;
++      }
++
++      if (obj->ioctl (pool->video_fd, VIDIOC_STREAMON, &obj->type) < 0)
++        goto resume_failed;
++
++      pool->streaming = TRUE;
++
++      GST_DEBUG_OBJECT (pool, "Resume streaming");
++      break;
++    default:
++      break;
++  }
++
++  return TRUE;
++
++resume_failed:
++  {
++    GST_ERROR_OBJECT (pool, "error with RESUME STREAM %d (%s)", errno,
++        g_strerror (errno));
++    return FALSE;
++  }
++}
++
++gboolean
++gst_v4l2_buffer_pool_pause (GstBufferPool * bpool)
++{
++  GstV4l2BufferPool *pool = GST_V4L2_BUFFER_POOL (bpool);
++  GstV4l2Object *obj = pool->obj;
++
++
++  if (!pool->streaming) {
++    GST_ERROR_OBJECT (pool, "Streaming had been paused or closed");
++    return FALSE;
++  }
++
++  switch (obj->mode) {
++    case GST_V4L2_IO_MMAP:
++    case GST_V4L2_IO_USERPTR:
++    case GST_V4L2_IO_DMABUF:
++    case GST_V4L2_IO_DMABUF_IMPORT:
++
++      if (obj->ioctl (pool->video_fd, VIDIOC_STREAMOFF, &obj->type) < 0)
++        goto pause_failed;
++
++      pool->streaming = FALSE;
++
++      GST_DEBUG_OBJECT (pool, "Pause streaming");
++      break;
++    default:
++      break;
++  }
++
++  return TRUE;
++
++pause_failed:
++  {
++    GST_ERROR_OBJECT (pool, "error with PAUSE STREAM %d (%s)", errno,
++        g_strerror (errno));
++    return FALSE;
++  }
++}
++
+diff --git a/sys/v4l2/gstv4l2bufferpool.h b/sys/v4l2/gstv4l2bufferpool.h
+index 0fffc71..14198dc 100644
+--- a/sys/v4l2/gstv4l2bufferpool.h
++++ b/sys/v4l2/gstv4l2bufferpool.h
+@@ -109,6 +109,9 @@ void                gst_v4l2_buffer_pool_copy_at_threshold (GstV4l2BufferPool *
+
+ gboolean            gst_v4l2_buffer_pool_flush   (GstBufferPool *pool);
+
++gboolean            gst_v4l2_buffer_pool_resume (GstBufferPool * bpool);
++
++gboolean            gst_v4l2_buffer_pool_pause (GstBufferPool * bpool);
+ G_END_DECLS
+
+ #endif /*__GST_V4L2_BUFFER_POOL_H__ */
+diff --git a/sys/v4l2/gstv4l2src.c b/sys/v4l2/gstv4l2src.c
+index aba4496..fa27b65 100644
+--- a/sys/v4l2/gstv4l2src.c
++++ b/sys/v4l2/gstv4l2src.c
+@@ -205,6 +205,10 @@ gst_v4l2src_init (GstV4l2Src * v4l2src)
+
+   gst_base_src_set_format (GST_BASE_SRC (v4l2src), GST_FORMAT_TIME);
+   gst_base_src_set_live (GST_BASE_SRC (v4l2src), TRUE);
++
++  /* add for resume and pause */
++  v4l2src->suspending = FALSE;
++  v4l2src->keyevent = FALSE;
+ }
+
+
+@@ -797,8 +801,27 @@ gst_v4l2src_change_state (GstElement * element, GstStateChange transition)
+       /* close the device */
+       if (!gst_v4l2_object_close (obj))
+         return GST_STATE_CHANGE_FAILURE;
+-
+       break;
++    case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
++      /* when task pause before pool_pause we should skip pool_pause */
++      if (v4l2src->keyevent == TRUE) {
++        v4l2src->suspending = TRUE;
++        break;
++      } else {
++        /* when suspending we should resume pool */
++        if (v4l2src->suspending == TRUE)
++          v4l2src->keyevent = TRUE;
++        break;
++      }
++    case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
++      if (v4l2src->keyevent == TRUE) {
++        v4l2src->suspending = FALSE;
++        break;
++      } else {
++        if (v4l2src->suspending == FALSE)
++          v4l2src->keyevent = TRUE;
++        break;
++      }
+     default:
+       break;
+   }
+@@ -818,6 +841,16 @@ gst_v4l2src_create (GstPushSrc * src, GstBuffer ** buf)
+   GstClockTime delay;
+   GstMessage *qos_msg;
+
++  /* ensure resuming stream before dqbuf and not resume when playing */
++  while (v4l2src->suspending == TRUE) {
++    if (v4l2src->suspending == TRUE && v4l2src->keyevent == TRUE) {
++      gst_v4l2_buffer_pool_resume (pool);
++      v4l2src->keyevent = FALSE;
++      v4l2src->suspending = FALSE;
++      break;
++    }
++  }
++
+   do {
+     ret = GST_BASE_SRC_CLASS (parent_class)->alloc (GST_BASE_SRC (src), 0,
+         obj->info.size, buf);
+@@ -980,6 +1013,13 @@ retry:
+   GST_BUFFER_TIMESTAMP (*buf) = timestamp;
+   GST_BUFFER_DURATION (*buf) = duration;
+
++  /* ensure pausing stream when buf is ok */
++  if (v4l2src->suspending == FALSE && v4l2src->keyevent == TRUE) {
++    gst_v4l2_buffer_pool_pause (pool);
++    v4l2src->keyevent = FALSE;
++    v4l2src->suspending = TRUE;
++  }
++
+   return ret;
+
+   /* ERROR */
+diff --git a/sys/v4l2/gstv4l2src.h b/sys/v4l2/gstv4l2src.h
+index cb7f751..06dd88d 100644
+--- a/sys/v4l2/gstv4l2src.h
++++ b/sys/v4l2/gstv4l2src.h
+@@ -67,6 +67,8 @@ struct _GstV4l2Src
+   /* Timestamp sanity check */
+   GstClockTime last_timestamp;
+   gboolean has_bad_timestamp;
++  gboolean suspending;
++  gboolean keyevent;
+ };
+
+ struct _GstV4l2SrcClass

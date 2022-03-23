@@ -1,0 +1,73 @@
+--- a/mgncs/Makefile.am
++++ b/mgncs/Makefile.am
+@@ -1,5 +1,5 @@
+ SUBDIRS=res
+-LDADD=-lmgncs -lmgplus -lxml2 -lsqlite3 -lmgutils
++LDADD=-lmgncs -lmgplus -lxml2 -lsqlite3 -lmgutils -lstdc++
+ 
+ noinst_PROGRAMS=helloworld helloworld_domodal helloworld_dlgbox \
+     wnd_template event_listener data_source data_binding \
+--- a/mgeff/Makefile.am
++++ b/mgeff/Makefile.am
+@@ -1,2 +1,2 @@
+ SUBDIRS = animation ball banner btnshow curve custom-effector effector image-box particle-sys
+-export LDADD+=-lmgeff -lmgplus
++export LDADD+=-lmgeff -lmgplus -lstdc++
+--- a/mgplus/brush/Makefile.am
++++ b/mgplus/brush/Makefile.am
+@@ -1,4 +1,4 @@
+-brushtest_LDADD=-lmgutils -lmgplus
++brushtest_LDADD=-lmgutils -lmgplus -lstdc++
+ 
+ noinst_PROGRAMS=brushtest
+ brushtest_SOURCES= brush_test.c 
+--- a/mgplus/colorcomposite/Makefile.am
++++ b/mgplus/colorcomposite/Makefile.am
+@@ -1,4 +1,4 @@
+-LDADD=-lmgplus
++LDADD=-lmgplus -lstdc++
+ 
+ noinst_PROGRAMS=colorcompositetest
+ colorcompositetest_SOURCES=colorcomposite_test.c 
+--- a/mgplus/glyphoutline/Makefile.am
++++ b/mgplus/glyphoutline/Makefile.am
+@@ -1,4 +1,4 @@
+-LDADD = ../animate/libanimate.la -lmgplus
++LDADD = ../animate/libanimate.la -lmgplus -lstdc++
+ 
+ noinst_PROGRAMS=glyphoutline
+ glyphoutline_SOURCES=glyphoutlinetest.c 
+--- a/mgplus/path/Makefile.am
++++ b/mgplus/path/Makefile.am
+@@ -1,4 +1,4 @@
+-LDADD=-lmgplus
++LDADD=-lmgplus -lstdc++
+ 
+ noinst_PROGRAMS=pathtest
+ pathtest_SOURCES= pathtest.c 
+--- a/mgplus/pen/Makefile.am
++++ b/mgplus/pen/Makefile.am
+@@ -1,4 +1,4 @@
+-LDADD = -lmgutils -lmgplus
++LDADD = -lmgutils -lmgplus -lstdc++
+ 
+ noinst_PROGRAMS=pentest
+ pentest_SOURCES= pen_test.c 
+--- a/mgplus/src/Makefile.am
++++ b/mgplus/src/Makefile.am
+@@ -1,6 +1,6 @@
+ AM_CPPFLAGS = -I../animate -I../animate/common_animates
+ 
+-LDADD = ../animate/libanimate.la -lmgplus
++LDADD = ../animate/libanimate.la -lmgplus -lstdc++
+ 
+ COMMON_PROGS = mgplustest gradientdemo mgglyph_outline coverflow \
+ 	       mgcompositedemo blinds centersplit cubicrotate lion_test mgplus_efficiency
+--- a/mgplus/worldtransform/Makefile.am
++++ b/mgplus/worldtransform/Makefile.am
+@@ -4,5 +4,5 @@
+ 
+ worldtransform_SOURCES= worldtransform.c 
+ 
+-worldtransform_LDADD =-lmgplus
++worldtransform_LDADD =-lmgplus -lstdc++

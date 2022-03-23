@@ -1,0 +1,32 @@
+config TINATEST_SYS_BUILD_BOOT_SCRIPT
+    bool "boot_script"
+    select BUSYBOX_INIT_BASE_FILES_RC_LOAD_SCRIPT if SYSTEM_INIT_BUSYBOX
+    default n
+    help
+        Install boot script.
+        By this script, TinaTest can run automatically when boot.
+
+    if TINATEST_SYS_BUILD_BOOT_SCRIPT
+        config TINATEST_SYS_BUILD_BOOT_SCRIPT_COMMAND
+            string "command"
+            default "tt"
+            help
+                The command to call when boot.
+
+        config TINATEST_SYS_BUILD_BOOT_SCRIPT_LEVEL
+            int "level"
+            range 0 99
+            default 99
+            help
+                The boot level, limited in 0-99.
+                The smaller value, the earlier call.
+                It is used in serial mode of calling boot script.
+
+        config TINATEST_SYS_BUILD_BOOT_SCRIPT_DEPEND
+            string "depend"
+            default "sysntpd"
+            help
+                The boot dependences.
+                Call this boot script after all dependences.
+                It is used in parallel mode of calling boot script.
+    endif

@@ -1,0 +1,33 @@
+Commit information:
+sgx544: support multiple displays for arm-openwrt-linux-gnueabi
+
+	eglGetDisplay(num) -> /dev/fb<num>
+
+MD5 Information:
+4353940f924cdf657450a6760c63eea8 lib/libEGL.so
+535510e28a03d5278880b08d1a7a403d lib/libews.so
+9ad3e1cd7be478c68bf887bb52bcaa5a lib/libGLES_CM.so
+11ce349b784d34993c1b945253e447d9 lib/libGLESv2.so
+1a7b8aea02d3675b80d8d348af3055ea lib/libglslcompiler.so
+0feff2165d940a681c83b814200006d7 lib/libIMGegl.so
+08beef8609ce77920c48253f4906e129 lib/libpvr2d.so
+674b21c90b2d6819c13aecc54c579ecc lib/libpvrEWS_REMWSEGL.so
+99c20e9328c284c8bac7acbc8b75007f lib/libpvrEWS_WSEGL.so
+26f2f08973e3ce3e3f0cf8a5c9a37b23 lib/libpvrPVR2D_BLITWSEGL.so
+25b06376cdaca9d15d24b6f2d8d9b782 lib/libpvrPVR2D_FLIPWSEGL.so
+39c52a3772040c53eb94fdad312b090a lib/libpvrPVR2D_FRONTWSEGL.so
+e0fabb9646d02c21ae64d3e1b7f005aa lib/libpvrPVR2D_LINUXFBWSEGL.so
+66df118662cda2745876d490041de592 lib/libPVRScopeServices.so
+379dd54786b50b59248104ecb74a5aed lib/libsrv_init.so
+47d75c216c76fc7f72c5e8fb97880074 lib/libsrv_um.so
+b0394ace9977b5da1d647005bff823d6 lib/libusc.so
+c6991095d8a26f4f3e4a723c20efd180 bin/pvrsrvctl
+
+Toolchain information:
+Reading specs from /home/yuxyun/gpu-src/tools/toolchains/arm-openwrt-linux-gnueabi/bin/../lib/gcc/arm-openwrt-linux-gnueabi/6.4.1/specs
+COLLECT_GCC=arm-openwrt-linux-gnueabi-gcc.bin
+COLLECT_LTO_WRAPPER=/home/yuxyun/gpu-src/tools/toolchains/arm-openwrt-linux-gnueabi/bin/../libexec/gcc/arm-openwrt-linux-gnueabi/6.4.1/lto-wrapper
+Target: arm-openwrt-linux-gnueabi
+Configured with: /home/caiyongheng/tina/out/r16-parrot/compile_dir/toolchain/gcc-linaro-6.4-2017.11/configure --with-bugurl=https://dev.openwrt.org/ --with-pkgversion='OpenWrt/Linaro GCC 6.4-2017.11 2017-11' --prefix=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=arm-openwrt-linux-gnueabi --with-gnu-ld --enable-target-optspace --enable-libgomp --disable-libmudflap --disable-multilib --disable-nls --without-isl --without-cloog --with-host-libstdcxx=-lstdc++ --with-gmp=/home/caiyongheng/tina/out/host --with-mpfr=/home/caiyongheng/tina/out/host --with-mpc=/home/caiyongheng/tina/out/host --disable-decimal-float --with-diagnostics-color=auto-if-env --enable-libssp --enable-__cxa_atexit --with-arch=armv7-a --with-float=hard --with-headers=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain/include --disable-libsanitizer --enable-languages=c,c++ --enable-shared --enable-threads --with-slibdir=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain/lib --enable-lto --with-libelf=/home/caiyongheng/tina/out/host
+Thread model: posix
+gcc version 6.4.1 (OpenWrt/Linaro GCC 6.4-2017.11 2017-11)

@@ -1,0 +1,8 @@
+menuconfig TINATEST_BASE_PRODUCTION_WIFI
+    bool "wifi"
+    default y
+
+if TINATEST_BASE_PRODUCTION_WIFI
+    source package/testtools/tinatest/config/base/production/wifi/wifitester/Config.in
+    source package/testtools/tinatest/config/base/production/wifi/rt_wifitester/Config.in
+endif

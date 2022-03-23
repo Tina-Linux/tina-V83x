@@ -1,0 +1,7 @@
+1.CooeeDemoAndroid-v1.8.0.zip and EasySetupAndroid-v1.9.0.zip both are Android demo to send 802.11 data packs.
+The CooeeDemoAndroid-v1.8.0.zip is the version v1.8.0.It just send bcast data packs.(setup -d -p 1)
+The EasySetupAndroid-v1.9.0.zip is the version v1.9.0.It will send bcast and mcast data packs. (setup -d -p 3)
+
+2.CooeeDemoIOS-v1.5.0.zip is iOS demo to send 802.11 data packs,the same as CooeeDemoAndroid-v1.8.0.zip.
+
+It all get from Ampak.

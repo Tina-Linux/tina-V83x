@@ -1,0 +1,12 @@
+ShaderYUVtoRGB test usage notes：
+void InitResource();
+void DestoryResource();
+int ShaderYUVtoRGB_toionbuf(int dma_fd, int output_fd, Srcresource * src_resource, Dstresource * dst_resource);
+int ShaderYUVtoRGB_tofb(int dma_fd, Srcresource * src_resource, Dstresource * dst_resource);
+
+InitResource:Initialize egl, shader and program
+DestoryResource:Destory resource
+ShaderYUVtoRGB_toionbuf:Convert YUV resource file to RGBA data in opengl es DDK. Send data to the ionbuf
+ShaderYUVtoRGB_tofb:Convert YUV resource file to RGBA data in opengl es DDK. Send data to the framebuffer
+
+currently support YUV format are YUV420 NV12 NV21 YU12 YV12 YUYV, the output RGB format sre RGBA8888 ARGB8888 RGB565

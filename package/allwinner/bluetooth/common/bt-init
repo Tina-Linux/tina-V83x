@@ -1,0 +1,32 @@
+#!/bin/sh
+
+PROG=/usr/bin/bluealsa
+
+bt_init() {
+	hciconfig hci0 up
+	MAC_STR=`hciconfig | grep "BD Address"`
+	if [ -n "$MAC_STR" ] ;then
+		MAC1=`echo ${MAC_STR} | cut -d ':' -f 5`
+		MAC2=`echo ${MAC_STR} | cut -d ':' -f 6`
+		hciconfig hci0 name aw-bt-test-$MAC1$MAC2
+		hciconfig hci0 reset
+		hciconfig hci0 piscan;
+	else
+		echo "hciconfig hci0 up failed"
+		exit 1
+	fi
+}
+bluealsa_start() {
+	"$PROG" -p a2dp-sink -p hfp-hf &
+}
+
+audio_init() {
+	if [ -f /etc/config/audio ] ;then
+		/etc/config/audio
+	else
+		echo "warning: audio init failed"
+	fi
+}
+bt_init
+bluealsa_start
+audio_init

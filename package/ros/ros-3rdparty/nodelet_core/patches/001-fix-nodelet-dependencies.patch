@@ -1,0 +1,11 @@
+--- a/nodelet/CMakeLists.txt	2018-12-14 23:53:56.000000000 +0800
++++ b/nodelet/CMakeLists.txt	2019-01-16 11:34:54.488251760 +0800
+@@ -42,7 +42,7 @@
+
+ add_library(nodeletlib src/nodelet_class.cpp src/loader.cpp src/callback_queue.cpp src/callback_queue_manager.cpp)
+ target_link_libraries(nodeletlib ${catkin_LIBRARIES} ${BOOST_LIBRARIES})
+-add_dependencies(nodeletlib ${nodelet_EXPORTED_TARGETS})
++#add_dependencies(nodeletlib ${nodelet_EXPORTED_TARGETS})
+
+ add_executable(nodelet src/nodelet.cpp)
+ target_link_libraries(nodelet nodeletlib ${UUID_LIBRARIES} ${catkin_LIBRARIES} ${BOOST_LIBRARIES})

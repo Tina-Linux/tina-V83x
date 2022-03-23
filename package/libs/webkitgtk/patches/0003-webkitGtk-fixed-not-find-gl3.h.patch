@@ -1,0 +1,26 @@
+From e832e89970a95f1f522fa48fbd1a843c01b40bc6 Mon Sep 17 00:00:00 2001
+From: xielinfei <xielinfei@allwinnertech.com>
+Date: Tue, 13 Mar 2018 20:04:01 +0800
+Subject: [PATCH] webkitGtk: fixed not find gl3.h
+
+Signed-off-by: xielinfei <xielinfei@allwinnertech.com>
+---
+ Source/WebCore/platform/graphics/GLContext.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Source/WebCore/platform/graphics/GLContext.cpp b/Source/WebCore/platform/graphics/GLContext.cpp
+index 599dcc0..89c6377 100644
+--- a/Source/WebCore/platform/graphics/GLContext.cpp
++++ b/Source/WebCore/platform/graphics/GLContext.cpp
+@@ -31,7 +31,7 @@
+ #elif USE(OPENGL_ES_2)
+ #define GL_GLEXT_PROTOTYPES 1
+ #include <GLES2/gl2.h>
+-#include <GLES3/gl3.h>
++/*#include <GLES3/gl3.h>*/
+ #endif
+ 
+ #if USE(GLX)
+-- 
+1.9.1
+

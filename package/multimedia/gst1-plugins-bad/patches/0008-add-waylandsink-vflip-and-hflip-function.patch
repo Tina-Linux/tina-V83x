@@ -1,0 +1,183 @@
+diff --git a/ext/wayland/gstwaylandsink.c b/ext/wayland/gstwaylandsink.c
+index 6dbe9ff..8069603 100644
+--- a/ext/wayland/gstwaylandsink.c
++++ b/ext/wayland/gstwaylandsink.c
+@@ -65,7 +65,22 @@ enum
+   PROP_WAYLAND_POSITION_X, /* add property (position_x) */
+   PROP_WAYLAND_POSITION_Y, /* add property (position_y) */
+   PROP_WAYLAND_OUT_WIDTH,  /* add property (out_width) */
+-  PROP_WAYLAND_OUT_HEIGHT  /* add property (out_height) */
++  PROP_WAYLAND_OUT_HEIGHT, /* add property (out_height) */
++  PROP_WAYLAND_OUT_VFLIP,  /* add property (out_vflip) */
++  PROP_WAYLAND_OUT_HFLIP,  /* add property (out_hflip) */
++  PROP_WAYLAND_OUT_TRANSFORM  /* add property (out_transform) */
++};
++
++enum
++{
++  WAYLAND_OUT_TRANSFORM_NORMAL,
++  WAYLAND_OUT_TRANSFORM_90,
++  WAYLAND_OUT_TRANSFORM_180,
++  WAYLAND_OUT_TRANSFORM_270,
++  WAYLAND_OUT_TRANSFORM_FLIPPED,
++  WAYLAND_OUT_TRANSFORM_FLIPPED_90,
++  WAYLAND_OUT_TRANSFORM_FLIPPED_180,
++  WAYLAND_OUT_TRANSFORM_FLIPPED_270
+ };
+
+ GST_DEBUG_CATEGORY (gstwayland_debug);
+@@ -267,6 +282,36 @@ gst_wayland_sink_class_init (GstWaylandSinkClass * klass)
+                         1080,
+                         0,
+                         G_PARAM_READWRITE));
++  /* install property (out_transform) */
++  g_object_class_install_property (G_OBJECT_CLASS(klass), PROP_WAYLAND_OUT_TRANSFORM,
++      g_param_spec_int ("transform",
++                        "transform",
++                        "Wayland  Out_transform value from the application",
++                        0,
++                        7,
++                        0,
++                        G_PARAM_READWRITE));
++  /* install property (out_vflip) */
++  g_object_class_install_property (G_OBJECT_CLASS(klass), PROP_WAYLAND_OUT_VFLIP,
++      g_param_spec_int ("vflip",
++                        "transform",
++                        "Wayland  Out_vertial_flip value from the application",
++                        0,
++                        1,
++                        0,
++                        G_PARAM_READWRITE));
++  /* install property (out_hflip) */
++  g_object_class_install_property (G_OBJECT_CLASS(klass), PROP_WAYLAND_OUT_HFLIP,
++      g_param_spec_int ("hflip",
++                        "transform",
++                        "Wayland  Out_horizontal_flip value from the application",
++                        0,
++                        1,
++                        0,
++                        G_PARAM_READWRITE));
++
++
++
+ }
+
+ static void
+@@ -279,6 +324,9 @@ gst_wayland_sink_init (GstWaylandSink * sink)
+   sink->scale = 0;
+   sink->out_width = 0;
+   sink->out_height = 0;
++  sink->out_transform = -1;
++  sink->out_vflip = 0;
++  sink->out_hflip = 0;
+ }
+
+ static void
+@@ -305,10 +353,22 @@ gst_wayland_sink_get_property (GObject * object,
+ 	  /* set out_width property */
+ 	  g_value_set_int (value, sink->out_width);
+ 	  break;
+-	  case PROP_WAYLAND_OUT_HEIGHT:
++	case PROP_WAYLAND_OUT_HEIGHT:
+ 	  /* set out_height property */
+ 	  g_value_set_int (value, sink->out_height);
+ 	  break;
++	case PROP_WAYLAND_OUT_TRANSFORM:
++	  /* set out_transform property */
++	  g_value_set_int (value, sink->out_transform);
++	  break;
++	case PROP_WAYLAND_OUT_VFLIP:
++	  /* set out_vflip property */
++	  g_value_set_int (value, sink->out_vflip);
++	  break;
++	case PROP_WAYLAND_OUT_HFLIP:
++	  /* set out_hflip property */
++	  g_value_set_int (value, sink->out_hflip);
++	  break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -339,10 +399,22 @@ gst_wayland_sink_set_property (GObject * object,
+ 	  /* get out_width property */
+ 	  sink->out_width = g_value_get_int (value);
+ 	  break;
+-	  case PROP_WAYLAND_OUT_HEIGHT:
++	case PROP_WAYLAND_OUT_HEIGHT:
+ 	  /* get out_height property */
+ 	  sink->out_height = g_value_get_int (value);
+ 	  break;
++	case PROP_WAYLAND_OUT_TRANSFORM:
++	  /* get out_tranform property */
++	  sink->out_transform = g_value_get_int (value);
++	  break;
++	case PROP_WAYLAND_OUT_VFLIP:
++	  /* get out_vflip property */
++	  sink->out_vflip = g_value_get_int (value);
++	  break;
++	case PROP_WAYLAND_OUT_HFLIP:
++	  /* get out_hflip property */
++	  sink->out_hflip = g_value_get_int (value);
++	  break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -431,6 +503,15 @@ gst_wayland_sink_find_display (GstWaylandSink * sink)
+ 		sink->display->position_y = sink->position_y;
+ 		sink->display->out_width = sink->out_width;
+ 		sink->display->out_height = sink->out_height;
++		/* set flip and hflip */
++		if (sink->out_vflip)
++			sink->display->out_transform = WAYLAND_OUT_TRANSFORM_FLIPPED_180;
++		if (sink->out_hflip)
++			sink->display->out_transform = WAYLAND_OUT_TRANSFORM_FLIPPED;
++		if (sink->out_vflip && sink->out_hflip)
++			sink->display->out_transform = WAYLAND_OUT_TRANSFORM_180;
++
++
+         GST_OBJECT_UNLOCK (sink);
+
+         if (error) {
+diff --git a/ext/wayland/gstwaylandsink.h b/ext/wayland/gstwaylandsink.h
+index c3ec0df..599eaf6 100644
+--- a/ext/wayland/gstwaylandsink.h
++++ b/ext/wayland/gstwaylandsink.h
+@@ -70,7 +70,10 @@ struct _GstWaylandSink
+   gint position_y;  /* property(position_y) */
+   gint out_width;   /* property out_width */
+   gint out_height;  /* property out_height */
++  gint out_vflip;
++  gint out_hflip;
+   uint32_t scale;
++  gint out_transform;  /* property out_transform */
+ };
+
+ struct _GstWaylandSinkClass
+diff --git a/ext/wayland/wldisplay.h b/ext/wayland/wldisplay.h
+index 1568d31..7c43916 100644
+--- a/ext/wayland/wldisplay.h
++++ b/ext/wayland/wldisplay.h
+@@ -70,6 +70,7 @@ struct _GstWlDisplay
+   gint position_y;  /* property(position_y) */
+   gint out_width;   /* property out_width */
+   gint out_height;  /* property out_height */
++  gint out_transform;  /* property out_transform */
+
+   GstVideoCropMeta crop;  /* crop info */
+
+diff --git a/ext/wayland/wlwindow.c b/ext/wayland/wlwindow.c
+index c64f3ce..6b4705e 100644
+--- a/ext/wayland/wlwindow.c
++++ b/ext/wayland/wlwindow.c
+@@ -147,6 +147,12 @@ gst_wl_window_new_internal (GstWlDisplay * display, GMutex * render_lock)
+ 		}
+ 	}
+
++	/* use out_transform to set flip and rotation */
++	if (display->out_transform > 0) {
++		wl_surface_set_buffer_transform(window->area_surface, display->out_transform);
++		wl_surface_set_buffer_transform(window->video_surface, display->out_transform);
++	}
++
+   /* do not accept input */
+   region = wl_compositor_create_region (display->compositor);
+   wl_surface_set_input_region (window->area_surface, region);

@@ -1,0 +1,52 @@
+--- a/src/softkeyboard/animate/animate_sence.c
++++ b/src/softkeyboard/animate/animate_sence.c
+@@ -1,5 +1,6 @@
+ #include <stdio.h>
+ #include <pthread.h>
++#include <sys/time.h>
+ #include <minigui/common.h>
+ #include <minigui/minigui.h>
+ #include <minigui/gdi.h>
+@@ -7,7 +7,7 @@
+ #include <minigui/window.h>
+ 
+ #include "animate.h"
+-
++#define TIMER_ID 100
+ #if KBD_ANIMATE
+ 
+ static inline DWORD getcurtime()
+@@ -511,7 +511,7 @@
+     as->start_time = getcurtime();
+ 	as->old_time = as->start_time;
+ 
+-	return SetTimerEx((HWND)as, 0, as->interval/10, as_timer_draw);
++	return SetTimerEx((HWND)as, TIMER_ID, as->interval/10, as_timer_draw);
+ }
+ 
+ static BOOL as_set_state(ANIMATE_SENCE *as, int state)
+--- a/src/pinyin.h
++++ b/src/pinyin.h
+@@ -51,10 +51,10 @@
+ #define PINYIN_AREA_WIDTH 20
+ 
+ /***************/
+-#ifdef WIN32
++/*#ifdef WIN32*/
+ typedef unsigned short u_short;
+ typedef unsigned char u_char;
+-#endif
++/*#endif*/
+ /***************/
+ 
+ /* Max single char pinyin length: 6, zhuang, chuang ... */
+--- a/src/softkeyboard/animate/animate.h
++++ b/src/softkeyboard/animate/animate.h
+@@ -1,6 +1,7 @@
+ #ifndef __ANIMATE_H__
+ #define __ANIMATE_H__
+ 
++#include <pthread.h>
+ #include <minigui/common.h>
+ #include <minigui/fixedmath.h>
+ #include "../../mgiconfig.h"

@@ -1,0 +1,40 @@
+From 45c9aca3119d99f52f8f1d755fb202677c726d92 Mon Sep 17 00:00:00 2001
+From: leo <leo.feng@citybrandhk.com>
+Date: Fri, 9 Nov 2018 11:56:14 +0800
+Subject: [PATCH] 180-fix_link_segfault
+
+---
+ Makefile.shared | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/Makefile.shared b/Makefile.shared
+index 4f9550a..43efd50 100644
+--- a/Makefile.shared
++++ b/Makefile.shared
+@@ -102,9 +102,7 @@ LINK_APP=	\
+     LDCMD="$${LDCMD:-$(CC)}"; LDFLAGS="$${LDFLAGS:-$(CFLAGS) $(LDFLAGS)}"; \
+     LIBPATH=`for x in $$LIBDEPS; do echo $$x; done | sed -e 's/^ *-L//;t' -e d | uniq`; \
+     LIBPATH=`echo $$LIBPATH | sed -e 's/ /:/g'`; \
+-    echo LD_LIBRARY_PATH=$$LIBPATH:$$LD_LIBRARY_PATH \
+-        $${LDCMD} $${LDFLAGS} -o $${APPNAME:=$(APPNAME)} $(OBJECTS) $${LIBDEPS}; \
+-    LD_LIBRARY_PATH=$$LIBPATH:$$LD_LIBRARY_PATH \
++    echo $${LDCMD} $${LDFLAGS} -o $${APPNAME:=$(APPNAME)} $(OBJECTS) $${LIBDEPS}; \
+     $${LDCMD} $${LDFLAGS} -o $${APPNAME:=$(APPNAME)} $(OBJECTS) $${LIBDEPS} )
+ 
+ LINK_SO=	\
+@@ -114,11 +112,9 @@ LINK_SO=	\
+     SHAREDFLAGS="$${SHAREDFLAGS:-$(CFLAGS) $(SHARED_LDFLAGS)}"; \
+     LIBPATH=`for x in $$LIBDEPS; do echo $$x; done | sed -e 's/^ *-L//;t' -e d | uniq`; \
+     LIBPATH=`echo $$LIBPATH | sed -e 's/ /:/g'`; \
+-    echo LD_LIBRARY_PATH=$$LIBPATH:$$LD_LIBRARY_PATH \
+-         $${SHAREDCMD} $${SHAREDFLAGS} \
++    echo $${SHAREDCMD} $${SHAREDFLAGS} \
+ 	     -o $(SHLIBNAME_FULL) \
+ 	     $$ALLSYMSFLAGS $$SHOBJECTS $$NOALLSYMSFLAGS $$LIBDEPS; \
+-    LD_LIBRARY_PATH=$$LIBPATH:$$LD_LIBRARY_PATH \
+     $${SHAREDCMD} $${SHAREDFLAGS} \
+ 	-o $(SHLIBNAME_FULL) \
+ 	$$ALLSYMSFLAGS $$SHOBJECTS $$NOALLSYMSFLAGS $$LIBDEPS \
+-- 
+1.9.1
+

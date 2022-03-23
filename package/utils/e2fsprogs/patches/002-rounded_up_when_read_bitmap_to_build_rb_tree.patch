@@ -1,0 +1,13 @@
+Index: e2fsprogs-1.42.12/lib/ext2fs/rw_bitmaps.c
+===================================================================
+--- e2fsprogs-1.42.12.orig/lib/ext2fs/rw_bitmaps.c
++++ e2fsprogs-1.42.12/lib/ext2fs/rw_bitmaps.c
+@@ -189,7 +189,7 @@ static errcode_t read_bitmaps(ext2_filsy
+ 	char *buf;
+ 	errcode_t retval;
+ 	int block_nbytes = EXT2_CLUSTERS_PER_GROUP(fs->super) / 8;
+-	int inode_nbytes = EXT2_INODES_PER_GROUP(fs->super) / 8;
++	int inode_nbytes = (EXT2_INODES_PER_GROUP(fs->super) + 7)/ 8;
+ 	int csum_flag = 0;
+ 	unsigned int	cnt;
+ 	blk64_t	blk;

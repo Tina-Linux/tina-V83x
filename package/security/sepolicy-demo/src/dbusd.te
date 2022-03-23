@@ -1,0 +1,32 @@
+# dbus daemon
+type dbusd, domain;
+type dbusd_exec, exec_type, file_type;
+# permissive dbusd;
+domain_auto_trans(init,dbusd_exec,dbusd)
+# domain_auto_trans(dbusd,busybox_exec,busybox)
+# domain_auto_trans(dbusd,start_stop_exec,start_stop)
+# domain_auto_trans(dbusd,ubusd_exec,ubusd)
+
+# allow dbusd dbusd_exec:file { execute execute_no_trans open };
+
+allow dbusd self:capability { setgid setuid sys_resource };
+allow dbusd console_device:chr_file read;
+# allow dbusd serial_device:chr_file rw_file_perms;
+
+allow dbusd init:fifo_file { read write };
+# allow dbusd system_file:file { execute execute_no_trans open execmod };
+# allow dbusd temp_exec:file {read getattr execute execute_no_trans open execmod};
+# allow dbusd temp_exec:lnk_file { getattr open read execute };
+
+# allow dbusd { etc_selinux etc_initd }:dir { search open read getattr };
+allow dbusd etc_passwd:file r_file_perms;
+
+allow dbusd tmpfs:dir create_dir_perms;
+allow dbusd tmpfs:file create_file_perms;
+allow dbusd tmpfs:sock_file create_file_perms;
+
+allow dbusd start_stop:fd use;
+
+allow dbusd bluetoothd:dir search;
+allow dbusd bluetoothd:file r_file_perms;
+

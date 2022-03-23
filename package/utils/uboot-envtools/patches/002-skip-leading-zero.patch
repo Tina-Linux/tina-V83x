@@ -1,0 +1,86 @@
+diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
+index 0e3e343..b420984 100644
+--- a/tools/env/fw_env.c
++++ b/tools/env/fw_env.c
+@@ -397,8 +397,15 @@ static char *envmatch(char *s1, char *s2)
+ char *fw_getenv (char *name)
+ {
+ 	char *env, *nxt;
++	for (nxt = environment.data; !(*nxt); ++nxt) {
++		if (nxt >= &environment.data[ENV_SIZE]) {
++			fprintf (stderr, "## Error: "
++				"environment is empty\n");
++			return NULL;
++		}
++	}
+ 
+-	for (env = environment.data; *env; env = nxt + 1) {
++	for (env = nxt; *env; env = nxt + 1) {
+ 		char *val;
+ 
+ 		for (nxt = env; *nxt; ++nxt) {
+@@ -423,8 +430,15 @@ char *fw_getenv (char *name)
+ char *fw_getdefenv(char *name)
+ {
+ 	char *env, *nxt;
++	for (nxt = default_environment; !(*nxt); ++nxt) {
++		if (nxt >= &default_environment[ENV_SIZE]) {
++			fprintf (stderr, "## Error: "
++				"default environment is empty\n");
++			return NULL;
++		}
++	}
+ 
+-	for (env = default_environment; *env; env = nxt + 1) {
++	for (env = nxt; *env; env = nxt + 1) {
+ 		char *val;
+ 
+ 		for (nxt = env; *nxt; ++nxt) {
+@@ -464,7 +478,14 @@ int fw_printenv(int argc, char *argv[], int value_only, struct env_opts *opts)
+ 
+ 	if (argc == 0) {		/* Print all env variables  */
+ 		char *env, *nxt;
+-		for (env = environment.data; *env; env = nxt + 1) {
++		for (nxt = environment.data; !(*nxt); ++nxt) {
++			if (nxt >= &environment.data[ENV_SIZE]) {
++				fprintf (stderr, "## Error: "
++					"environment is empty\n");
++				return -1;
++			}
++		}
++		for (env = nxt; *env; env = nxt + 1) {
+ 			for (nxt = env; *nxt; ++nxt) {
+ 				if (nxt >= &environment.data[ENV_SIZE]) {
+ 					fprintf (stderr, "## Error: "
+@@ -539,7 +560,14 @@ int fw_env_write(char *name, char *value)
+ 	/*
+ 	 * search if variable with this name already exists
+ 	 */
+-	for (nxt = env = environment.data; *env; env = nxt + 1) {
++	for (nxt = environment.data; !(*nxt); ++nxt) {
++		if (nxt >= &environment.data[ENV_SIZE]) {
++			fprintf (stderr, "## Error: "
++				"environment is empty\n");
++			return -1;
++		}
++	}
++	for (env = nxt; *env; env = nxt + 1) {
+ 		for (nxt = env; *nxt; ++nxt) {
+ 			if (nxt >= &environment.data[ENV_SIZE]) {
+ 				fprintf(stderr, "## Error: "
+@@ -615,7 +643,14 @@ int fw_env_write(char *name, char *value)
+ 	/*
+ 	 * Append new definition at the end
+ 	 */
+-	for (env = environment.data; *env || *(env + 1); ++env);
++	for (nxt = environment.data; !(*nxt); ++nxt) {
++		if (nxt >= &environment.data[ENV_SIZE]) {
++			fprintf (stderr, "## Error: "
++				"environment is empty\n");
++			return -1;
++		}
++	}
++	for (env = nxt; *env || *(env + 1); ++env);
+ 	if (env > environment.data)
+ 		++env;
+ 	/*

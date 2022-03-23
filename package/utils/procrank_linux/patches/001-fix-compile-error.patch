@@ -1,0 +1,26 @@
+diff --git a/Makefile b/Makefile
+index 238a792..bc9bcc7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -10,6 +10,8 @@ BINDIR ?= usr/bin
+ LOCAL_CFLAGS ?= -Wall
+ PROGRAM = procrank
+ 
++all: $(PROGRAM) install
++
+ $(PROGRAM): $(PROGRAM).c libpagemap/libpagemap.a
+ 	$(CC) $(CFLAGS) $(LOCAL_CFLAGS) $(LDFLAGS) $(PROGRAM).c -Ilibpagemap/include -Llibpagemap -lpagemap -o $@
+ 
+diff --git a/libpagemap/Makefile b/libpagemap/Makefile
+index 5cd3a4c..dc942d6 100644
+--- a/libpagemap/Makefile
++++ b/libpagemap/Makefile
+@@ -12,7 +12,7 @@ LOCAL_OBJ_FILES := \
+ 	strlcpy.o
+ 
+ LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
+-CFLAGS += -I$(LOCAL_C_INCLUDES) -c -D_LARGEFILE64_SOURCE
++override CFLAGS += -I$(LOCAL_C_INCLUDES) -c -D_LARGEFILE64_SOURCE
+ 
+ all: libpagemap.a
+ 

@@ -1,0 +1,8 @@
+config TINATEST_SYS_GLOBAL_INFO
+    bool "info"
+    default y
+
+if TINATEST_SYS_GLOBAL_INFO
+    source outlog/Config.in
+    source collectd/Config.in
+endif

@@ -1,0 +1,280 @@
+Index: procd-2016-02-08/CMakeLists.txt
+===================================================================
+--- procd-2016-02-08.orig/CMakeLists.txt
++++ procd-2016-02-08/CMakeLists.txt
+@@ -28,6 +28,10 @@ IF(DEBUG)
+   ADD_DEFINITIONS(-DDEBUG -g3)
+ ENDIF()
+
++IF(BOOT_PLAY)
++  ADD_DEFINITIONS(-DBOOT_PLAY=${BOOT_PLAY})
++ENDIF()
++
+ IF(EARLY_PATH)
+   ADD_DEFINITIONS(-DEARLY_PATH="${EARLY_PATH}")
+ ENDIF()
+Index: procd-2016-02-08/initd/early.c
+===================================================================
+--- procd-2016-02-08.orig/initd/early.c
++++ procd-2016-02-08/initd/early.c
+@@ -20,6 +20,8 @@
+ #include <fcntl.h>
+ #include <unistd.h>
+ #include <stdlib.h>
++#include <dirent.h>
++#include <string.h>
+ 
+ #include "init.h"
+ #include "../libc-compat.h"
+@@ -58,6 +60,38 @@ early_console(const char *dev)
+ 	fcntl(STDERR_FILENO, F_SETFL, fcntl(STDERR_FILENO, F_GETFL) | O_NONBLOCK);
+ }
+ 
++#define is_known_file(ent) \
++((ent->d_type&DT_DIR && \
++(strncmp(ent->d_name, ".", 1) == 0 || \
++ strncmp(ent->d_name, "..", 2) == 0)) || \
++(ent->d_type&DT_CHR && \
++ strncmp(ent->d_name, "console", 7) == 0))
++
++static void
++dev_mount(void)
++{
++	DIR *dir;
++	struct dirent *ent;
++	int exist=0;
++
++	dir = opendir("/dev");
++	if (dir == NULL) {
++		mkdir("/dev", 0755);
++		dir = opendir("/dev");
++	}
++
++	while ((ent = readdir(dir)) != NULL) {
++		if (is_known_file(ent))
++			continue;
++		exist = 1;
++		break;
++	}
++
++	if (exist == 0)
++		mount("tmpfs", "/dev", "tmpfs", MS_NOATIME | MS_NOSUID, "mode=0755,size=512K");
++	return;
++}
++
+ static void
+ early_mounts(void)
+ {
+@@ -66,7 +100,7 @@ early_mounts(void)
+ 	mount("proc", "/proc", "proc", MS_NOATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID, 0);
+ 	mount("sysfs", "/sys", "sysfs", MS_NOATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID, 0);
+ 	mount("cgroup", "/sys/fs/cgroup", "cgroup",  MS_NODEV | MS_NOEXEC | MS_NOSUID, 0);
+-	mount("tmpfs", "/dev", "tmpfs", MS_NOATIME | MS_NOSUID, "mode=0755,size=512K");
++	dev_mount();
+ 	ignore(symlink("/tmp/shm", "/dev/shm"));
+ 	mkdir("/dev/pts", 0755);
+ 	mount("devpts", "/dev/pts", "devpts", MS_NOATIME | MS_NOEXEC | MS_NOSUID, "mode=600");
+Index: procd-2016-02-08/initd/init.c
+===================================================================
+--- procd-2016-02-08.orig/initd/init.c
++++ procd-2016-02-08/initd/init.c
+@@ -34,7 +34,6 @@
+ #include "../watchdog.h"
+ 
+ unsigned int debug = 0;
+-pid_t gKmodLoaderPid;
+ 
+ static void
+ signal_shutdown(int signal, siginfo_t *siginfo, void *data)
+@@ -71,8 +70,6 @@ cmdline(void)
+ int
+ main(int argc, char **argv)
+ {
+-	pid_t pid;
+-
+ 	ulog_open(ULOG_KMSG, LOG_DAEMON, "init");
+ 
+ 	sigaction(SIGTERM, &sa_shutdown, NULL);
+@@ -83,31 +80,6 @@ main(int argc, char **argv)
+ 	cmdline();
+ 	watchdog_init(1);
+ 
+-	pid = fork();
+-	if (!pid) {
+-		char *kmod[] = { "/sbin/kmodloader", "/etc/modules-boot.d/", NULL };
+-
+-		if (debug < 3) {
+-			int fd = open("/dev/null", O_RDWR);
+-
+-			if (fd > -1) {
+-				dup2(fd, STDIN_FILENO);
+-				dup2(fd, STDOUT_FILENO);
+-				dup2(fd, STDERR_FILENO);
+-				if (fd > STDERR_FILENO)
+-					close(fd);
+-			}
+-		}
+-		execvp(kmod[0], kmod);
+-		ERROR("Failed to start kmodloader\n");
+-		exit(-1);
+-	}
+-	if (pid <= 0) {
+-		ERROR("Failed to start kmodloader instance\n");
+-	} else {
+-		gKmodLoaderPid = pid;
+-	}
+-
+ 	uloop_init();
+ 	preinit();
+ 	uloop_run();
+Index: procd-2016-02-08/initd/preinit.c
+===================================================================
+--- procd-2016-02-08.orig/initd/preinit.c
++++ procd-2016-02-08/initd/preinit.c
+@@ -24,13 +24,14 @@
+ #include <stdio.h>
+ 
+ #include <unistd.h>
++#include <fcntl.h>
+ 
+ #include "init.h"
+ #include "../watchdog.h"
+ 
+ static struct uloop_process preinit_proc;
+ static struct uloop_process plugd_proc;
+-extern pid_t gKmodLoaderPid;
++static struct uloop_process kmodloader_proc;
+ 
+ static void
+ check_dbglvl(void)
+@@ -50,7 +51,7 @@ check_dbglvl(void)
+ }
+ 
+ static void
+-spawn_procd(struct uloop_process *proc, int ret)
++spawn_procd(void)
+ {
+ 	char *wdt_fd = watchdog_fd();
+ 	char *argv[] = { "/sbin/procd", NULL};
+@@ -64,15 +65,6 @@ spawn_procd(struct uloop_process *proc,
+ 		while (true)
+ 			sleep(1);
+ 
+-	if(gKmodLoaderPid != 0) {
+-		int i;
+-		for (i = 0; i < 120; i++) {
+-			if (waitpid(gKmodLoaderPid, NULL, WNOHANG) > 0)
+-				break;
+-			usleep(10000);
+-			watchdog_ping();
+-		}
+-	}
+ 	unsetenv("INITRAMFS");
+ 	unsetenv("PREINIT");
+ 	DEBUG(2, "Exec to real procd now\n");
+@@ -88,6 +80,43 @@ spawn_procd(struct uloop_process *proc,
+ }
+ 
+ static void
++kmodloader_cb(struct uloop_process *proc, int ret)
++{
++#if BOOT_PLAY == 2
++	char *boot_play_cmd[] = {"/sbin/boot-play", "boot", NULL};
++
++	if (!access(boot_play_cmd[0], F_OK|X_OK) && fork() == 0) {
++		if (debug < 3) {
++			int fd;
++			fd = open("/dev/null", O_RDWR);
++			if (fd > -1) {
++				dup2(fd, STDIN_FILENO);
++				dup2(fd, STDOUT_FILENO);
++				dup2(fd, STDERR_FILENO);
++				if (fd > STDERR_FILENO)
++					close(fd);
++			}
++		}
++		execvp(boot_play_cmd[0], boot_play_cmd);
++		ERROR("Failed to start boot-play\n");
++		exit(-1);
++	}
++#endif
++	proc->pid = 0;
++
++	if (preinit_proc.pid == 0)
++		spawn_procd();
++}
++
++static void
++preinit_proc_cb(struct uloop_process *proc, int ret)
++{
++	proc->pid = 0;
++	if (kmodloader_proc.pid == 0)
++		spawn_procd();
++}
++
++static void
+ plugd_proc_cb(struct uloop_process *proc, int ret)
+ {
+ 	proc->pid = 0;
+@@ -98,8 +127,52 @@ preinit(void)
+ {
+ 	char *init[] = { "/bin/sh", "/etc/preinit", NULL };
+ 	char *plug[] = { "/sbin/procd", "-h", "/etc/hotplug-preinit.json", NULL };
++	char *kmodloader[] = {"/sbin/kmodloader", "/etc/modules-boot.d/", NULL};
+ 
+ 	LOG("- preinit -\n");
++#if BOOT_PLAY == 1
++	char *boot_play_cmd[] = {"/sbin/boot-play", "boot", NULL};
++
++	if (!access(boot_play_cmd[0], F_OK|X_OK) && fork() == 0) {
++		if (debug < 3) {
++			int fd;
++			fd = open("/dev/null", O_RDWR);
++			if (fd > -1) {
++				dup2(fd, STDIN_FILENO);
++				dup2(fd, STDOUT_FILENO);
++				dup2(fd, STDERR_FILENO);
++				if (fd > STDERR_FILENO)
++					close(fd);
++			}
++		}
++		execvp(boot_play_cmd[0], boot_play_cmd);
++		ERROR("Failed to start boot-play\n");
++		exit(-1);
++	}
++#endif
++	kmodloader_proc.cb = kmodloader_cb;
++	kmodloader_proc.pid = fork();
++	if (!kmodloader_proc.pid) {
++		if (debug < 3) {
++			int fd;
++			fd = open("/dev/null", O_RDWR);
++			if (fd > -1) {
++				dup2(fd, STDIN_FILENO);
++				dup2(fd, STDOUT_FILENO);
++				dup2(fd, STDERR_FILENO);
++				if (fd > STDERR_FILENO)
++					close(fd);
++			}
++		}
++		execvp(kmodloader[0], kmodloader);
++		ERROR("Failed to start kmodloader\n");
++		exit(-1);
++	}
++	if (kmodloader_proc.pid <= 0) {
++		ERROR("Failed to start new kmodloader instance\n");
++		return;
++	}
++	uloop_process_add(&kmodloader_proc);
+
+ 	plugd_proc.cb = plugd_proc_cb;
+ 	plugd_proc.pid = fork();
+@@ -116,7 +189,7 @@ preinit(void)
+ 
+ 	setenv("PREINIT", "1", 1);
+ 
+-	preinit_proc.cb = spawn_procd;
++	preinit_proc.cb = preinit_proc_cb;
+ 	preinit_proc.pid = fork();
+ 	if (!preinit_proc.pid) {
+ 		execvp(init[0], init);

@@ -1,0 +1,12 @@
+--- a/src/control/edit.c	2018-04-09 15:25:51.000000000 +0800
++++ b/src/control/edit.c	2018-07-16 17:57:09.000000000 +0800
+@@ -2103,6 +2103,9 @@
+ 
+         if (dwStyle & ES_READONLY)
+             return 0;
++
++	 if (wParam == 127) // BS
++            wParam = '\b';
+             
+         charBuffer [0] = FIRSTBYTE (wParam);
+         charBuffer [1] = SECONDBYTE (wParam);

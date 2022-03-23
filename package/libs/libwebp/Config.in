@@ -1,0 +1,10 @@
+if PACKAGE_webp
+
+config WEBP_DEMUX
+	bool "webpdemux"
+	help
+	  Demux is a part of WebPMux for extraction and manipulation
+	  of an extended format WebP file, which can have features
+	  like color profile, metadata and animation.
+
+endif

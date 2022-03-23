@@ -1,0 +1,13 @@
+--- a/liveMedia/StreamParser.cpp	2019-02-27 16:50:22.000000000 +0800
++++ b/liveMedia/StreamParser.cpp	2019-03-30 16:38:38.787009139 +0800
+@@ -23,7 +23,9 @@
+ #include <string.h>
+ #include <stdlib.h>
+ 
+-#define BANK_SIZE 150000
++/* extended frame resolution buffer size */
++/* frame data exceeds this value and may be discarded */
++#define BANK_SIZE 300000
+ 
+ void StreamParser::flushInput() {
+   fCurParserIndex = fSavedParserIndex = 0;

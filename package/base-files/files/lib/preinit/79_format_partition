@@ -1,0 +1,107 @@
+#!/bin/sh
+# Copyright (C) 2006 OpenWrt.org
+# Copyright (C) 2010 Vertical Communications
+
+do_check_ext4()
+{
+	block info $1 | grep -q "TYPE=\"ext4\""
+	if [ $? -ne 0 ]; then
+		echo "formating $1 to ext4"
+		mkfs.ext4 -m 0 $1
+	else
+		echo $1 "already format by ext4"
+	fi
+}
+
+do_check_jffs2()
+{
+	block info $1 | grep -q "TYPE=\"jffs2\""
+	if [ $? -ne 0 ]; then
+		echo "formating $1 to jffs2"
+		mkdir -p /tmp/jffs2.dir/tmp #mkfs.jffs2 need to point out a directory to copy to image file or local directory(./) defaultly
+		mkfs.jffs2 -p -e 0x$(cat /proc/mtd | grep $(basename $1) | awk '{print $3}') -d /tmp/jffs2.dir -o /tmp/jffs2.img
+		dd if=/tmp/jffs2.img of=$1
+		rm -rf /tmp/jffs2.img /tmp/jffs2.dir
+	else
+		echo $1 "already format by jffs2"
+	fi
+}
+
+do_check_ubifs()
+{
+	block info $1 | grep -q "TYPE=\"ubifs\""
+	if [ $? -ne 0 ]; then
+		echo "formating $1 to ubifs"
+		mkfs.ubifs -x zlib -y $(readlink $1)
+	else
+		echo "$1 already format by ubifs"
+	fi
+}
+
+do_check_format()
+{
+	[ -h $1 ] && {
+		lnk=`basename $(readlink $1)`
+		#emmc
+		[ ${lnk:0:6} = "mmcblk" ] && {
+			do_check_ext4 $1
+			return
+		}
+		#nand
+		[ ${lnk:0:4} = "nand" ] && {
+			do_check_ext4 $1
+			return
+		}
+		#nor
+		[ ${lnk:0:8} = "mtdblock" ] && {
+			do_check_jffs2 $1
+			return
+		}
+		#mtd-nand
+		[ ${lnk:0:3} = "ubi" ] && {
+			do_check_ubifs $1
+			return
+		}
+	}
+}
+
+link_by_name()
+{
+	local parts
+
+	[ -d /dev/by-name -o -h /dev/by-name/rootfs ] || {
+		mkdir -p -m 755 /dev/by-name
+		parts="$(grep -o 'partitions=[^ ]*' /proc/cmdline)"
+		parts=${parts##*=}
+		part=" "
+
+		if [ -n "${parts}" ]; then
+			while [ "$part" != "$parts" ]
+			do
+					part=${parts%%:*}
+					ln -s "/dev/${part#*@}" "/dev/by-name/${part%@*}"
+					parts=${parts#*:}
+			done
+		# partitions may not here, but we still get them for mtd-ubi platform.
+		elif which ubinfo >/dev/null && grep -q "ubi.mtd" /proc/cmdline; then
+			for dev in $(find /dev -name "ubi[0-9]*_[0-9]*")
+			do
+				target="$(ubinfo ${dev} | awk '/^Name:/{print $2}')"
+				[ -z "${target}" ] && continue
+				ln -s "${dev}" "/dev/by-name/${target}"
+			done
+		fi
+	}
+}
+
+do_format_filesystem()
+{
+	link_by_name
+
+	do_check_format /dev/by-name/UDISK
+	do_check_format /dev/by-name/rootfs_data
+	[ -h /dev/by-name/sec_storage ] && do_check_format /dev/by-name/sec_storage
+}
+
+[ "$INITRAMFS" = "1" ] || boot_hook_add preinit_main do_format_filesystem
+[ "$INITRAMFS" = "1" ] && boot_hook_add initramfs do_format_filesystem

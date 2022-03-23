@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+
+START=70
+STOP=90
+
+USE_PROCD=1
+PROG=/usr/sbin/rtk_hciattach
+DEPEN=bluetoothd
+start_service() {
+
+	echo 0 > /sys/class/rfkill/rfkill0/state;
+	echo 1 > /sys/class/rfkill/rfkill0/state;
+	procd_open_instance
+	procd_set_param command "$PROG" -n -s 115200 ttyS1 rtk_h4
+	procd_close_instance
+}
+
+shutdonwn() {
+	echo shutdonwn
+}

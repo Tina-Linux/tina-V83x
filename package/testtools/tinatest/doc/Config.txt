@@ -1,0 +1,268 @@
+** 此文件为配置tinatest.json的编写说明 **
+
+目录:
+1.  简介
+2.  配置树
+3.  系统默认配置值
+4.  定制 - 简介
+5.  定制 - 节点配置
+6.  定制 - 全局限制
+7.  定制 - 全局信息
+8.  定制 - 局部限制
+9.  定制 - 局部信息
+10. 配置示例
+11. 可视化配置(menucofig)
+
+============================分割线===========================
+
+1. 简介
+----------------------------------------------
+   配置文件定义所有有效的测试用例(testcase),控制了所有测试用例以及tinatest的所有行为
+   因此要定制自己的规则,只需要修改配置文件"tinatest.json"
+   -------------
+   配置文件路径:
+   (小机端) /etc/tinatest.json
+   (电脑端) tinatest/src/config/tinatest.json
+   -------------
+   需要注意的是,tinatest支持`make menuconfig`的界面配置,最终执行`convert_json.sh`脚本,
+   根据menuconfig的配置项重新生成'tinatest.json'文件
+   (仅当`make menucofig`使能了`Customize TinaTest options`才会执行`convert_json.sh`脚本)
+   (否则只会拷贝电脑端的tinatest.json到小机端)
+   -------------
+   只要节点存在配置项command,即会判定此节点为用例节点
+   -------------
+   用例执行顺序是根据配置文件从上往下依次执行
+   run_alone: 则等待前面的测试用例结束后再执行此用例,且当此用例结束后才执行下一个用例
+   run_times: 单个测试用例的执行次数,默认执行完一次再执行下一次
+   run_parallel: 并行执行单个用例的所有次数,即不等待上一次完成,直接启动run_times个测试进程
+
+
+2. 配置树
+----------------------------------------------
+   配置树为tinatest.json的结构图,例如:
+   "/stress/reboot" 对应配置文件的路径为:
+   | "/" : {
+   |     "stress" : {
+   |         "reboot" : {
+   |             "enable" : true,
+   |             "command" : "echo \"===== Going to reboot =====\"; reboot -f",
+   |             "run_times" : 1000,
+   |             "may_reboot" : true
+   |         }
+   |     }
+   | }
+
+
+3. 系统默认配置值
+----------------------------------------------
+   系统默认配置值是固化在代码中的测试用例环境值,用于保证当tinatest.json中缺少关
+   键项配置时能用默认值正常执行.
+   因此,配置值优先级为:
+   默认值 < tinatest.json内/sys配置节点 < 测试用例节点个性配置
+
+   系统默认配置值如下:
+   (非下表说明的其他配置项默认值为0/false)
+   (当/sys下无run_times的配置且用例无run_times的个性配置时,默认值才生效)
+   ---------------------
+   | 关键字                | 默认值                | 其他说明
+   | run_cnt_up_to         | 10                    | 最多同时执行任务数
+   | outdir                | "/mnt/UDISK/collectd" | collectd输出目录
+   | collectd_interval_sec | 2                     | collectd收集环境时间间隔
+   | run_times             | 1                     | 默认执行次数
+   | date                  | 1                     | 记录用例执行日期
+   | resource              | 1                     | 记录用例执行占用资源
+   | run_time_sec          | 10000                 | 限制用例执行时间
+
+4.  定制 - 简介
+---------------------------------------------
+   1) 系统配置(/sys)分为4类:
+       节点-配置 : 测试用例节点配置项
+       全局-限制 : /sys/global/limit - 控制tinatest的行为
+       全局-信息 : /sys/global/info - 配置collectd采集的系统环境信息
+       局部-限制 : /sys/local/limit - 测试用例可个性定制的用例限制
+       局部-信息 : /sys/local/info - 测试用例可个性定制的用例信息采集
+       ---------------------
+       Note: 全局 指 只能在/sys/global中修改,测试用例配置节点中配置无效,作用范围为所有测试用例
+             局部 指 既能在/sys/global中修改,也能在测试用例配置节点中配置,且测试用例节点中的配置
+                     会覆盖/sys/global中的配置,作用范围为配置项所在的测试用例
+       ---------------------
+
+   2) 对一个测试用例而言,用例个性配置的优先级：
+       默认值 < tinatest.json内/sys配置节点 < 测试用例节点个性配置
+       例如:
+       | "/" : {                            (在syskey.h中run_times的默认宏值为10)
+       |     "sys" : {
+       |         "local" : {
+       |             "info" : {
+       |                 "run_times" : 5,   (/sys下配置run_times为5)
+       |                 ...
+       |             }
+       |         }
+       |     "demo" : {
+       |         "demo-c" : {
+       |             "command" : "demo-c"
+       |             "run_times" : 100      (测试用例个性配置run_times为100)
+       |         }
+       |         "demo-sh" : {
+       |             "command" : "demo-sh"  (测试用例无run_times的个性配置)
+       |         }
+       |     }
+       | }
+       最终,根据优先级,
+           /demo/demo-c 节点被执行100次(个性配置)
+           /demo/demo-sh 节点被执行5次(tinatest.json内/sys配置节点)
+
+   3) 怎样才是一个有效的测试节点？
+      当节点存在配置 "command" 时为一个有效节点,且本节点无设置enable为false时才能执行
+      例如:
+      配置文件如下:
+       | "/" : {
+       |     "demo" : {
+       |         "enable" : false,
+       |         "demo-c" : {
+       |             "command" : "demo-c"
+       |         }
+       |         "demo-sh" : {
+       |             "command" : "demo-sh"
+       |         }
+       |     }
+       | }
+      命令: tinatest /demo
+      效果: 从/demo节点开始遍历,由于/demo节点设置了enable为false,因此无有效测试节点
+      命令: tinatest /demo/demo-c
+      效果: 从/demo/demo-c节点开始遍历(非/demo开始),因此会执行测试用例demo-c
+
+5.  定制 - 节点配置
+----------------------------------------------
+
+  |   分类   | 配置关键字              |  类型  | 说明
+  | ======== | ======================= | ====== | ===============================================
+  | 节点配置 | command                 | string | 执行用例的shell命令(用例节点标识)
+  | 节点配置 | enable                  | bool   | 此树节点及树叉下所有节点使能标识(默认为true)
+  | 节点配置 | stdin                   | array  | 字符串数组的每个元素为对测试用例的一次输入
+  | 节点配置 | fstdin                  | string | 重定向文件为用例的标准输入(优先级：fstdin < stdin)
+
+6.  定制 - 全局限制
+----------------------------------------------
+
+  |   分类   | 配置关键字              |  类型  | 说明
+  | ======== | ======================= | ====== | ===============================================
+  | 全局限制 | run_cnt_up_to           | int    | 最大同时执行任务数(<=0无效)
+
+7.  定制 - 全局信息
+----------------------------------------------
+
+  |   分类   |  子分类   | 配置关键字              |  类型  | 说明
+  | ======== | ========  | ======================= | ====== | ======================================
+  | 全局信息 | 通用      | collectd_interval_sec   | int    | 系统环境信息采集周期(<=0无效)
+  | 全局信息 | 通用      | enable                  | bool   | collectd单项环境采集使能
+  | 全局信息 | 通用      | match                   | NULL   | 并非配置项,选中后出现具体匹配项
+  | 全局信息 | csv       | outdir                  | string | 采集结果以csv数据格式输出的目录
+  | 全局信息 | rrdtool   | outdir                  | string | 采集结果以rrd数据格式输出的目录
+  | 全局信息 | cpu       | report_to_percentage    | bool   | 以百分比形式记录采集数据
+  | 全局信息 | memory    | report_to_absolute      | bool   | 以绝对值形式记录采集数据
+  | 全局信息 | memory    | report_to_percentage    | bool   | 以百分比形式记录采集数据
+  | 全局信息 | df        | report_to_absolute      | bool   | 以绝对值形式记录采集数据
+  | 全局信息 | df        | report_to_percentage    | bool   | 以百分比形式记录采集数据
+  | 全局信息 | df        | sellect_or_ignore       | string | 忽略匹配项(ignore)or选择匹配项(select)
+  | 全局信息 | df        | device                  | string | df - 匹配的设备名, "ALL"表示所有
+  | 全局信息 | df        | mountpoint              | string | df - 匹配的挂载点, "ALL"表示所有
+  | 全局信息 | df        | fstype                  | string | df - 匹配的文件系统, "ALL"表示所有
+  | 全局信息 | disk      | sellect_or_ignore       | string | 忽略匹配项(ignore)or选择匹配项(select)
+  | 全局信息 | disk      | disk_regular_expression | string | disk - 支持正则表达的设备名
+  | 全局信息 | filecount | directory               | string | 统计的文件夹
+  | 全局信息 | filecount | include_hidden          | bool   | 是否包含隐藏文件
+  | 全局信息 | filecount | include_subdir          | bool   | 是否遍历子目录
+  | 全局信息 | filecount | name                    | string | 匹配文件名(支持通配) (参考find命令)
+  | 全局信息 | filecount | size                    | string | 匹配文件大小 (参考find命令)
+  | 全局信息 | filecount | mtime                   | string | 匹配文件修改时间 (参考find命令)
+  | 全局信息 | ping      | host                    | string | ping - ping的ip
+  | 全局信息 | ping      | send_interval_sec       | string | ping - pint一次的时间间隔(<=0无效)
+                                                              (务必小于collectd_interval_sec)
+  | 全局信息 | ping      | timeout                 | string | ping - ping一次的超时时间
+  | 全局信息 | ping      | max_ttl                 | string | ping - ping一次的ttl上限(0-255)
+
+8.  定制 - 局部限制
+----------------------------------------------
+
+  |   分类   | 配置关键字              |  类型  | 说明
+  | ======== | ======================= | ====== | ======================================
+  | 本地限制 | run_times               | int    | 用例执行次数限制(<=0无效)
+  | 本地限制 | run_alone               | bool   | 用例单独执行(等待之前的任务完成)
+  | 本地限制 | run_parallel            | bool   | 并行执行(同时执行run_times个用例)
+  | 本地限制 | may_reboot              | bool   | 有可能重启(非易失地保存用例数据)
+  | 本地限制 | run_time_sec            | int    | 用例执行时长限制(秒)
+  | 本地限制 | run_time_min            | int    | 用例执行时长限制(分)
+  | 本地限制 | run_time_hour           | int    | 用例执行时长限制(时)
+                                                  (最终限制时间为 [时*60*60 + 分*60 + 秒])
+9.  定制 - 局部信息
+
+  |   分类   | 配置关键字              |  类型  | 说明
+  | ======== | ======================= | ====== | ======================================
+  | 本地信息 | date                    | bool   | 记录用例开始日期和结束日期
+  | 本地信息 | resource                | bool   | 记录用例使用资源情况
+
+10. 配置示例
+----------------------------------------------
+   (1)=================
+    "reboot" : {
+        "command" : "echo \"Going to reboot\"; reboot -f",    ==> 测试命令
+        "may_reboot" : true,    ==> 此用例会重启(且单独执行)
+        "run_times" : 1000    ==> 此用例需要执行1000次
+    }
+
+   (2)=================
+    "sys" : {
+        "global" : {
+            "info" : {
+                "collectd_interval_sec" : 2,    ==> collectd的采集间隔为2秒
+                "collectd_csv" : {
+                    "enable" : true,    ==> 使能csv输出格式
+                    "outdir" : "/mnt/UDISK/collectd"    ==> 输出目录路径
+                },
+                "collectd_rrdtool" : {
+                    "enable" : false,    ==> 关闭rrdtool输出格式
+                },
+                "collectd_cpu" : {
+                    "enable" : true,    ==> 使能collectd的cpu模块
+                    "report_to_percentage" : true    ==> 以百分比的形式记录数据
+                },
+            }
+        }
+        "local" : {
+            "info" : {
+                "date" : true,    ==> 使能记录用例的开始日期和结束日期
+                "resource" : true    ==> 使能记录用例的使用资源
+            },
+            "limit" : {
+                "run_times" : 1,    ==> 默认执行次数为1
+                "run_time_sec" : 10000,   ==> 默认执行时长限制为10000秒
+                "run_time_min" : 0,
+                "run_time_hour" : 0
+            }
+        }
+    },
+    "demo" : {
+        "demo-c" : {
+            "enable" : false,    ==> 取消使能此用例
+            "date" : false,    ==> 此用例取消日期记录
+            "resource" : false,    ==> 此用例取消资源记录
+            "command" : "demo-c",    ==> 测试用例的调用shell命令
+            "run_times" : 100    ==> 此用例执行100次(串行)
+        },
+        "demo-sh" : {
+            "command" : "demo-sh.sh"
+            "run_parallel" : true,    ==> 并行调用测试用例
+            "run_times" : 10    ==> 此用例执行10次(并行)
+        }
+    }
+    此时执行命令: `tt /demo`,则只会并行调用demo-sh测试用例(demo-c没使能),
+    且由于demo-sh没定制date和resource,而/sys/local/info中默认使能date和resource,因此
+    demo-sh会记录开始/结束日期和用例使用资源.
+
+11. 可视化配置(menucofig)
+----------------------------------------------
+   在tina根目录执行`make menuconfig`进入界面配置,路径为:
+     DragonTools --> tinatest
+   当且仅当使能了`Customize TinaTest Options`才会执行`convert_json.sh`脚本根据menuconfig
+   的配置重新自动生成'tinatest.json'

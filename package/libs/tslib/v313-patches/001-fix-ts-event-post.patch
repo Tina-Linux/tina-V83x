@@ -1,0 +1,200 @@
+--- a/plugins/input-raw.c	2018-01-11 21:14:58.000000000 +0800
++++ b/plugins/input-raw.c	2019-04-03 11:29:14.431644239 +0800
+@@ -345,14 +345,28 @@
+ 	if (i->no_pressure)
+ 		set_pressure(i);
+ 
+-	if (i->using_syn) {
+-		while (total < nr) {
+-			ret = read(ts->fd, &ev, sizeof(struct input_event));
+-			if (ret < (int)sizeof(struct input_event)) {
+-				total = -1;
+-				break;
+-			}
++	unsigned char *p = (unsigned char *) &ev;
++	int len = sizeof(struct input_event);
++	while (total < nr) {
++		ret = read(ts->fd, p, len);
++		if (ret < 0) {
++			if (errno == EINTR)
++				continue;
++
++			break;
++		}
++
++		if (ret < len) {
++			/* short read
++			 * restart read to get the rest of the event
++			 */
++			p += ret;
++			len -= ret;
++			continue;
++		}
++		/* successful read of a whole event */
+ 
++		if (i->using_syn) {
+ 			switch (ev.type) {
+ 			case EV_KEY:
+ 				switch (ev.code) {
+@@ -367,8 +381,8 @@
+ 				if (ev.code == SYN_REPORT) {
+ 					/* Fill out a new complete event */
+ 					if (pen_up) {
+-						samp->x = 0;
+-						samp->y = 0;
++						samp->x = i->current_x;
++						samp->y = i->current_y;
+ 						samp->pressure = 0;
+ 						pen_up = 0;
+ 					} else {
+@@ -404,82 +418,75 @@
+ 				}
+ 				break;
+ 			case EV_ABS:
+-				if (i->special_device == EGALAX_VERSION_210) {
++				if (i->special_device == EGALAX_VERSION_210){
+ 					switch (ev.code) {
+-					case ABS_X:
+-						i->current_x = ev.value;
+-						break;
+-					case ABS_Y:
+-						i->current_y = ev.value;
+-						break;
+-					case ABS_PRESSURE:
+-						i->current_p = ev.value;
+-						break;
+-					case ABS_MT_DISTANCE:
+-						if (ev.value > 0)
+-							i->current_p = 0;
+-						else
+-							i->current_p = 255;
+-						break;
++						case ABS_MT_POSITION_X:
++							i->current_x = ev.value;
++                            samp->x = i->current_x;
++							break;
++						case ABS_MT_POSITION_Y:
++							i->current_y = ev.value;
++                            samp->y = i->current_y;
++							break;
++						case ABS_MT_TOUCH_MAJOR:
++							i->current_p = ev.value;
++                            samp->pressure = i->current_p;
++							break;
++						case ABS_MT_DISTANCE:
++							if (ev.value > 0)
++							{
++								i->current_p = 0;
++							}
++							else{
++								i->current_p = 255;                        
++							}
++                            samp->pressure = i->current_p;
++							break;
+ 					}
+-				} else {
++				} else {				
+ 					switch (ev.code) {
+-					case ABS_X:
+-						i->current_x = ev.value;
+-						break;
+-					case ABS_Y:
+-						i->current_y = ev.value;
+-						break;
+-					case ABS_MT_POSITION_X:
+-						i->current_x = ev.value;
+-						i->type_a++;
+-						break;
+-					case ABS_MT_POSITION_Y:
+-						i->current_y = ev.value;
+-						i->type_a++;
+-						break;
+-					case ABS_PRESSURE:
+-						i->current_p = ev.value;
+-						break;
+-					case ABS_MT_PRESSURE:
+-						i->current_p = ev.value;
+-						break;
+-					case ABS_MT_TRACKING_ID:
+-						if (ev.value == -1)
+-							i->current_p = 0;
+-						break;
++						case ABS_X:
++							i->current_x = ev.value;
++							samp->x = i->current_x;
++							break;
++						case ABS_Y:
++							i->current_y = ev.value;
++							samp->y = i->current_y;
++							break;
++						case ABS_MT_POSITION_X:
++							i->current_x = ev.value;
++							samp->x = i->current_x;
++							i->type_a++;
++							break;
++						case ABS_MT_POSITION_Y:
++							i->current_y = ev.value;
++							samp->y = i->current_y;
++							i->type_a++;
++							break;
++						case ABS_PRESSURE:
++							i->current_p = ev.value;
++							samp->pressure = i->current_p;
++							break;
++						case ABS_MT_PRESSURE:
++							i->current_p = ev.value;
++							samp->pressure = i->current_p;
++							break;
++						case ABS_MT_TRACKING_ID:
++							if (ev.value == -1){
++								i->current_p = 255;
++								samp->pressure = i->current_p;
++							}
++							break;
+ 					}
+ 				}
+ 				break;
+ 			}
+-		}
+-		ret = total;
+-	} else {
+-		unsigned char *p = (unsigned char *) &ev;
+-		int len = sizeof(struct input_event);
+-
+-		while (total < nr) {
+-			ret = read(ts->fd, p, len);
+-			if (ret == -1) {
+-				if (errno == EINTR)
+-					continue;
+-
+-				break;
+-			}
+-
+-			if (ret < (int)sizeof(struct input_event)) {
+-				/* short read
+-				 * restart read to get the rest of the event
+-				 */
+-				p += ret;
+-				len -= ret;
+-				continue;
+-			}
+-			/* successful read of a whole event */
++			ret = total;
++		} else {
+ 
+ 			if (ev.type == EV_ABS) {
+ 				switch (ev.code) {
+-				case ABS_X:
++				case ABS_MT_POSITION_X:
+ 					if (ev.value != 0) {
+ 						samp->x = i->current_x = ev.value;
+ 						samp->y = i->current_y;
+@@ -490,7 +497,7 @@
+ 						continue;
+ 					}
+ 					break;
+-				case ABS_Y:
++				case ABS_MT_POSITION_Y:
+ 					if (ev.value != 0) {
+ 						samp->x = i->current_x;
+ 						samp->y = i->current_y = ev.value;

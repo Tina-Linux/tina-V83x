@@ -1,0 +1,25 @@
+From 4f8c0f9cf74547636f24cd61c29f4d208d8c29d0 Mon Sep 17 00:00:00 2001
+From: houxiaoni <houxiaoni@allwinnertech.com>
+Date: Fri, 20 Jul 2018 19:40:15 +0800
+Subject: [PATCH] matroskamux-set-final-total-duration
+
+Signed-off-by: houxiaoni <houxiaoni@allwinnertech.com>
+---
+ gst/matroska/matroska-mux.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/gst/matroska/matroska-mux.c b/gst/matroska/matroska-mux.c
+index 0d129fc..11b9be0
+--- a/gst/matroska/matroska-mux.c
++++ b/gst/matroska/matroska-mux.c
+@@ -3980,6 +3980,7 @@ gst_matroska_mux_handle_buffer (GstCollectPads * pads, GstCollectData * data,
+ 
+   /* write one buffer */
+   ret = gst_matroska_mux_write_data (mux, best, buf);
++  gst_matroska_mux_finish (mux);
+ 
+ exit:
+   return ret;
+-- 
+1.9.1
+

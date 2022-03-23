@@ -1,0 +1,11 @@
+[Unit]
+Requires=sysroot.mount
+Before=initrd-cleanup.service
+After=sysroot.mount
+ConditionPathExists=/etc/initrd-release
+DefaultDependencies=false
+
+[Service]
+Type=oneshot
+ExecStart=/bin/rm -f /sysroot/etc/initrd-release
+ExecStart=/bin/ln -sf /usr/lib/systemd/system/multi-user.target /sysroot/etc/systemd/system/default.target

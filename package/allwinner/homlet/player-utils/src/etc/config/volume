@@ -1,0 +1,5 @@
+
+config setting 'global'
+	option mute '0'
+	option volume '100'
+

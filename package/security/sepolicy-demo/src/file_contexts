@@ -1,0 +1,255 @@
+################################################################################
+# Root
+/(.*)?					u:object_r:system_file:s0
+/OTA_Key_pub.pem			u:object_r:ota_file:s0
+/init_ota				u:object_r:ota_file:s0
+/init_sunxi				u:object_r:init_file:s0
+/pseudo_init				u:object_r:init_file:s0
+/rdinit					u:object_r:init_file:s0
+/init					u:object_r:init_file:s0
+
+################################################################################
+# Bin
+#
+/bin(/.*)?				u:object_r:system_file:s0
+/bin/sh					u:object_r:shell_exec:s0
+/bin/ash				u:object_r:shell_exec:s0
+/bin/bash.bash				u:object_r:shell_exec:s0
+/bin/busybox				u:object_r:busybox_exec:s0
+/bin/busybox.nosuid			u:object_r:busybox_exec:s0
+/bin/busybox.suid			u:object_r:busybox_exec:s0
+/bin/adbd				u:object_r:adbd_exec:s0
+/bin/mount.*				u:object_r:mount_exec:s0
+/bin/umount.*				u:object_r:mount_exec:s0
+/bin/mkdir.*				u:object_r:temp_exec:s0
+/bin/kmod				u:object_r:kmodloader_exec:s0
+/bin/sed				u:object_r:temp_exec:s0
+/bin/grep				u:object_r:temp_exec:s0
+/bin/grep.grep				u:object_r:temp_exec:s0
+/bin/hostname				u:object_r:temp_exec:s0
+/bin/sync				u:object_r:temp_exec:s0
+/bin/date				u:object_r:temp_exec:s0
+/bin/ubus				u:object_r:ubusd_exec:s0
+/bin/rm					u:object_r:temp_exec:s0
+/bin/smartlinkd				u:object_r:smartlinkd_exec:s0
+/bin/setusbconfig			u:object_r:temp_exec:s0
+/bin/ls					u:object_r:temp_exec:s0
+/bin/ln					u:object_r:temp_exec:s0
+/bin/chmod				u:object_r:temp_exec:s0
+/bin/touch				u:object_r:temp_exec:s0
+/bin/board_detect			u:object_r:base_script_exec:s0
+/bin/config_generate			u:object_r:base_script_exec:s0
+################################################################################
+# Etc
+#
+/etc(/.*)?				u:object_r:system_file:s0
+/etc/preinit				u:object_r:preinit_exec:s0
+/etc/init.d(/.*)?			u:object_r:etc_initd:s0
+# /etc/init.d/log				u:object_r:logd_exec:s0
+# /etc/init.d/sysntpd			u:object_r:ntpd_exec:s0
+# /etc/init.d/boot			u:object_r:boot_exec:s0
+# /etc/init.d/dbus			u:object_r:dbusd_exec:s0
+# /etc/init.d/sysfixtime			u:object_r:sysfixtime_exec:s0
+# /etc/init.d/sysctl			u:object_r:sysctl_exec:s0
+# /etc/init.d/cron			u:object_r:cron_exec:s0
+# /etc/init.d/gpio_switch			u:object_r:gpio_switch_exec:s0
+# /etc/init.d/led				u:object_r:led_exec:s0
+# /etc/init.d/adbd			u:object_r:adbd_exec:s0
+# /etc/init.d/network			u:object_r:network_exec:s0
+# /etc/init.d/lvm2			u:object_r:lvm2_exec:s0
+# /etc/init.d/umount			u:object_r:mount_exec:s0
+# /etc/init.d/bluetoothd			u:object_r:bluetoothd_exec:s0
+
+/etc/rc.d(/.*)?			u:object_r:etc_initd:s0
+# /etc/rc.d/[S,K][0-9]*boot			u:object_r:boot_exec:s0
+# /etc/rc.d/[S,K][0-9]*adbd			u:object_r:adbd_exec:s0
+# /etc/rc.d/[S,K][0-9]*busyboxntpd		u:object_r:ntpd_exec:s0
+# /etc/rc.d/[S,K][0-9]*cron			u:object_r:cron_exec:s0
+# /etc/rc.d/[S,K][0-9]*tp_load		u:object_r:kmodloader_exec:s0
+# /etc/rc.d/[S,K][0-9]*wlan_load		u:object_r:kmodloader_exec:s0
+# /etc/rc.d/[S,K][0-9]*udev			u:object_r:udevd_exec:s0
+# /etc/rc.d/[S,K][0-9]*weston		u:object_r:weston_exec:s0
+# /etc/rc.d/[S,K][0-9]*rcinit		u:object_r:rcinit_exec:s0
+# /etc/rc.d/[S,K][0-9]*bluetoothd		u:object_r:bluetoothd_exec:s0
+
+/etc/selinux(/.*)?			u:object_r:etc_selinux:s0
+/etc/shadow				u:object_r:etc_shadow:s0
+/etc/passwd				u:object_r:etc_passwd:s0
+/etc/wpa_supplicant.conf		u:object_r:wpa_cfg:s0
+/etc/wifi(/.*)?				u:object_r:wpa_cfg:s0
+
+
+################################################################################
+# Devices
+#
+/dev(/.*)?				u:object_r:device:s0
+/dev/pts(/.*)?				u:object_r:devpts:s0
+/dev/usb[0-9]*				u:object_r:usb_device:s0
+/dev/event[0-9]*			u:object_r:event_device:s0
+/dev/fb[0-9]*				u:object_r:framebuf_device:s0
+/dev/disp				u:object_r:disp_device:s0
+/dev/dm-[0-9]*				u:object_r:dm_device:s0
+/dev/mapper(/.*)?			u:object_r:dm_device:s0
+/dev/alarm				u:object_r:alarm_device:s0
+/dev/block(/.*)?			u:object_r:block_device:s0
+/dev/block/dm-[0-9]+			u:object_r:dm_device:s0
+/dev/block/loop[0-9]*			u:object_r:loop_device:s0
+/dev/block/vold/.+			u:object_r:vold_device:s0
+/dev/block/ram[0-9]*			u:object_r:ram_device:s0
+/dev/bus/usb(.*)?			u:object_r:usb_device:s0
+/dev/cam				u:object_r:camera_device:s0
+/dev/console				u:object_r:console_device:s0
+/dev/full				u:object_r:full_device:s0
+/dev/fuse				u:object_r:fuse_device:s0
+/dev/hdmi				u:object_r:hdmi_device:s0
+/dev/input(/.*)				u:object_r:input_device:s0
+/dev/ion				u:object_r:ion_device:s0
+/dev/log(/.*)?				u:object_r:log_device:s0
+/dev/mem				u:object_r:kmem_device:s0
+/dev/mtd(/.*)?				u:object_r:mtd_device:s0
+/dev/mmcblk.*				u:object_r:mmc_device:s0
+/dev/nand.*				u:object_r:nand_device:s0
+/dev/ptmx				u:object_r:ptmx_device:s0
+/dev/kmsg				u:object_r:kmsg_device:s0
+/dev/null				u:object_r:null_device:s0
+/dev/random				u:object_r:random_device:s0
+/dev/rtc[0-9]*				u:object_r:rtc_device:s0
+/dev/snd(/.*)?				u:object_r:audio_device:s0
+/dev/pcmC*				u:object_r:audio_device:s0
+/dev/controlC[0-9]*			u:object_r:audio_device:s0
+/dev/tf_driver				u:object_r:tee_device:s0
+/dev/tty				u:object_r:owntty_device:s0
+/dev/tty[0-9a-z]*			u:object_r:tty_device:s0
+/dev/ttyS[0-9]*				u:object_r:serial_device:s0
+/dev/urandom				u:object_r:urandom_device:s0
+# /dev/usb-ffs/adb(/.*)?		u:object_r:functionfs:s0
+/dev/vcs[0-9a-z]*			u:object_r:vcs_device:s0
+/dev/watchdog				u:object_r:watchdog_device:s0
+/dev/zero				u:object_r:zero_device:s0
+/dev/tee0				u:object_r:tee_device:s0
+/dev/teepriv0				u:object_r:tee_device:s0
+/dev/shm				u:object_r:ashmem_device:s0
+/dev/dri/card0				u:object_r:gpu_device:s0
+/dev/android_adb			u:object_r:adb_device:s0
+/dev/rfkill				u:object_r:rfkill_device:s0
+
+/dev/video0				u:object_r:cam_device:s0
+/dev/media0				u:object_r:isp_device:s0
+/dev/v4l-subdev[0-9]*	u:object_r:v4lsub_device:s0
+
+################################################################################
+# Lib
+#
+/lib(/.*)?				u:object_r:system_file:s0
+/lib/modules(/.*)?			u:object_r:kmodloader:s0
+/lib/preinit(/.*)?			u:object_r:preinit_exec:s0
+
+################################################################################
+# Sbin
+#
+/sbin(/.*)?				u:object_r:system_file:s0
+/sbin/askfirst				u:object_r:askfirst_exec:s0
+/sbin/init				u:object_r:init_exec:s0
+/sbin/procd				u:object_r:init_exec:s0
+/sbin/kmodloader			u:object_r:kmodloader_exec:s0
+/sbin/sysctl				u:object_r:temp_exec:s0
+/sbin/ubusd				u:object_r:ubusd_exec:s0
+/sbin/udevd				u:object_r:udevd_exec:s0
+/sbin/mdev				u:object_r:mdev_exec:s0
+/sbin/udevtrigger			u:object_r:udevtrigger_exec:s0
+/sbin/hotplug-call			u:object_r:temp_exec:s0
+/sbin/logd				u:object_r:logd_exec:s0
+/sbin/logread				u:object_r:logd_exec:s0
+/sbin/netifd				u:object_r:netifd_exec:s0
+/sbin/start-stop-daemon			u:object_r:start_stop_exec:s0
+/sbin/syslogd				u:object_r:logd_exec:s0
+/sbin/klogd				u:object_r:logd_exec:s0
+/sbin/restorecon			u:object_r:selinux_exec:s0
+/sbin/mount_root			u:object_r:mount_exec:s0
+/sbin/lvm.*				u:object_r:lvm2_exec:s0
+/sbin/block				u:object_r:mount_exec:s0
+/sbin/uci				u:object_r:temp_exec:s0
+/sbin/validate_data			u:object_r:temp_exec:s0
+/sbin/ifconfig				u:object_r:temp_exec:s0
+/sbin/insmod				u:object_r:kmodloader_exec:s0
+/sbin/hwclock				u:object_r:temp_exec:s0
+/sbin/reload_config			u:object_r:base_script_exec:s0
+/sbin/swupdate_cmd.sh			u:object_r:temp_exec:s0
+################################################################################
+# Usr
+#
+/usr(/.*)?				u:object_r:system_file:s0
+/usr/lib(/.*)?				u:object_r:system_file:s0
+/usr/sbin/dbus-daemon			u:object_r:dbusd_exec:s0
+/usr/sbin/crond				u:object_r:cron_exec:s0
+/usr/sbin/ntpd				u:object_r:ntpd_exec:s0
+/usr/sbin/tee-supplicant		u:object_r:tee_exec:s0
+/usr/sbin/ss_demo			u:object_r:tee_exec:s0
+/usr/sbin/adbd				u:object_r:adbd_exec:s0
+/usr/bin/weston				u:object_r:weston_exec:s0
+/usr/bin/amixer				u:object_r:audio_exec:s0
+/usr/bin/pulseaudio			u:object_r:audio_exec:s0
+/usr/bin/jshn				u:object_r:temp_exec:s0
+/usr/bin/find				u:object_r:temp_exec:s0
+/usr/bin/sort				u:object_r:temp_exec:s0
+/usr/bin/head				u:object_r:temp_exec:s0
+/usr/bin/awk				u:object_r:temp_exec:s0
+/usr/bin/jsonfilter			u:object_r:temp_exec:s0
+/usr/bin/dbus-uuidgen			u:object_r:dbusd_exec:s0
+
+/usr/bin/hotplug.sh			u:object_r:mount_exec:s0
+/usr/bin/readlink			u:object_r:temp_exec:s0
+/usr/sbin/e2fsck			u:object_r:mount_exec:s0
+/usr/sbin/mke2fs			u:object_r:mount_exec:s0
+
+# camera
+/usr/bin/camerademo			u:object_r:cam_exec:s0
+
+# wifi
+/usr/bin/wpa_passphrase			u:object_r:wpa_exec:s0
+/usr/bin/basename			u:object_r:temp_exec:s0
+/usr/bin/bluetoothd			u:object_r:bluetoothd_exec:s0
+
+# fw print & set
+/usr/sbin/fw_setenv			u:object_r:fw_env_exec:s0
+/usr/sbin/fw_printenv			u:object_r:fw_env_exec:s0
+
+/usr/sbin/wpa_supplicant		u:object_r:wpa_exec:s0
+/usr/sbin/wpa_cli			u:object_r:wpa_exec:s0
+/usr/sbin/wifi.*			u:object_r:wpa_exec:s0
+/bin/wifi.*				u:object_r:wpa_exec:s0
+/sbin/wifi				u:object_r:wpa_exec:s0
+
+# ota
+/usr/bin/progress			u:object_r:ota_exec:s0
+
+/usr/bin/logger				u:object_r:temp_exec:s0
+
+/usr/lib/busybox/bin/mkdir		u:object_r:temp_exec:s0
+/usr/lib/busybox/bin/sh			u:object_r:shell_exec:s0
+/usr/lib/busybox/bin/ash		u:object_r:shell_exec:s0
+/usr/lib/busybox/usr/sbin/ntpd		u:object_r:ntpd_exec:s0
+/usr/lib/busybox/usr/sbin/crond		u:object_r:cron_exec:s0
+/usr/lib/busybox/sbin/start-stop-daemon u:object_r:start_stop_exec:s0
+/usr/lib/busybox/sbin/klogd		u:object_r:logd_exec:s0
+/usr/lib/busybox/sbin/syslogd		u:object_r:logd_exec:s0
+
+################################################################################
+# Security
+#
+/data(/.*)?				u:object_r:system_file:s0
+/data/tee(/.*)?				u:object_r:tee_data_file:s0
+
+################################################################################
+# Empty directories
+#
+/lost\+found(/.*)?			u:object_r:system_file:s0
+/home(/.*)?				u:object_r:system_file:s0
+/opt(/.*)?				u:object_r:system_file:s0
+/boot(/.*)?				u:object_r:boot_file:s0
+/bt(/.*)?				u:object_r:system_file:s0
+/root(/.*)?				u:object_r:system_file:s0
+/var(/.*)?				u:object_r:system_file:s0
+/run(/.*)?				u:object_r:system_file:s0
+/mnt(/.*)?				u:object_r:storage_file:s0
+/mnt/UDISK(/.*)?			u:object_r:storage_file:s0

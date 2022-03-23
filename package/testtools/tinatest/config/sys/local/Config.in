@@ -1,0 +1,8 @@
+menuconfig TINATEST_SYS_LOCAL
+    bool "local"
+    default y
+
+if TINATEST_SYS_LOCAL
+    source info/Config.in
+    source limit/Config.in
+endif

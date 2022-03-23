@@ -1,0 +1,15 @@
+--- a/cmake/python.cmake	2018-10-16 01:25:42.000000000 +0800
++++ b/cmake/python.cmake	2018-12-27 14:41:38.628029253 +0800
+@@ -8,9 +8,9 @@ message(STATUS "Using PYTHON_EXECUTABLE:
+ set(_PYTHON_PATH_VERSION_SUFFIX "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
+
+ set(enable_setuptools_deb_layout OFF)
+-if(EXISTS "/etc/debian_version")
+-  set(enable_setuptools_deb_layout ON)
+-endif()
++#if(EXISTS "/etc/debian_version")
++#  set(enable_setuptools_deb_layout ON)
++#endif()
+ option(SETUPTOOLS_DEB_LAYOUT "Enable debian style python package layout" ${enable_setuptools_deb_layout})
+
+ if(SETUPTOOLS_DEB_LAYOUT)

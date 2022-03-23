@@ -1,0 +1,26 @@
+From f949070a97528e622c2e1e401df5c5395a89e44a Mon Sep 17 00:00:00 2001
+From: xielinfei <xielinfei@allwinnertech.com>
+Date: Sat, 10 Feb 2018 17:47:18 +0800
+Subject: [PATCH] bmalloc: Failure to build when the compiler specifically
+ targets ARMv8-A
+
+Signed-off-by: xielinfei <xielinfei@allwinnertech.com>
+---
+ Source/cmake/FindHarfBuzz.cmake    | 2 +-
+ 3 files changed, 5 insertions(+), 3 deletions(-)
+diff --git a/Source/cmake/FindHarfBuzz.cmake b/Source/cmake/FindHarfBuzz.cmake
+index 8440c7b..548f11b 100644
+--- a/Source/cmake/FindHarfBuzz.cmake
++++ b/Source/cmake/FindHarfBuzz.cmake
+@@ -34,7 +34,7 @@ include(FindPkgConfig)
+ 
+ pkg_check_modules(PC_HARFBUZZ harfbuzz>=0.9.7)
+ 
+-find_path(HARFBUZZ_INCLUDE_DIRS NAMES hb.h
++find_path(HARFBUZZ_INCLUDE_DIRS NAMES harfbuzz/hb.h
+     HINTS ${PC_HARFBUZZ_INCLUDE_DIRS} ${PC_HARFBUZZ_INCLUDEDIR}
+ )
+ 
+-- 
+1.9.1
+

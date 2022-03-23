@@ -1,0 +1,9 @@
+menuconfig TINATEST_BASE_AUDIO
+    bool "audio"
+
+if TINATEST_BASE_AUDIO
+    source common/Config.in
+    source headphone_playback/Config.in
+    source speaker_playback/Config.in
+    source mic_capture/Config.in
+endif

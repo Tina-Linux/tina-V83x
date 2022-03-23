@@ -1,0 +1,9 @@
+menuconfig TINATEST_BASE_WIFI
+    bool "wifi"
+
+if TINATEST_BASE_WIFI
+    source wifi_connect/Config.in
+    source wifi_scan/Config.in
+    source wifi_remove_network/Config.in
+    source wifi_remove_all_network/Config.in
+endif

@@ -1,0 +1,59 @@
+if PACKAGE_libminigui-gpl
+choice
+prompt "Preferred Minigui Run Mode"
+	default MINIGUI_THS
+	help
+	Select the preferred minigui running mode.
+config MINIGUI_THS
+	bool "ths"
+config MINIGUI_PROC
+	bool "proc"
+endchoice
+config TTF2_SUPPORT
+    bool "Enabel truetype font support"
+    default y
+        help
+          Enabling True type font support for minigui.
+          You need config the font path in MiniGUI.cfg.
+          And add font in res path.
+          Unless you know what you are doing, you should leave this as 'n'
+config TSLIB_SUPPORT
+    bool "Enabel tslib support for MiniGUI"
+    default n
+        help
+          Enabling tslib ial support for minigui.
+          You need config ialengine in MiniGUI.cfg.
+          And add pointercal in /etc directory.
+		  Unless you know what you are doing, you should leave this as 'n'
+config G2D_SUPPORT
+    bool "Enabel g2d support for MiniGUI"
+    default n
+        help
+        Enabling g2d support for minigui
+config SUNXIFB_SUPPORT
+    bool "Enabel sunxifb support for MiniGUI"
+    default n
+        help
+        Enabling sunxifb support for minigui
+config SUNXIFBION_SUPPORT
+    bool "Enabel sunxifbion support for MiniGUI"
+    default n
+        help
+        Enabling sunxifbion support for minigui
+config CCW_SUPPORT
+    bool "Enabel coortrans cw support for MiniGUI"
+    default n
+        help
+          Enabling rotate support for minigui.
+          You need config system in MiniGUI.cfg.
+          And adjust the width and height.
+		  Unless you know what you are doing, you should leave this as 'n'
+config BUILD_LIB_MIN
+    bool "Enabel reduce size for MiniGUI"
+    default n
+        help
+          Reduce the unwanted function module of minigui.
+          You need config system in MiniGUI.cfg.
+          Adust the font config and reduce cursor resource.
+		  Unless you know what you are doing, you should leave this as 'n'
+endif

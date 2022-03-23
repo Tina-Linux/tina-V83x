@@ -1,0 +1,49 @@
+From 5062aa38d0dd1c3559aae78653f78144db567fb2 Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 18:44:47 +0800
+Subject: [PATCH 5/8] weston: Add read yuv data from bin in simple-dmabuf-intel
+ test
+
+This exmaple is test for weston to compose video layer by GPU or DE
+---
+ clients/simple-dmabuf-intel.c | 24 +++++++++++++-----------
+ 1 file changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/clients/simple-dmabuf-intel.c b/clients/simple-dmabuf-intel.c
+index cf9eae6..cc76eba 100644
+--- a/clients/simple-dmabuf-intel.c
++++ b/clients/simple-dmabuf-intel.c
+@@ -174,17 +174,19 @@ static void
+ fill_content(struct buffer *my_buf)
+ {
+ 	int x = 0, y = 0;
+-	uint32_t *pix;
+-
+-	assert(my_buf->mmap);
+-
+-	for (y = 0; y < my_buf->height; y++) {
+-		pix = (uint32_t *)(my_buf->mmap + y * my_buf->stride);
+-		for (x = 0; x < my_buf->width; x++) {
+-			*pix++ = (0xff << 24) | ((x % 256) << 16) |
+-			         ((y % 256) << 8) | 0xf0;
+-		}
+-	}
++        uint32_t *pix;
++        int nv21_read_fd;
++        void *addr_nv21;
++
++        assert(my_buf->mmap);
++        nv21_read_fd = open("/home/pic_bin/pic_nv21_640x384_8.dat.yuv", O_RDWR);
++        if (nv21_read_fd < 0) {
++                fprintf(stderr, "cannot open nv21 file\n");
++                return;
++        }
++        addr_nv21 = (void *)mmap((void *)0, my_buf->drm_buf.size, PROT_WRITE, MAP_SHARED, nv21_read_fd, 0);
++        memcpy(my_buf->mmap, addr_nv21, my_buf->drm_buf.size);
++        munmap(addr_nv21, my_buf->drm_buf.size);
+ }
+ 
+ #if 0
+-- 
+1.9.1
+

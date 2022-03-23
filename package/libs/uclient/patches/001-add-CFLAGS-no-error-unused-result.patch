@@ -1,0 +1,13 @@
+Index: uclient-2016-01-28/CMakeLists.txt
+===================================================================
+--- uclient-2016-01-28.orig/CMakeLists.txt
++++ uclient-2016-01-28/CMakeLists.txt
+@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
+ INCLUDE(CheckIncludeFiles)
+ 
+ PROJECT(uclient C)
+-ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations)
++ADD_DEFINITIONS(-Os -Wall -Werror -Wno-error=unused-result --std=gnu99 -g3 -Wmissing-declarations)
+ 
+ SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+ 

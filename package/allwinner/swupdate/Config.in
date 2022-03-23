@@ -1,0 +1,17 @@
+if PACKAGE_swupdate
+
+
+config SWUPDATE_CUSTOM
+	bool "Customize swupdate options"
+	default y
+        help
+          Enabling this allows full customization of swupdate settings.
+
+	source "Config-defaults.in"
+
+	if SWUPDATE_CUSTOM
+	source "config/Config.in"
+	endif
+
+
+endif

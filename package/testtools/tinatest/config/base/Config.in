@@ -1,0 +1,11 @@
+menuconfig TINATEST_BASE
+    bool "base"
+    default y
+
+if TINATEST_BASE
+    source production/Config.in
+    source storage/Config.in
+    source audio/Config.in
+    source display/Config.in
+    source wifi/Config.in
+endif

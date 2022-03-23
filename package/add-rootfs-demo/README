@@ -1,0 +1,14 @@
+This package is used to customize the rootfs template
+
+To use this package, add a "package/add-rootfs-demo" list
+usage:
+1.Add your own package or application to the corresponding directory,
+  ---But this package or application needs to be compiled in advance;
+2.Execute the command "add-rootfs-demo"
+
+eg:
+-->source build/envsetup.sh
+-->lunch platform(r40_m2ultra-tina/r18_d1-tina/r6_perf1-tina...)
+-->cd package/add-rootfs-demo
+-->"add your own package or application"
+-->add-rootfs-demo

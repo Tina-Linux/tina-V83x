@@ -1,0 +1,26 @@
+Index: src/util-linux/mkfs_vfat.c
+===================================================================
+--- src.orig/util-linux/mkfs_vfat.c
++++ src/util-linux/mkfs_vfat.c
+@@ -268,8 +268,7 @@ int mkfs_vfat_main(int argc UNUSED_PARAM
+			&& sect_per_clust != 32
+			&& sect_per_clust != 64
+			&& sect_per_clust != 128)) {
+-			fprintf(stderr, "Bad number of sectors per cluster : %s\n", str_sect_per_clust);
+-			return 22;
++			bb_error_msg_and_die("Bad number of sectors per cluster : %s", str_sect_per_clust);
+		}
+	}
+
+@@ -550,8 +549,11 @@ int mkfs_vfat_main(int argc UNUSED_PARAM
+		MARK_CLUSTER(2, EOF_FAT32);
+		for (i = 0; i < NUM_FATS; i++) {
+			xwrite(dev, buf, bytes_per_sect);
+-			for (j = 1; j < sect_per_fat; j++)
++			for (j = 1; j < sect_per_fat; j++) {
+				xwrite(dev, buf + bytes_per_sect, bytes_per_sect);
++				if (j%2000 == 0)
++					fsync(dev);
++			}
+		}
+	}

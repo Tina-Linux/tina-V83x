@@ -1,0 +1,19 @@
+
+This package contains the Bluetooth Application Manager (app_manager) on Linux.
+The BTE version is BTE3.14.2 (with few modifications to remove compilation warnings).
+
+To compile the Bluetooth application Manager have to type:
+> cd 3rdparty/embedded/std/linux/app_manager/build
+> make			<= For PC/Linux target (default)
+> make CPU=mips		<= For STB/Linux target
+
+For PC/Linux target, the application executable is located in build/x86 folder.
+To execute it, you have to go in the folder used to start the server application:
+> cd  ../../server/build/
+> ../../app_manager/build/x86/app_manager
+
+In fact both server and applications need to access the named socket file (bt-daemon-socket),
+which is created when the server is started.
+
+For STB target, the application executable is located in build/mips folder.
+To execute it, you have to copy and to execute it on the STB platform (from the same location used to execute the bt_server).

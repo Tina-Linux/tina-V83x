@@ -1,0 +1,14 @@
+--- a/Modules/_ssl.c	2018-04-30 06:47:33.000000000 +0800
++++ b/Modules/_ssl.c	2019-12-09 10:16:13.628692715 +0800
+@@ -4482,7 +4482,11 @@
+     r = Py_BuildValue("IIIII", major, minor, fix, patch, status);
+     if (r == NULL || PyModule_AddObject(m, "OPENSSL_VERSION_INFO", r))
+         return;
++#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+     r = PyString_FromString(SSLeay_version(SSLEAY_VERSION));
++#else
++    r = PyString_FromString(OpenSSL_version(OPENSSL_VERSION));
++#endif
+     if (r == NULL || PyModule_AddObject(m, "OPENSSL_VERSION", r))
+         return;
+

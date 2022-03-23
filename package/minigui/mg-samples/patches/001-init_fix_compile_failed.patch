@@ -1,0 +1,104 @@
+--- a/lf_skin/lf_skin_res_cn.h
++++ b/lf_skin/lf_skin_res_cn.h
+@@ -1,4 +1,4 @@
+-
++#include <minigui/ctrl/treeview.h>
+ static char* g_pTitleButton = "换肤" ;
+ 
+ static char* g_pHelpList    = "列表" ;
+--- a/commlcd/commlcd_ops.c
++++ b/commlcd/commlcd_ops.c
+@@ -7,6 +7,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <unistd.h>
++#include <sys/time.h>
+ 
+ #include <minigui/common.h>
+ #include <minigui/minigui.h>
+--- a/mgplus/worldtransform/Makefile.am
++++ b/mgplus/worldtransform/Makefile.am
+@@ -4,5 +4,5 @@
+ 
+ worldtransform_SOURCES= worldtransform.c 
+ 
+-worldtransform_LDADD =-lmgplus @APP_LIBS@
++worldtransform_LDADD =-lmgplus
+
+--- a/mgncs/Makefile.am
++++ b/mgncs/Makefile.am
+@@ -1,5 +1,5 @@
+ SUBDIRS=res
+-LDADD=-lmgncs
++LDADD=-lmgncs -lmgplus -lxml2 -lsqlite3 -lmgutils
+ 
+ noinst_PROGRAMS=helloworld helloworld_domodal helloworld_dlgbox \
+     wnd_template event_listener data_source data_binding \
+--- a/mgeff/animation/Makefile.am
++++ b/mgeff/animation/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS= \
+ animation_async     animation_curve        animation_sync    effector_custom \
+--- a/mgeff/ball/Makefile.am
++++ b/mgeff/ball/Makefile.am
+@@ -1,4 +1,3 @@
+-ball_LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=ball
+ ball_SOURCES=ball.c
+--- a/mgeff/banner/Makefile.am
++++ b/mgeff/banner/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=banner
+ banner_SOURCES=banner.c data.c
+--- a/mgeff/btnshow/Makefile.am
++++ b/mgeff/btnshow/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=btnshow
+ btnshow_SOURCES=btnshow.c
+--- a/mgeff/curve/Makefile.am
++++ b/mgeff/curve/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=curve
+ curve_SOURCES=curve.c
+--- a/mgeff/custom-effector/Makefile.am
++++ b/mgeff/custom-effector/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=custom-effector
+ custom_effector_SOURCES=customeffector.c
+--- a/mgeff/effector/Makefile.am
++++ b/mgeff/effector/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=effector
+ effector_SOURCES=effector.c
+--- a/mgeff/image-box/Makefile.am
++++ b/mgeff/image-box/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=image-box
+ image_box_SOURCES=imagebox.c  image.c  image.h
+--- a/mgeff/Makefile.am
++++ b/mgeff/Makefile.am
+@@ -1 +1,2 @@
+ SUBDIRS = animation ball banner btnshow curve custom-effector effector image-box particle-sys
++export LDADD+=-lmgeff -lmgplus
+--- a/mgeff/particle-sys/Makefile.am
++++ b/mgeff/particle-sys/Makefile.am
+@@ -1,4 +1,3 @@
+-LDADD=-lmgeff
+ 
+ noinst_PROGRAMS=particle-sys
+ particle_sys_SOURCES=main.c

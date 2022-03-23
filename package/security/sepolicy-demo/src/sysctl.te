@@ -1,0 +1,20 @@
+type sysctl, domain, mlstrustedsubject;
+# permissive sysctl;
+type sysctl_exec, exec_type, file_type;
+
+#domain_auto_trans(shell,sysctl_exec,sysctl)
+domain_auto_trans(init,sysctl_exec,sysctl)
+# domain_auto_trans(sysctl,busybox_exec,busybox)
+
+# allow sysctl console_device:chr_file { read write };
+# allow sysctl serial_device:chr_file rw_file_perms;
+# allow sysctl init:fifo_file { read write };
+
+# allow sysctl system_file:file { execute execute_no_trans open execmod };
+# allow sysctl proc:file write;
+# allow sysctl usermodehelper:file rw_file_perms;
+# allow sysctl proc_net:file rw_file_perms;
+
+# allow sysctl { etc_selinux etc_initd }:dir { search open read getattr };
+
+# allow sysctl self:capability net_admin;

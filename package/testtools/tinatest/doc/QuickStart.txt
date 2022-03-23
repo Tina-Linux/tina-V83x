@@ -1,0 +1,64 @@
+** 此文件为快速开始指引,主要是tinatest命令的使用 **
+
+目录:
+1. 简介
+2. 配置树
+3. 命令说明
+
+============================分割线===========================
+
+1. 简介
+----------------------------------------------
+   tinatest软连接为命令tt。
+   tinatest命令只能调用测试用例和打印配置树,复杂行为由配置文件tinatest.json配置。
+   配置文件的编写规则见 "Config.txt"。
+
+2. 配置树
+----------------------------------------------
+   配置树为tinatest.json的结构图,例如:
+   "/stress/reboot" 对应配置文件的路径为:
+   | "/" : {
+   |     "stress" : {
+   |         "reboot" : {
+   |             "enable" : true,
+   |             "command" : "echo \"===== Going to reboot =====\"; reboot -f",
+   |             "run_times" : 1000,
+   |             "may_reboot" : true
+   |         }
+   |     }
+   | }
+
+3. 命令说明
+----------------------------------------------
+tinatest [-p] [path1] [path2] ...
+Note:
+    1. 也可由命令tt调用,tt是tinatest的软链接
+    2. -p : 打印配置树,
+       eg. tinatest -p /stress/reboot (打印/stress/reboot路径下的配置,配置实例见 2.配置树)
+       输出:
+           . (/stress/reboot)
+           |-- enable = TRUE
+           |-- command = "echo \"==== Going to reboot ====\"; reboot -f"
+           |-- run_times = 1000
+           |-- may_reboot = TRUE
+    3. 可通过多个绝对路径参数选择执行(或打印)指定的树节点测试用例
+       例如:
+       配置文件为:
+       | "/" : {
+       |     ...
+       |     "demo" : {
+       |         "demo-c" : {
+       |             "command" : "demo-c"
+       |         }
+       |         "demo-sh" : {
+       |             "enable" : false,
+       |             "command" : "demo-sh"
+       |         }
+       |     }
+       |     ...
+       | }
+       执行命令: tinatest /demo (等效于: tinatest /demo/demo-c /demo/demo-sh)
+       执行过程: 遍历demo节点下的所有有效节点(有command项),发现有demo-c和demo-sh,但是由于
+       demo-sh的配置了enable项为false,因此最终只有demo-c被执行。
+    4. 当无指定测试用例路径,则执行配置文件下所有有效节点
+       例如: tinatest 等效于 tinatest /

@@ -1,0 +1,8 @@
+menuconfig TINATEST_SPEC_STORAGE
+    bool "storage"
+
+if TINATEST_SPEC_STORAGE
+    source rand/Config.in
+    source seq/Config.in
+    source tiny-seq/Config.in
+endif

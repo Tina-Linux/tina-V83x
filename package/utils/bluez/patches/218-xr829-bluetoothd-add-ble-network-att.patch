@@ -1,0 +1,149 @@
+From 8b63e1e3606b77899bd6e4c09aae0b174e80555c Mon Sep 17 00:00:00 2001
+From: liumingyuan <liumingyuan@allwinnertech.com>
+Date: Mon, 25 Feb 2019 16:23:27 +0800
+Subject: [PATCH] bluez:xr829:bluetoothd add ble network att
+
+Signed-off-by: liumingyuan <liumingyuan@allwinnertech.com>
+---
+ src/gatt-database.c | 104 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 104 insertions(+)
+
+diff --git a/src/gatt-database.c b/src/gatt-database.c
+index b8da955..5af6ece 100644
+--- a/src/gatt-database.c
++++ b/src/gatt-database.c
+@@ -61,6 +61,19 @@
+ #define UUID_GAP	0x1800
+ #define UUID_GATT	0x1801
+ 
++#ifdef XR829_BT
++/* For Xradio */
++#define UUID_XRADIO	0x1f3a
++#define XRADIO_CHARAC_DISTRIBUTION_NETWORK	0xfff0
++#define XRADIO_DATABASE_MAX_SSID_LEN	32
++#define XRADIO_DATABASE_MAX_PW_LEN	64
++
++struct xradio_database {
++	char ssid[XRADIO_DATABASE_MAX_SSID_LEN];
++	char password[XRADIO_DATABASE_MAX_PW_LEN];
++};
++#endif
++
+ #ifndef MIN
+ #define MIN(a, b) ((a) < (b) ? (a) : (b))
+ #endif
+@@ -79,6 +92,9 @@ struct btd_gatt_database {
+ 	struct gatt_db_attribute *svc_chngd_ccc;
+ 	struct queue *apps;
+ 	struct queue *profiles;
++#ifdef XR829_BT
++	struct xradio_database xr_db;
++#endif
+ };
+ 
+ struct gatt_app {
+@@ -683,6 +699,91 @@ static void populate_gap_service(struct btd_gatt_database *database)
+ 	gatt_db_service_set_active(service, true);
+ }
+ 
++#ifdef XR829_BT
++static void xradio_dn_read_cb(struct gatt_db_attribute *attrib,
++					unsigned int id, uint16_t offset,
++					uint8_t opcode, struct bt_att *att,
++					void *user_data)
++{
++	struct btd_gatt_database *database = user_data;
++	uint8_t error = 0;
++	size_t len = 0;
++	const uint8_t *value = NULL;
++	const char *ssid;
++
++	DBG("Xradio Distribution Network attribute read request\n");
++
++	ssid = database->xr_db.ssid;
++	len = strlen(ssid);
++	DBG("ssid len = %d, ssid = %s\n", len, ssid);
++
++	if (offset > len) {
++		error = BT_ATT_ERROR_INVALID_OFFSET;
++		goto done;
++	}
++
++	len -= offset;
++	value = len ? (const uint8_t *) &ssid[offset] : NULL;
++
++done:
++	gatt_db_attribute_read_result(attrib, id, error, value, len);
++}
++
++static void xradio_dn_write_cb(struct gatt_db_attribute *attrib,
++					unsigned int id, uint16_t offset,
++					const uint8_t *value, size_t len,
++					uint8_t opcode, struct bt_att *att,
++					void *user_data)
++{
++	struct btd_gatt_database *database = user_data;
++	uint8_t error = 0;
++	char *ssid;
++
++	DBG("Xradio Distribution Network attribute write request\n");
++
++	ssid = database->xr_db.ssid;
++
++	if (!value || !len || len > XRADIO_DATABASE_MAX_SSID_LEN - 1) {
++		error = BT_ATT_ERROR_INVALID_ATTRIBUTE_VALUE_LEN;
++		goto done;
++	}
++
++	if (offset) {
++		error = BT_ATT_ERROR_INVALID_OFFSET;
++		goto done;
++	}
++
++	if (value) {
++		DBG("Setting value: %s, len = %d\n", value, len);
++		memcpy(ssid, value, len);
++	}
++
++done:
++	gatt_db_attribute_write_result(attrib, id, error);
++}
++
++static void populate_network_service(struct btd_gatt_database *database)
++{
++	bt_uuid_t uuid;
++	struct gatt_db_attribute *service;
++
++	/* Add the GATT service */
++	bt_uuid16_create(&uuid, UUID_XRADIO);
++	service = gatt_db_add_service(database->db, &uuid, true, 4);
++	database->gatt_handle = database_add_record(database, UUID_XRADIO,
++						service,
++						"Xradio Vendor Profile");
++
++	bt_uuid16_create(&uuid, XRADIO_CHARAC_DISTRIBUTION_NETWORK);
++	database->svc_chngd = gatt_db_service_add_characteristic(service, &uuid,
++				BT_ATT_PERM_WRITE | BT_ATT_PERM_READ,
++				BT_GATT_CHRC_PROP_WRITE | BT_GATT_CHRC_PROP_READ,
++				xradio_dn_read_cb, xradio_dn_write_cb, database);
++
++	gatt_db_service_set_active(service, true);
++}
++#endif
++
+ static bool get_dst_info(struct bt_att *att, bdaddr_t *dst, uint8_t *dst_type)
+ {
+ 	GIOChannel *io = NULL;
+@@ -883,6 +984,9 @@ static void register_core_services(struct btd_gatt_database *database)
+ {
+ 	populate_gap_service(database);
+ 	populate_gatt_service(database);
++#ifdef XR829_BT
++	populate_network_service(database);
++#endif
+ }
+ 
+ struct notify {
+-- 
+1.9.1
+

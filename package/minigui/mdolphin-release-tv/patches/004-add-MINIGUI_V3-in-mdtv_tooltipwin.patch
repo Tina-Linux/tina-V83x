@@ -1,0 +1,28 @@
+--- a/src/mdtv_tooltipwin.h
++++ b/src/mdtv_tooltipwin.h
+@@ -1,5 +1,6 @@
+ #ifndef __MDOLPHIN_TOOLTIPWIN_H__
+ #define __MDOLPHIN_TOOLTIPWIN_H__
++#define MINIGUI_V3 1
+ int mdolphin_ToolTipWinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam);
+ 
+ HWND mdolphin_createToolTipWin (HWND hParentWnd, int x, int y, int timeout_ms, 
+--- a/src/mdtv_tooltipwin.cpp
++++ b/src/mdtv_tooltipwin_new.cpp
+@@ -22,6 +22,7 @@
+ #include <minigui/window.h>
+ #include <minigui/control.h>
+ #include <mdolphin/mdolphin.h>
++#include "mdtv_tooltipwin.h"
+
+ #ifdef MINIGUI_V3
+ #include <mgutils/mgutils.h>
+@@ -41,7 +42,7 @@
+         ShowWindow(hwnd, SW_HIDE);
+ }
+
+-static int mdolphin_ToolTipWinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++int mdolphin_ToolTipWinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
+ {
+     switch (message)
+     {

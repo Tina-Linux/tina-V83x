@@ -1,0 +1,36 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_ENABLE
+    bool "collectd_df"
+    select PACKAGE_collectd-mod-df
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_REPORT_TO_ABSOLUTE
+        bool "report_to_absolute"
+        default n
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_REPORT_TO_PERCENTAGE
+        bool "report_to_percentage"
+        default y
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_MATCH
+        bool "match"
+        default y
+
+    if TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_MATCH
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_MATCH_SELLECT_OR_IGNORE
+            string "sellect_or_ignore"
+            default "sellect"
+
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_MATCH_DEVICE
+            string "device"
+            default "ALL"
+
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_MATCH_MOUNTPOINT
+            string "mountpoint"
+            default "ALL"
+
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DF_MATCH_FSTYPE
+            string "fstype"
+            default "ALL"
+    endif
+endif

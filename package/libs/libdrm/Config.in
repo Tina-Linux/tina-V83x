@@ -1,0 +1,11 @@
+if PACKAGE_libdrm
+
+config LIBDRM_TEST_PROGRAMS
+    bool "install libdrm test programs"
+    default n
+
+config LIBDRM_V4C
+    bool "Enable support for vc4's API"
+    default n
+
+endif

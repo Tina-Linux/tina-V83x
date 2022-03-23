@@ -1,0 +1,20 @@
+--- a/ubusd.c
++++ b/ubusd.c
+@@ -96,7 +96,7 @@ static int ubus_msg_writev(int fd, struc
+ 			.cmsg_type = SCM_RIGHTS,
+ 		},
+ 	};
+-	struct msghdr msghdr = {
++	volatile struct msghdr msghdr = {
+ 		.msg_iov = iov,
+ 		.msg_iovlen = ARRAY_SIZE(iov),
+ 		.msg_control = &fd_buf,
+@@ -115,7 +115,7 @@ static int ubus_msg_writev(int fd, struc
+ 		iov[1].iov_base = (char *) ub->data;
+ 		iov[1].iov_len = ub->len;
+ 
+-		return sendmsg(fd, &msghdr, 0);
++		return sendmsg(fd, (void *)&msghdr, 0);
+ 	} else {
+ 		offset -= sizeof(ub->hdr);
+ 		return write(fd, ((char *) ub->data) + offset, ub->len - offset);

@@ -1,0 +1,27 @@
+type preinit, domain, mlstrustedsubject;
+type preinit_exec, exec_type, file_type;
+# permissive preinit;
+domain_auto_trans(init,preinit_exec,preinit)
+# domain_auto_trans(preinit,kmodloader_exec,kmodloader)
+
+# # allow preinit self:system module_load;
+# allow preinit self:capability { sys_module sys_admin };
+
+# allow preinit device:dir write;
+# allow preinit console_device:chr_file read;
+
+# allow preinit init:fifo_file { read write };
+
+# # allow preinit system_file:file { execute execute_no_trans open execmod };
+# # allow preinit shell:file { execute execute_no_trans open execmod };
+
+# allow preinit temp_exec:file {read getattr execute execute_no_trans open execmod};
+# allow preinit temp_exec:lnk_file { getattr open read execute };
+
+# allow preinit tmpfs:dir create_dir_perms;
+# allow preinit tmpfs:file create_file_perms;
+# allow preinit tmpfs:lnk_file create;
+
+# allow preinit sysfs:dir mounton;
+
+# allow preinit debugfs:filesystem mount;

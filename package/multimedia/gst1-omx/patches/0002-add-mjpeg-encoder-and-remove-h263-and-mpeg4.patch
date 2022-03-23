@@ -1,0 +1,340 @@
+From 863e52e8f34c2c23c3411272734c7bed28c2d5fc Mon Sep 17 00:00:00 2001
+From: xiebin <xiebin@allwinnertech.com>
+Date: Thu, 1 Jun 2017 17:04:53 +0800
+Subject: [PATCH 2/2] add mjpeg and remove h263 and mpeg4 encoder
+
+---
+ config/bellagio/gstomx.conf |  20 +----
+ omx/Makefile.am             |   6 +-
+ omx/gstomx.c                |   3 +-
+ omx/gstomxmjpegenc.c        | 174 ++++++++++++++++++++++++++++++++++++++++++++
+ omx/gstomxmjpegenc.h        |  59 +++++++++++++++
+ 5 files changed, 240 insertions(+), 22 deletions(-)
+ create mode 100644 omx/gstomxmjpegenc.c
+ create mode 100644 omx/gstomxmjpegenc.h
+
+diff --git a/config/bellagio/gstomx.conf b/config/bellagio/gstomx.conf
+index cf27588..8aaa01a 100644
+--- a/config/bellagio/gstomx.conf
++++ b/config/bellagio/gstomx.conf
+@@ -187,26 +187,8 @@ in-port-index=0
+ out-port-index=1
+ hacks=event-port-settings-changed-ndata-parameter-swap;video-framerate-integer;syncframe-flag-not-used;no-disable-outport
+
+-[omxh263videoenc]
+-type-name=GstOMXH263Enc
+-core-name=/usr/lib/libcdc_omxil_core.so
+-component-name=OMX.allwinner.video.encoder.h263
+-rank=257
+-in-port-index=0
+-out-port-index=1
+-hacks=event-port-settings-changed-ndata-parameter-swap;video-framerate-integer;syncframe-flag-not-used;no-disable-outport
+-
+-[omxmpeg4videoenc]
+-type-name=GstOMXMPEG4VideoEnc
+-core-name=/usr/lib/libcdc_omxil_core.so
+-component-name=OMX.allwinner.video.encoder.mpeg4
+-rank=257
+-in-port-index=0
+-out-port-index=1
+-hacks=event-port-settings-changed-ndata-parameter-swap;video-framerate-integer;syncframe-flag-not-used;no-disable-outport
+-
+ [omxmjpegvideoenc]
+-type-name=GstOMXMJPEGVideoEnc
++type-name=GstOMXMJPEGEnc
+ core-name=/usr/lib/libOmxCore.so
+ component-name=OMX.allwinner.video.encoder.mjpeg
+ rank=257
+diff --git a/omx/Makefile.am b/omx/Makefile.am
+index b3627f7..f7596dd 100644
+--- a/omx/Makefile.am
++++ b/omx/Makefile.am
+@@ -51,7 +51,8 @@ libgstomx_la_SOURCES = \
+ 	gstomxrv20dec.c         \
+ 	gstomxdivx4dec.c        \
+ 	gstomxrxdec.c           \
+-	gstomxavsdec.c
++	gstomxavsdec.c          \
++	gstomxmjpegenc.c
+
+ noinst_HEADERS = \
+ 	gstomx.h \
+@@ -94,7 +95,8 @@ noinst_HEADERS = \
+ 	gstomxrv20dec.h         \
+ 	gstomxdivx4dec.h        \
+ 	gstomxrxdec.h           \
+-	gstomxavsdec.h
++	gstomxavsdec.h          \
++	gstomxmjpegenc.h
+
+ if !HAVE_EXTERNAL_OMX
+ OMX_INCLUDEPATH = -I$(abs_srcdir)/openmax
+diff --git a/omx/gstomx.c b/omx/gstomx.c
+index 31c43e3..175b350 100644
+--- a/omx/gstomx.c
++++ b/omx/gstomx.c
+@@ -61,6 +61,7 @@
+ #include "gstomxdivx4dec.h"
+ #include "gstomxrxdec.h"
+ #include "gstomxavsdec.h"
++#include "gstomxmjpegenc.h"
+
+
+ GST_DEBUG_CATEGORY (gstomx_debug);
+@@ -2301,7 +2302,7 @@ static const GGetTypeFunction types[] = {
+   gst_omx_vp9_dec_get_type, gst_omx_h265_dec_get_type,
+   gst_omx_flv1_dec_get_type, gst_omx_rv20_dec_get_type,
+   gst_omx_rx_dec_get_type, gst_omx_divx4_dec_get_type,
+-  gst_omx_avs_dec_get_type
++  gst_omx_avs_dec_get_type, gst_omx_mjpeg_enc_get_type
+ #ifdef HAVE_VP8
+       , gst_omx_vp8_dec_get_type
+ #endif
+diff --git a/omx/gstomxmjpegenc.c b/omx/gstomxmjpegenc.c
+new file mode 100644
+index 0000000..ed2234e
+--- /dev/null
++++ b/omx/gstomxmjpegenc.c
+@@ -0,0 +1,174 @@
++/*
++ * Copyright (C) 2011, Hewlett-Packard Development Company, L.P.
++ *   Author: Sebastian Dröge <sebastian.droege@collabora.co.uk>, Collabora Ltd.
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation
++ * version 2.1 of the License.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
++ *
++ */
++
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include <gst/gst.h>
++
++#include "gstomxmjpegenc.h"
++
++GST_DEBUG_CATEGORY_STATIC (gst_omx_mjpeg_enc_debug_category);
++#define GST_CAT_DEFAULT gst_omx_mjpeg_enc_debug_category
++
++/* prototypes */
++static gboolean gst_omx_mjpeg_enc_set_format (GstOMXVideoEnc * enc,
++    GstOMXPort * port, GstVideoCodecState * state);
++static GstCaps *gst_omx_mjpeg_enc_get_caps (GstOMXVideoEnc * enc,
++    GstOMXPort * port, GstVideoCodecState * state);
++
++enum
++{
++  PROP_0
++};
++
++/* class initialization */
++
++#define DEBUG_INIT \
++  GST_DEBUG_CATEGORY_INIT (gst_omx_mjpeg_enc_debug_category, "omxmjpegenc", 0, \
++      "debug category for gst-omx video encoder base class");
++
++G_DEFINE_TYPE_WITH_CODE (GstOMXMJPEGEnc, gst_omx_mjpeg_enc,
++    GST_TYPE_OMX_VIDEO_ENC, DEBUG_INIT);
++
++static void
++gst_omx_mjpeg_enc_class_init (GstOMXMJPEGEncClass * klass)
++{
++  GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
++  GstOMXVideoEncClass *videoenc_class = GST_OMX_VIDEO_ENC_CLASS (klass);
++  printf("mjpeg class init!\n");
++  videoenc_class->set_format = GST_DEBUG_FUNCPTR (gst_omx_mjpeg_enc_set_format);
++  videoenc_class->get_caps = GST_DEBUG_FUNCPTR (gst_omx_mjpeg_enc_get_caps);
++
++  videoenc_class->cdata.default_src_template_caps = "image/jpeg";
++
++  gst_element_class_set_static_metadata (element_class,
++      "OpenMAX Mjpeg Video Encoder",
++      "Codec/Encoder/Video",
++      "Encode Mjpeg video streams",
++      "Sebastian Dröge <sebastian.droege@collabora.co.uk>");
++
++  gst_omx_set_default_role (&videoenc_class->cdata, "video_encoder.mjpeg");
++}
++
++static void
++gst_omx_mjpeg_enc_init (GstOMXMJPEGEnc * self)
++{
++}
++
++static gboolean
++gst_omx_mjpeg_enc_set_format (GstOMXVideoEnc * enc, GstOMXPort * port,
++    GstVideoCodecState * state)
++{
++  GstOMXMJPEGEnc *self = GST_OMX_MJPEG_ENC (enc);
++  GstCaps *peercaps;
++  OMX_PARAM_PORTDEFINITIONTYPE port_def;
++  OMX_VIDEO_PARAM_PROFILELEVELTYPE param;
++  OMX_ERRORTYPE err;
++  guint profile_id, level_id;
++
++  gst_omx_port_get_port_definition (GST_OMX_VIDEO_ENC (self)->enc_out_port,
++      &port_def);
++  port_def.format.video.eCompressionFormat = OMX_VIDEO_CodingMJPEG;
++  err =
++      gst_omx_port_update_port_definition (GST_OMX_VIDEO_ENC
++      (self)->enc_out_port, &port_def);
++  if (err != OMX_ErrorNone)
++    return FALSE;
++
++  GST_OMX_INIT_STRUCT (&param);
++  param.nPortIndex = GST_OMX_VIDEO_ENC (self)->enc_out_port->index;
++  err =
++      gst_omx_component_get_parameter (GST_OMX_VIDEO_ENC (self)->enc,
++      OMX_IndexParamVideoProfileLevelCurrent, &param);
++  if (err != OMX_ErrorNone) {
++    GST_WARNING_OBJECT (self,
++        "Getting profile/level not supported by component");
++    return TRUE;
++  }
++
++  peercaps = gst_pad_peer_query_caps (GST_VIDEO_ENCODER_SRC_PAD (enc),
++      gst_pad_get_pad_template_caps (GST_VIDEO_ENCODER_SRC_PAD (enc)));
++  if (peercaps) {
++    GstStructure *s;
++
++    if (gst_caps_is_empty (peercaps)) {
++      gst_caps_unref (peercaps);
++      GST_ERROR_OBJECT (self, "Empty caps");
++      return FALSE;
++    }
++
++    s = gst_caps_get_structure (peercaps, 0);
++    gst_caps_unref (peercaps);
++  }
++
++  err =
++      gst_omx_component_set_parameter (GST_OMX_VIDEO_ENC (self)->enc,
++      OMX_IndexParamVideoProfileLevelCurrent, &param);
++  if (err == OMX_ErrorUnsupportedIndex) {
++    GST_WARNING_OBJECT (self,
++        "Setting profile/level not supported by component");
++  } else if (err != OMX_ErrorNone) {
++    GST_ERROR_OBJECT (self,
++        "Error setting profile %u and level %u: %s (0x%08x)",
++        (guint) param.eProfile, (guint) param.eLevel,
++        gst_omx_error_to_string (err), err);
++    return FALSE;
++  }
++
++  return TRUE;
++
++unsupported_profile:
++  GST_ERROR_OBJECT (self, "Unsupported profile %u", profile_id);
++  gst_caps_unref (peercaps);
++  return FALSE;
++
++unsupported_level:
++  GST_ERROR_OBJECT (self, "Unsupported level %u", level_id);
++  gst_caps_unref (peercaps);
++  return FALSE;
++}
++
++static GstCaps *
++gst_omx_mjpeg_enc_get_caps (GstOMXVideoEnc * enc, GstOMXPort * port,
++    GstVideoCodecState * state)
++{
++  GstOMXMJPEGEnc *self = GST_OMX_MJPEG_ENC (enc);
++  GstCaps *caps;
++  OMX_ERRORTYPE err;
++  OMX_VIDEO_PARAM_PROFILELEVELTYPE param;
++  guint profile, level;
++
++  caps = gst_caps_new_empty_simple ("image/jpeg");
++
++  GST_OMX_INIT_STRUCT (&param);
++  param.nPortIndex = GST_OMX_VIDEO_ENC (self)->enc_out_port->index;
++
++  err =
++      gst_omx_component_get_parameter (GST_OMX_VIDEO_ENC (self)->enc,
++      OMX_IndexParamVideoProfileLevelCurrent, &param);
++  if (err != OMX_ErrorNone && err != OMX_ErrorUnsupportedIndex) {
++    gst_caps_unref (caps);
++    return NULL;
++  }
++
++  return caps;
++}
+diff --git a/omx/gstomxmjpegenc.h b/omx/gstomxmjpegenc.h
+new file mode 100644
+index 0000000..e053d04
+--- /dev/null
++++ b/omx/gstomxmjpegenc.h
+@@ -0,0 +1,59 @@
++/*
++ * Copyright (C) 2011, Hewlett-Packard Development Company, L.P.
++ *   Author: Sebastian Dröge <sebastian.droege@collabora.co.uk>, Collabora Ltd.
++ *
++ * This library is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU Lesser General Public
++ * License as published by the Free Software Foundation
++ * version 2.1 of the License.
++ *
++ * This library is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
++ * Lesser General Public License for more details.
++ *
++ * You should have received a copy of the GNU Lesser General Public
++ * License along with this library; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
++ *
++ */
++
++#ifndef __GST_OMX_MJPEG_ENC_H__
++#define __GST_OMX_MJPEG_ENC_H__
++
++#include <gst/gst.h>
++#include "gstomxvideoenc.h"
++
++G_BEGIN_DECLS
++
++#define GST_TYPE_OMX_MJPEG_ENC \
++  (gst_omx_mjpeg_enc_get_type())
++#define GST_OMX_MJPEG_ENC(obj) \
++  (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_OMX_MJPEG_ENC,GstOMXMJPEGEnc))
++#define GST_OMX_MJPEG_ENC_CLASS(klass) \
++  (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_OMX_MJPEG_ENC,GstOMXMJPEGEncClass))
++#define GST_OMX_MJPEG_ENC_GET_CLASS(obj) \
++  (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_OMX_MJPEG_ENC,GstOMXMJPEGEncClass))
++#define GST_IS_OMX_MJPEG_ENC(obj) \
++  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_OMX_MJPEG_ENC))
++#define GST_IS_OMX_MJPEG_ENC_CLASS(obj) \
++  (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_OMX_MJPEG_ENC))
++
++typedef struct _GstOMXMJPEGEnc GstOMXMJPEGEnc;
++typedef struct _GstOMXMJPEGEncClass GstOMXMJPEGEncClass;
++
++struct _GstOMXMJPEGEnc
++{
++  GstOMXVideoEnc parent;
++};
++
++struct _GstOMXMJPEGEncClass
++{
++  GstOMXVideoEncClass parent_class;
++};
++
++GType gst_omx_mjpeg_enc_get_type (void);
++
++G_END_DECLS
++
++#endif /* __GST_OMX_MJPEG_ENC_H__ */
+--
+2.7.4
+

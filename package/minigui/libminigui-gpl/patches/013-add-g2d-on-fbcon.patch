@@ -1,0 +1,1270 @@
+diff --git a/libminigui-gpl-3.2/src/include/g2d_driver.h b/libminigui-gpl-3.2/src/include/g2d_driver.h
+new file mode 100644
+index 0000000..0e6489d
+--- /dev/null
++++ b/src/include/g2d_driver.h
+@@ -0,0 +1,268 @@
++/* g2d_driver.h
++ *
++ * Copyright (c)	2011 xxxx Electronics
++ *					2011 Yupu Tang
++ *
++ * @ F23 G2D driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA02111-1307USA
++ */
++
++#ifndef __G2D_DRIVER_H
++#define __G2D_DRIVER_H
++
++#ifndef __G2D_BSP_DRV_H
++#define __G2D_BSP_DRV_H
++
++/* mixer data format */
++typedef enum {
++	/* share data format */
++	G2D_FMT_ARGB_AYUV8888	= (0x0),
++	G2D_FMT_BGRA_VUYA8888	= (0x1),
++	G2D_FMT_ABGR_AVUY8888	= (0x2),
++	G2D_FMT_RGBA_YUVA8888	= (0x3),
++
++	G2D_FMT_XRGB8888		= (0x4),
++	G2D_FMT_BGRX8888		= (0x5),
++	G2D_FMT_XBGR8888		= (0x6),
++	G2D_FMT_RGBX8888		= (0x7),
++
++	G2D_FMT_ARGB4444		= (0x8),
++	G2D_FMT_ABGR4444		= (0x9),
++	G2D_FMT_RGBA4444		= (0xA),
++	G2D_FMT_BGRA4444		= (0xB),
++
++	G2D_FMT_ARGB1555		= (0xC),
++	G2D_FMT_ABGR1555		= (0xD),
++	G2D_FMT_RGBA5551		= (0xE),
++	G2D_FMT_BGRA5551		= (0xF),
++
++	G2D_FMT_RGB565			= (0x10),
++	G2D_FMT_BGR565			= (0x11),
++
++	G2D_FMT_IYUV422			= (0x12),
++
++	G2D_FMT_8BPP_MONO		= (0x13),
++	G2D_FMT_4BPP_MONO		= (0x14),
++	G2D_FMT_2BPP_MONO		= (0x15),
++	G2D_FMT_1BPP_MONO		= (0x16),
++
++	G2D_FMT_PYUV422UVC		= (0x17),
++	G2D_FMT_PYUV420UVC		= (0x18),
++	G2D_FMT_PYUV411UVC		= (0x19),
++
++	/* just for output format */
++	G2D_FMT_PYUV422			= (0x1A),
++	G2D_FMT_PYUV420			= (0x1B),
++	G2D_FMT_PYUV411			= (0x1C),
++
++	/* just for input format */
++	G2D_FMT_8BPP_PALETTE	= (0x1D),
++	G2D_FMT_4BPP_PALETTE	= (0x1E),
++	G2D_FMT_2BPP_PALETTE	= (0x1F),
++	G2D_FMT_1BPP_PALETTE	= (0x20),
++
++	G2D_FMT_PYUV422UVC_MB16	= (0x21),
++	G2D_FMT_PYUV420UVC_MB16	= (0x22),
++	G2D_FMT_PYUV411UVC_MB16	= (0x23),
++	G2D_FMT_PYUV422UVC_MB32	= (0x24),
++	G2D_FMT_PYUV420UVC_MB32	= (0x25),
++	G2D_FMT_PYUV411UVC_MB32	= (0x26),
++	G2D_FMT_PYUV422UVC_MB64	= (0x27),
++	G2D_FMT_PYUV420UVC_MB64	= (0x28),
++	G2D_FMT_PYUV411UVC_MB64	= (0x29),
++	G2D_FMT_PYUV422UVC_MB128 = (0x2A),
++	G2D_FMT_PYUV420UVC_MB128 = (0x2B),
++	G2D_FMT_PYUV411UVC_MB128 = (0x2C),
++
++} g2d_data_fmt;
++
++/* pixel sequence in double word */
++typedef enum {
++	G2D_SEQ_NORMAL = 0x0,
++
++	/* for interleaved yuv422 */
++	G2D_SEQ_VYUY   = 0x1,				/* pixel 0�ڵ�16λ */
++	G2D_SEQ_YVYU   = 0x2,				/* pixel 1�ڵ�16λ */
++
++	/* for uv_combined yuv420 */
++	G2D_SEQ_VUVU   = 0x3,
++
++	/* for 16bpp rgb */
++	G2D_SEQ_P10    = 0x4,				/* pixel 0�ڵ�16λ */
++	G2D_SEQ_P01    = 0x5,				/* pixel 1�ڵ�16λ */
++
++	/* planar format or 8bpp rgb */
++	G2D_SEQ_P3210  = 0x6,				/* pixel 0�ڵ�8λ */
++	G2D_SEQ_P0123  = 0x7,				/* pixel 3�ڵ�8λ */
++
++	/* for 4bpp rgb */
++	G2D_SEQ_P76543210  = 0x8,			/* 7,6,5,4,3,2,1,0 */
++	G2D_SEQ_P67452301  = 0x9,			/* 6,7,4,5,2,3,0,1 */
++	G2D_SEQ_P10325476  = 0xA,			/* 1,0,3,2,5,4,7,6 */
++	G2D_SEQ_P01234567  = 0xB,			/* 0,1,2,3,4,5,6,7 */
++
++	/* for 2bpp rgb */
++	G2D_SEQ_2BPP_BIG_BIG	   = 0xC,	/* 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0 */
++	G2D_SEQ_2BPP_BIG_LITTER    = 0xD,	/* 12,13,14,15,8,9,10,11,4,5,6,7,0,1,2,3 */
++	G2D_SEQ_2BPP_LITTER_BIG    = 0xE,	/* 3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12 */
++	G2D_SEQ_2BPP_LITTER_LITTER = 0xF,	/* 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 */
++
++	/* for 1bpp rgb */
++	G2D_SEQ_1BPP_BIG_BIG	   = 0x10,	/* 31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0 */
++	G2D_SEQ_1BPP_BIG_LITTER    = 0x11,	/* 24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7 */
++	G2D_SEQ_1BPP_LITTER_BIG    = 0x12,	/* 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24 */
++	G2D_SEQ_1BPP_LITTER_LITTER = 0x13,	/* 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 */
++} g2d_pixel_seq;
++
++
++typedef enum {
++	G2D_FIL_NONE			= 0x00000000,
++	G2D_FIL_PIXEL_ALPHA		= 0x00000001,
++	G2D_FIL_PLANE_ALPHA		= 0x00000002,
++	G2D_FIL_MULTI_ALPHA		= 0x00000004,
++} g2d_fillrect_flags;
++
++typedef enum {
++	G2D_BLT_NONE			= 0x00000000,
++	G2D_BLT_PIXEL_ALPHA		= 0x00000001,
++	G2D_BLT_PLANE_ALPHA		= 0x00000002,
++	G2D_BLT_MULTI_ALPHA		= 0x00000004,
++	G2D_BLT_SRC_COLORKEY	= 0x00000008,
++	G2D_BLT_DST_COLORKEY	= 0x00000010,
++	G2D_BLT_FLIP_HORIZONTAL	= 0x00000020,
++	G2D_BLT_FLIP_VERTICAL	= 0x00000040,
++	G2D_BLT_ROTATE90		= 0x00000080,
++	G2D_BLT_ROTATE180		= 0x00000100,
++	G2D_BLT_ROTATE270		= 0x00000200,
++	G2D_BLT_MIRROR45		= 0x00000400,
++	G2D_BLT_MIRROR135		= 0x00000800,
++	G2D_BLT_SRC_PREMULTIPLY	= 0x00001000,
++	G2D_BLT_DST_PREMULTIPLY	= 0x00002000,
++} g2d_blt_flags;
++
++/* flip rectangle struct */
++typedef struct {
++	__s32		x;			/* left top point coordinate x */
++	__s32		y;			/* left top point coordinate y */
++	__u32		w;			/* rectangle width */
++	__u32		h;			/* rectangle height */
++} g2d_rect;
++
++/* image struct */
++typedef struct {
++	__u32			 addr[3];		/* base addr of image frame buffer in byte */
++	__u32			 w;			/* width of image frame buffer in pixel */
++	__u32			 h;			/* height of image frame buffer in pixel */
++	g2d_data_fmt	 format;	/* pixel format of image frame buffer */
++	g2d_pixel_seq	 pixel_seq;	/* pixel sequence of image frame buffer */
++} g2d_image;
++
++/*
++ * 0:Top to down, Left to right
++ * 1:Top to down, Right to left
++ * 2:Down to top, Left to right
++ * 3:Down to top, Right to left
++ */
++enum g2d_scan_order {
++	G2D_SM_TDLR = 0x00000000,
++	G2D_SM_TDRL = 0x00000001,
++	G2D_SM_DTLR = 0x00000002,
++	G2D_SM_DTRL = 0x00000003,
++};
++
++typedef struct {
++	g2d_fillrect_flags	 flag;
++	g2d_image			 dst_image;
++	g2d_rect			 dst_rect;
++
++	__u32				 color;		/* fill color */
++	__u32				 alpha;		/* plane alpha value */
++
++} g2d_fillrect;
++
++typedef struct {
++	g2d_blt_flags		 flag;
++	g2d_image			 src_image;
++	g2d_rect			 src_rect;
++
++	g2d_image			 dst_image;
++	__s32				 dst_x;		/* left top point coordinate x of dst rect */
++	__s32				 dst_y;		/* left top point coordinate y of dst rect */
++
++	__u32				 color;		/* colorkey color */
++	__u32				 alpha;		/* plane alpha value */
++
++} g2d_blt;
++
++typedef struct {
++	g2d_blt_flags		 flag;
++	g2d_image			 src_image;
++	g2d_rect			 src_rect;
++
++	g2d_image			 dst_image;
++	g2d_rect			 dst_rect;
++
++	__u32				 color;		/* colorkey color */
++	__u32				 alpha;		/* plane alpha value */
++
++
++} g2d_stretchblt;
++
++typedef struct {
++	__u32		 flag;		/* ��դ������ */
++	g2d_image	 dst_image;
++	g2d_rect	 dst_rect;
++
++	g2d_image	 src_image;
++	__u32		 src_x;
++	__u32		 src_y;
++
++	g2d_image	 mask_image;
++	__u32		 mask_x;
++	__u32		 mask_y;
++
++} g2d_maskblt;
++
++typedef struct {
++	__u32		*pbuffer;
++	__u32		 size;
++
++} g2d_palette;
++
++#endif /*__G2D_BSP_DRV_H*/
++
++typedef struct {
++	long	start;
++	long	end;
++} g2d_cache_range;
++
++typedef enum {
++	G2D_CMD_BITBLT			=	0x50,
++	G2D_CMD_FILLRECT		=	0x51,
++	G2D_CMD_STRETCHBLT		=	0x52,
++	G2D_CMD_PALETTE_TBL		=	0x53,
++	G2D_CMD_QUEUE			=	0x54,
++
++	G2D_CMD_MEM_REQUEST		=	0x59,
++	G2D_CMD_MEM_RELEASE		=	0x5A,
++	G2D_CMD_MEM_GETADR		=	0x5B,
++	G2D_CMD_MEM_SELIDX		=	0x5C,
++	G2D_CMD_MEM_FLUSH_CACHE	=	0x5D,
++	G2D_CMD_INVERTED_ORDER = 0x5E,
++} g2d_cmd;
++
++#endif	/* __G2D_DRIVER_H */
++
+diff --git a/libminigui-gpl-3.2/src/include/g2d_driver_enh.h b/libminigui-gpl-3.2/src/include/g2d_driver_enh.h
+new file mode 100644
+index 0000000..be56dc7
+--- /dev/null
++++ b/src/include/g2d_driver_enh.h
+@@ -0,0 +1,491 @@
++/* g2d_driver.h
++ *
++ * Copyright (c)	2011 xxxx Electronics
++ *					2011 Yupu Tang
++ *
++ * @ F23 G2D driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
++ * GNU General Public License for more details.
++ */
++
++#ifndef __G2D_DRIVER_H
++#define __G2D_DRIVER_H
++
++#include<stdbool.h>
++
++/* data format */
++typedef enum {
++	G2D_FORMAT_ARGB8888,
++	G2D_FORMAT_ABGR8888,
++	G2D_FORMAT_RGBA8888,
++	G2D_FORMAT_BGRA8888,
++	G2D_FORMAT_XRGB8888,
++	G2D_FORMAT_XBGR8888,
++	G2D_FORMAT_RGBX8888,
++	G2D_FORMAT_BGRX8888,
++	G2D_FORMAT_RGB888,
++	G2D_FORMAT_BGR888,
++	G2D_FORMAT_RGB565,
++	G2D_FORMAT_BGR565,
++	G2D_FORMAT_ARGB4444,
++	G2D_FORMAT_ABGR4444,
++	G2D_FORMAT_RGBA4444,
++	G2D_FORMAT_BGRA4444,
++	G2D_FORMAT_ARGB1555,
++	G2D_FORMAT_ABGR1555,
++	G2D_FORMAT_RGBA5551,
++	G2D_FORMAT_BGRA5551,
++	G2D_FORMAT_ARGB2101010,
++	G2D_FORMAT_ABGR2101010,
++	G2D_FORMAT_RGBA1010102,
++	G2D_FORMAT_BGRA1010102,
++
++	/* invailed for UI channel */
++	G2D_FORMAT_IYUV422_V0Y1U0Y0 = 0x20,
++	G2D_FORMAT_IYUV422_Y1V0Y0U0,
++	G2D_FORMAT_IYUV422_U0Y1V0Y0,
++	G2D_FORMAT_IYUV422_Y1U0Y0V0,
++
++	G2D_FORMAT_YUV422UVC_V1U1V0U0,
++	G2D_FORMAT_YUV422UVC_U1V1U0V0,
++	G2D_FORMAT_YUV422_PLANAR,
++
++	G2D_FORMAT_YUV420UVC_V1U1V0U0 = 0x28,
++	G2D_FORMAT_YUV420UVC_U1V1U0V0,
++	G2D_FORMAT_YUV420_PLANAR,
++
++	G2D_FORMAT_YUV411UVC_V1U1V0U0 = 0x2c,
++	G2D_FORMAT_YUV411UVC_U1V1U0V0,
++	G2D_FORMAT_YUV411_PLANAR,
++
++	G2D_FORMAT_Y8 = 0x30,
++
++	/* YUV 10bit format */
++	G2D_FORMAT_YVU10_P010 = 0x34,
++
++	G2D_FORMAT_YVU10_P210 = 0x36,
++
++	G2D_FORMAT_YVU10_444 = 0x38,
++	G2D_FORMAT_YUV10_444 = 0x39,
++	G2D_FORMAT_MAX,
++} g2d_fmt_enh;
++/* mixer data format */
++typedef enum {
++	/* share data format */
++	G2D_FMT_ARGB_AYUV8888	= (0x0),
++	G2D_FMT_BGRA_VUYA8888	= (0x1),
++	G2D_FMT_ABGR_AVUY8888	= (0x2),
++	G2D_FMT_RGBA_YUVA8888	= (0x3),
++
++	G2D_FMT_XRGB8888		= (0x4),
++	G2D_FMT_BGRX8888		= (0x5),
++	G2D_FMT_XBGR8888		= (0x6),
++	G2D_FMT_RGBX8888		= (0x7),
++
++	G2D_FMT_ARGB4444		= (0x8),
++	G2D_FMT_ABGR4444		= (0x9),
++	G2D_FMT_RGBA4444		= (0xA),
++	G2D_FMT_BGRA4444		= (0xB),
++
++	G2D_FMT_ARGB1555		= (0xC),
++	G2D_FMT_ABGR1555		= (0xD),
++	G2D_FMT_RGBA5551		= (0xE),
++	G2D_FMT_BGRA5551		= (0xF),
++
++	G2D_FMT_RGB565			= (0x10),
++	G2D_FMT_BGR565			= (0x11),
++
++	G2D_FMT_IYUV422			= (0x12),
++
++	G2D_FMT_8BPP_MONO		= (0x13),
++	G2D_FMT_4BPP_MONO		= (0x14),
++	G2D_FMT_2BPP_MONO		= (0x15),
++	G2D_FMT_1BPP_MONO		= (0x16),
++
++	G2D_FMT_PYUV422UVC		= (0x17),
++	G2D_FMT_PYUV420UVC		= (0x18),
++	G2D_FMT_PYUV411UVC		= (0x19),
++
++	/* just for output format */
++	G2D_FMT_PYUV422			= (0x1A),
++	G2D_FMT_PYUV420			= (0x1B),
++	G2D_FMT_PYUV411			= (0x1C),
++
++	/* just for input format */
++	G2D_FMT_8BPP_PALETTE	= (0x1D),
++	G2D_FMT_4BPP_PALETTE	= (0x1E),
++	G2D_FMT_2BPP_PALETTE	= (0x1F),
++	G2D_FMT_1BPP_PALETTE	= (0x20),
++
++	G2D_FMT_PYUV422UVC_MB16	= (0x21),
++	G2D_FMT_PYUV420UVC_MB16	= (0x22),
++	G2D_FMT_PYUV411UVC_MB16	= (0x23),
++	G2D_FMT_PYUV422UVC_MB32	= (0x24),
++	G2D_FMT_PYUV420UVC_MB32	= (0x25),
++	G2D_FMT_PYUV411UVC_MB32	= (0x26),
++	G2D_FMT_PYUV422UVC_MB64	= (0x27),
++	G2D_FMT_PYUV420UVC_MB64	= (0x28),
++	G2D_FMT_PYUV411UVC_MB64	= (0x29),
++	G2D_FMT_PYUV422UVC_MB128 = (0x2A),
++	G2D_FMT_PYUV420UVC_MB128 = (0x2B),
++	G2D_FMT_PYUV411UVC_MB128 = (0x2C),
++
++} g2d_data_fmt;
++
++/* pixel sequence in double word */
++typedef enum {
++	G2D_SEQ_NORMAL = 0x0,
++
++	/* for interleaved yuv422 */
++	G2D_SEQ_VYUY   = 0x1,			/* pixel 0�ڵ�16λ */
++	G2D_SEQ_YVYU   = 0x2,			/* pixel 1�ڵ�16λ */
++
++	/* for uv_combined yuv420 */
++	G2D_SEQ_VUVU   = 0x3,
++
++	/* for 16bpp rgb */
++	G2D_SEQ_P10    = 0x4,			/* pixel 0�ڵ�16λ */
++	G2D_SEQ_P01    = 0x5,			/* pixel 1�ڵ�16λ */
++
++	/* planar format or 8bpp rgb */
++	G2D_SEQ_P3210  = 0x6,			/* pixel 0�ڵ�8λ */
++	G2D_SEQ_P0123  = 0x7,			/* pixel 3�ڵ�8λ */
++
++	/* for 4bpp rgb */
++	G2D_SEQ_P76543210  = 0x8,			/* 7,6,5,4,3,2,1,0 */
++	G2D_SEQ_P67452301  = 0x9,			/* 6,7,4,5,2,3,0,1 */
++	G2D_SEQ_P10325476  = 0xA,			/* 1,0,3,2,5,4,7,6 */
++	G2D_SEQ_P01234567  = 0xB,			/* 0,1,2,3,4,5,6,7 */
++
++	/* for 2bpp rgb */
++	/* 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0 */
++	G2D_SEQ_2BPP_BIG_BIG       = 0xC,
++	/* 12,13,14,15,8,9,10,11,4,5,6,7,0,1,2,3 */
++	G2D_SEQ_2BPP_BIG_LITTER    = 0xD,
++	/* 3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12 */
++	G2D_SEQ_2BPP_LITTER_BIG    = 0xE,
++	/* 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 */
++	G2D_SEQ_2BPP_LITTER_LITTER = 0xF,
++
++	/* for 1bpp rgb */
++	/* 31,30,29,28,27,26,25,24,23,22,21,20,
++	 * 19,18,17,16,15,14,13,12,11,10,9,8,7,
++	 * 6,5,4,3,2,1,0
++	 */
++	G2D_SEQ_1BPP_BIG_BIG       = 0x10,
++	/* 24,25,26,27,28,29,30,31,16,17,
++	 * 18,19,20,21,22,23,8,9,10,11,12,
++	 * 13,14,15,0,1,2,3,4,5,6,7
++	 */
++	G2D_SEQ_1BPP_BIG_LITTER    = 0x11,
++	/* 7,6,5,4,3,2,1,0,15,14,13,12,11,
++	 * 10,9,8,23,22,21,20,19,18,17,16,
++	 * 31,30,29,28,27,26,25,24
++	 */
++	G2D_SEQ_1BPP_LITTER_BIG    = 0x12,
++	/* 0,1,2,3,4,5,6,7,8,9,10,11,12,13,
++	 * 14,15,16,17,18,19,20,21,22,23,24,
++	 * 25,26,27,28,29,30,31
++	 */
++	G2D_SEQ_1BPP_LITTER_LITTER = 0x13,
++} g2d_pixel_seq;
++
++/*  */
++typedef enum {
++	G2D_BLT_NONE_H = 0x0,
++	G2D_BLT_BLACKNESS,
++	G2D_BLT_NOTMERGEPEN,
++	G2D_BLT_MASKNOTPEN,
++	G2D_BLT_NOTCOPYPEN,
++	G2D_BLT_MASKPENNOT,
++	G2D_BLT_NOT,
++	G2D_BLT_XORPEN,
++	G2D_BLT_NOTMASKPEN,
++	G2D_BLT_MASKPEN,
++	G2D_BLT_NOTXORPEN,
++	G2D_BLT_NOP,
++	G2D_BLT_MERGENOTPEN,
++	G2D_BLT_COPYPEN,
++	G2D_BLT_MERGEPENNOT,
++	G2D_BLT_MERGEPEN,
++	G2D_BLT_WHITENESS = 0x000000ff,
++
++	G2D_ROT_90  = 0x00000100,
++	G2D_ROT_180 = 0x00000200,
++	G2D_ROT_270 = 0x00000300,
++	G2D_ROT_0   = 0x00000400,
++	G2D_ROT_H = 0x00001000,
++	G2D_ROT_V = 0x00002000,
++
++/*	G2D_SM_TDLR_1  =    0x10000000, */
++	G2D_SM_DTLR_1 = 0x10000000,
++/*	G2D_SM_TDRL_1  =    0x20000000, */
++/*	G2D_SM_DTRL_1  =    0x30000000, */
++} g2d_blt_flags_h;
++
++/* ROP3 command */
++typedef enum {
++	G2D_ROP3_BLACKNESS = 0x00,
++	G2D_ROP3_NOTSRCERASE = 0x11,
++	G2D_ROP3_NOTSRCCOPY = 0x33,
++	G2D_ROP3_SRCERASE = 0x44,
++	G2D_ROP3_DSTINVERT = 0x55,
++	G2D_ROP3_PATINVERT = 0x5A,
++	G2D_ROP3_SRCINVERT = 0x66,
++	G2D_ROP3_SRCAND = 0x88,
++	G2D_ROP3_MERGEPAINT = 0xBB,
++	G2D_ROP3_MERGECOPY = 0xC0,
++	G2D_ROP3_SRCCOPY = 0xCC,
++	G2D_ROP3_SRCPAINT = 0xEE,
++	G2D_ROP3_PATCOPY = 0xF0,
++	G2D_ROP3_PATPAINT = 0xFB,
++	G2D_ROP3_WHITENESS = 0xFF,
++} g2d_rop3_cmd_flag;
++
++typedef enum {
++	G2D_FIL_NONE			= 0x00000000,
++	G2D_FIL_PIXEL_ALPHA		= 0x00000001,
++	G2D_FIL_PLANE_ALPHA		= 0x00000002,
++	G2D_FIL_MULTI_ALPHA		= 0x00000004,
++} g2d_fillrect_flags;
++
++typedef enum {
++	G2D_BLT_NONE			= 0x00000000,
++	G2D_BLT_PIXEL_ALPHA		= 0x00000001,
++	G2D_BLT_PLANE_ALPHA		= 0x00000002,
++	G2D_BLT_MULTI_ALPHA		= 0x00000004,
++	G2D_BLT_SRC_COLORKEY	= 0x00000008,
++	G2D_BLT_DST_COLORKEY	= 0x00000010,
++	G2D_BLT_FLIP_HORIZONTAL	= 0x00000020,
++	G2D_BLT_FLIP_VERTICAL	= 0x00000040,
++	G2D_BLT_ROTATE90		= 0x00000080,
++	G2D_BLT_ROTATE180		= 0x00000100,
++	G2D_BLT_ROTATE270		= 0x00000200,
++	G2D_BLT_MIRROR45		= 0x00000400,
++	G2D_BLT_MIRROR135		= 0x00000800,
++	G2D_BLT_SRC_PREMULTIPLY	= 0x00001000,
++	G2D_BLT_DST_PREMULTIPLY	= 0x00002000,
++} g2d_blt_flags;
++
++/* BLD LAYER ALPHA MODE*/
++typedef enum {
++	G2D_PIXEL_ALPHA,
++	G2D_GLOBAL_ALPHA,
++	G2D_MIXER_ALPHA,
++} g2d_alpha_mode_enh;
++
++/* flip rectangle struct */
++typedef struct {
++	__s32		x;		/* left top point coordinate x */
++	__s32		y;		/* left top point coordinate y */
++	__u32		w;		/* rectangle width */
++	__u32		h;		/* rectangle height */
++} g2d_rect;
++
++/* g2d color gamut */
++typedef enum {
++	G2D_BT601,
++	G2D_BT709,
++	G2D_BT2020,
++} g2d_color_gmt;
++
++/* image struct */
++typedef struct {
++	__u32		addr[3];/* base addr of image frame buffer in byte */
++	__u32		w;	/* width of image frame buffer in pixel */
++	__u32		h;	/* height of image frame buffer in pixel */
++	g2d_data_fmt	format;	/* pixel format of image frame buffer */
++	g2d_pixel_seq	pixel_seq;/* pixel sequence of image frame buffer */
++} g2d_image;
++
++/* image struct */
++typedef struct {
++	int		 bbuff;
++	__u32		 color;
++	g2d_fmt_enh	 format;
++	__u32		 laddr[3];
++	__u32		 haddr[3];
++	__u32		 width;
++	__u32		 height;
++	__u32		 align[3];
++
++	g2d_rect	 clip_rect;
++
++	__u32		 gamut;
++	int		 bpremul;
++	__u8		 alpha;
++	g2d_alpha_mode_enh mode;
++	int		 fd;
++} g2d_image_enh;
++
++/*
++ * 0:Top to down, Left to right
++ * 1:Top to down, Right to left
++ * 2:Down to top, Left to right
++ * 3:Down to top, Right to left
++ */
++enum g2d_scan_order {
++	G2D_SM_TDLR = 0x00000000,
++	G2D_SM_TDRL = 0x00000001,
++	G2D_SM_DTLR = 0x00000002,
++	G2D_SM_DTRL = 0x00000003,
++};
++
++typedef struct {
++	g2d_fillrect_flags	 flag;
++	g2d_image			 dst_image;
++	g2d_rect			 dst_rect;
++
++	__u32				 color;		/* fill color */
++	__u32				 alpha;		/* plane alpha value */
++
++} g2d_fillrect;
++
++typedef struct {
++	g2d_image_enh dst_image_h;
++} g2d_fillrect_h;
++
++typedef struct {
++	g2d_blt_flags		flag;
++	g2d_image		src_image;
++	g2d_rect		src_rect;
++
++	g2d_image		dst_image;
++	/* left top point coordinate x of dst rect */
++	__s32			dst_x;
++	/* left top point coordinate y of dst rect */
++	__s32			dst_y;
++
++	__u32			color;		/* colorkey color */
++	__u32			alpha;		/* plane alpha value */
++
++} g2d_blt;
++
++typedef struct {
++	g2d_blt_flags_h flag_h;
++	g2d_image_enh src_image_h;
++	g2d_image_enh dst_image_h;
++} g2d_blt_h;
++
++typedef struct {
++	g2d_blt_flags			 flag;
++	g2d_image			 src_image;
++	g2d_rect			 src_rect;
++
++	g2d_image			 dst_image;
++	g2d_rect			 dst_rect;
++
++	__u32				 color;		/* colorkey color */
++	__u32				 alpha;		/* plane alpha value */
++
++
++} g2d_stretchblt;
++
++typedef struct {
++	g2d_rop3_cmd_flag back_flag;
++	g2d_rop3_cmd_flag fore_flag;
++
++	g2d_image_enh dst_image_h;
++	g2d_image_enh src_image_h;
++	g2d_image_enh ptn_image_h;
++	g2d_image_enh mask_image_h;
++
++} g2d_maskblt;
++
++/* Porter Duff BLD command*/
++typedef enum {
++	G2D_BLD_CLEAR = 0x00000001,
++	G2D_BLD_COPY = 0x00000002,
++	G2D_BLD_DST = 0x00000003,
++	G2D_BLD_SRCOVER = 0x00000004,
++	G2D_BLD_DSTOVER = 0x00000005,
++	G2D_BLD_SRCIN = 0x00000006,
++	G2D_BLD_DSTIN = 0x00000007,
++	G2D_BLD_SRCOUT = 0x00000008,
++	G2D_BLD_DSTOUT = 0x00000009,
++	G2D_BLD_SRCATOP = 0x0000000a,
++	G2D_BLD_DSTATOP = 0x0000000b,
++	G2D_BLD_XOR = 0x0000000c,
++	G2D_CK_SRC = 0x00010000,
++	G2D_CK_DST = 0x00020000,
++} g2d_bld_cmd_flag;
++
++typedef struct {
++	__u32		*pbuffer;
++	__u32		 size;
++
++} g2d_palette;
++
++
++
++typedef struct {
++	long	start;
++	long	end;
++} g2d_cache_range;
++
++/* CK PARA struct */
++typedef struct {
++	bool match_rule;
++/*	int match_rule; */
++	__u32 max_color;
++	__u32 min_color;
++} g2d_ck;
++
++typedef struct {
++	g2d_bld_cmd_flag bld_cmd;
++	g2d_image_enh dst_image_h;
++	g2d_image_enh src_image_h;
++	g2d_ck ck_para;
++} g2d_bld;			/* blending enhance */
++
++typedef enum {
++	G2D_CMD_BITBLT			=	0x50,
++	G2D_CMD_FILLRECT		=	0x51,
++	G2D_CMD_STRETCHBLT		=	0x52,
++	G2D_CMD_PALETTE_TBL		=	0x53,
++	G2D_CMD_QUEUE			=	0x54,
++	G2D_CMD_BITBLT_H		=	0x55,
++	G2D_CMD_FILLRECT_H		=	0x56,
++	G2D_CMD_BLD_H			=	0x57,
++	G2D_CMD_MASK_H			=	0x58,
++
++	G2D_CMD_MEM_REQUEST		=	0x59,
++	G2D_CMD_MEM_RELEASE		=	0x5A,
++	G2D_CMD_MEM_GETADR		=	0x5B,
++	G2D_CMD_MEM_SELIDX		=	0x5C,
++	G2D_CMD_MEM_FLUSH_CACHE		=	0x5D,
++	G2D_CMD_INVERTED_ORDER		=	0x5E,
++} g2d_cmd;
++
++typedef struct{
++    int g2d_fd;
++    g2d_blt_h info;
++    g2d_blt blit;
++    Uint32 src_base_addr;
++    Uint32 dst_base_addr;
++//    g2d_rect src_rect;
++//    g2d_rect dst_rect;
++    Uint32 src_full_width;
++    Uint32 src_full_height;
++    Uint32 src_start_x;
++    Uint32 src_start_y;
++    Uint32 src_work_width;
++    Uint32 src_work_height;
++    Uint32 dst_full_width;
++    Uint32 dst_full_height;
++    Uint32 dst_start_x;
++    Uint32 dst_start_y;
++    Uint32 dst_work_width;
++    Uint32 dst_work_height;
++}fb_g2d_params;
++
++#endif	/* __G2D_DRIVER_H */
++
+diff --git a/libminigui-gpl-3.2/src/include/newgal.h b/libminigui-gpl-3.2/src/include/newgal.h
+index debe5be..b4fb3b9 100644
+--- a/src/include/newgal.h
++++ b/src/include/newgal.h
+@@ -66,7 +66,8 @@ extern "C" {
+ /* Transparency definitions: These define alpha as the opacity of a surface */
+ #define GAL_ALPHA_OPAQUE        255
+ #define GAL_ALPHA_TRANSPARENT   0
+-
++int GAL_VieoIonFd;
++char *GAL_ionbuffer;
+ /*
+  * Allocate a pixel format structure and fill it according to the given info.
+  */
+@@ -110,6 +111,7 @@ typedef struct GAL_Surface {
+ 
+     /* Reference count -- used when freeing surface */
+     int refcount;                       /* Read-mostly */
++    Uint32 ionflags;
+ } GAL_Surface;
+ 
+ /* These are the currently supported flags for the GAL_surface */
+@@ -123,6 +125,7 @@ typedef struct GAL_Surface {
+ #define GAL_HWPALETTE        0x20000000             /* Surface has exclusive palette */
+ #define GAL_DOUBLEBUF        0x40000000             /* Set up double-buffered video mode */
+ #define GAL_OFFSETBUF        0x30000000             /* Set up offset-buffered video mode */
++#define GAL_IONBUF           0x50000000             /* Set up surface with ion mode */
+ #define GAL_FULLSCREEN       0x80000000             /* Surface is a full screen display */
+ /* Used internally (read-only) */
+ #define GAL_HWACCEL          0x00000100                 /* Blit uses hardware acceleration */
+diff --git a/libminigui-gpl-3.2/src/newgal/blit.c b/libminigui-gpl-3.2/src/newgal/blit.c
+index ff451ff..ec8bb33 100644
+--- a/src/newgal/blit.c
++++ b/src/newgal/blit.c
+@@ -97,7 +97,15 @@ static int GAL_SoftBlit(GAL_Surface *src, GAL_Rect *srcrect,
+     return(okay ? 0 : -1);
+ }
+ 
+-static void GAL_BlitCopy(GAL_BlitInfo *info)
++static int GAL_HWBlit(GAL_Surface *src, GAL_Rect *srcrect,
++		            GAL_Surface *dst, GAL_Rect *dstrect)
++{
++	GAL_VideoDevice *this  = current_video;
++	this->HWAccelBlit(this, src, srcrect, dst, dstrect);
++	return 0;
++}
++
++ static void GAL_BlitCopy(GAL_BlitInfo *info)
+ {
+     Uint8 *src, *dst;
+     int w, h;
+@@ -290,7 +298,17 @@ int GAL_CalculateBlit(GAL_Surface *surface)
+     }
+     
+     if ( surface->map->sw_blit == NULL ) {
+-        surface->map->sw_blit = GAL_SoftBlit;
++	if(surface->ionflags == GAL_IONBUF){
++		GAL_VideoDevice *video = current_video;
++		GAL_VideoDevice *this  = current_video;
++		if(video && video->HWAccelBlit){
++			surface->flags |= GAL_HWACCEL;
++			surface->map->hw_blit = GAL_HWBlit;
++		}else{
++		}
++	}else{
++		surface->map->sw_blit = GAL_SoftBlit;
++	}
+     }
+     return(0);
+ }
+diff --git a/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.c b/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.c
+index b757063..cca9de3 100644
+--- a/src/newgal/fbcon/fbvideo.c
++++ b/src/newgal/fbcon/fbvideo.c
+@@ -86,6 +86,8 @@ static void FB_FreeHWSurfaces(_THIS);
+ static void FB_RequestHWSurface (_THIS, const REQ_HWSURFACE* request, REP_HWSURFACE* reply);
+ static int FB_AllocHWSurface(_THIS, GAL_Surface *surface);
+ static void FB_FreeHWSurface(_THIS, GAL_Surface *surface);
++static void *FB_AllocIONBUF(_THIS, GAL_Surface *surface);
++static int FB_HWAccelBlit(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surface *dst, GAL_Rect *dstrect);
+ static void FB_WaitVBL(_THIS);
+ static void FB_WaitIdle(_THIS);
+ 
+@@ -102,6 +104,7 @@ static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable);
+ static void FB_SavePalette(_THIS, struct fb_fix_screeninfo *finfo,
+                                   struct fb_var_screeninfo *vinfo);
+ static void FB_RestorePalette(_THIS);
++#define FBIO_GET_PHY_ADDR 0x4633
+ 
+ /* FB driver bootstrap functions */
+ static int FB_Available(void)
+@@ -117,6 +120,18 @@ static int FB_Available(void)
+     if ( console >= 0 ) {
+         close(console);
+     }
++    GAL_ionbuffer = getenv("MG_IONBUFFER");
++    if(GAL_ionbuffer != NULL && strcmp(GAL_ionbuffer, "1")== 0){
++	if((GAL_VieoIonFd = open("/dev/g2d", O_RDWR)) == -1){
++		printf("open g2d device fail!\n");
++		close(GAL_VieoIonFd);
++		return -1;
++	}
++	if(sunxi_ion_alloc_open() == -1){
++		printf("open /dev/ion error\n");
++		sunxi_ion_alloc_close();
++	}
++    }
+     return(console >= 0);
+ }
+ 
+@@ -176,6 +191,9 @@ static GAL_VideoDevice *FB_CreateDevice(int devindex)
+     this->SetHWColorKey = NULL;
+     this->SetHWAlpha = NULL;
+     this->UpdateRects = NULL;
++
++    this->AllocIONBUF = FB_AllocIONBUF;
++    this->HWAccelBlit = FB_HWAccelBlit;
+ #if 1
+     this->LockHWSurface = FB_LockHWSurface;
+     this->UnlockHWSurface = FB_UnlockHWSurface;
+@@ -767,6 +785,11 @@ static GAL_Surface *FB_SetVideoMode(_THIS, GAL_Surface *current,
+         default:
+         break;
+     }
++	if(current->ionflags == GAL_IONBUF){
++                flip_phy_page = 0;
++                flip_addr_phy[0] = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
++                flip_addr_phy[1] = flip_addr_phy[0]+current->h*current->pitch;
++        }
+ 
+ 	if (flags & GAL_OFFSETBUF) {
+ 		current->flags |= GAL_OFFSETBUF;
+@@ -865,6 +888,9 @@ static int FB_InitHWSurfaces(_THIS, GAL_Surface *screen, char *base, int size)
+         bucket->base = base;
+         bucket->size = size;
+         bucket->next = NULL;
++	if(screen->ionflags == GAL_IONBUF){
++		bucket->addr_phy = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
++	}
+     } else {
+         bucket = NULL;
+     }
+@@ -875,6 +901,7 @@ static int FB_InitHWSurfaces(_THIS, GAL_Surface *screen, char *base, int size)
+     surfaces.base = screen->pixels;
+     surfaces.size = (unsigned int)((long)base - (long)surfaces.base);
+     surfaces.next = bucket;
++    surfaces.addr_phy = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
+     screen->hwdata = (void*)&surfaces;
+     return(0);
+ }
+@@ -955,6 +982,7 @@ static void FB_RequestHWSurface (_THIS, const REQ_HWSURFACE* request, REP_HWSURF
+             newbucket->prev = bucket;
+             newbucket->used = 0;
+             newbucket->base = bucket->base + size;
++	    newbucket->addr_phy = bucket->addr_phy+size;
+             newbucket->size = extra;
+             newbucket->next = bucket->next;
+             if ( bucket->next ) {
+@@ -967,6 +995,7 @@ static void FB_RequestHWSurface (_THIS, const REQ_HWSURFACE* request, REP_HWSURF
+         bucket->used = 1;
+         bucket->size = size;
+         bucket->dirty = 0;
++	bucket->addr_phy = bucket->addr_phy+size+extra;
+ #ifdef FBCON_DEBUG
+         fprintf(stderr, "NEWGAL>FBCON: Allocated %d bytes at %p\n", bucket->size, bucket->base);
+ #endif
+@@ -1088,6 +1117,72 @@ static void FB_FreeHWSurface(_THIS, GAL_Surface *surface)
+     surface->hwdata = NULL;
+ }
+ 
++static void *FB_AllocIONBUF (_THIS, GAL_Surface *surface)
++{
++	surface->hwdata = (struct private_hwdata *)surface;
++	surface->pixels = sunxi_ion_alloc_palloc(surface->h*surface->pitch);
++	((vidmem_bucket *)surface->hwdata)->addr_phy = sunxi_ion_alloc_vir2phy_cpu(surface->pixels);
++	return surface->pixels;
++}
++
++static int FB_HWAccelBlit(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surface *dst, GAL_Rect *dstrect)
++{
++	fb_g2d_params param;
++
++	if(dstrect->w == 0 || dstrect->h == 0){
++		return -1;
++	}
++	param.info.src_image_h.width = src->w;
++	param.info.src_image_h.height = src->h;
++
++	param.info.src_image_h.clip_rect.x = srcrect->x;
++	param.info.src_image_h.clip_rect.y = srcrect->y;
++	param.info.src_image_h.clip_rect.w = srcrect->w;
++	param.info.src_image_h.clip_rect.h = srcrect->h;
++
++	param.info.flag_h = 1024;
++	param.info.src_image_h.mode = 2;
++	param.info.src_image_h.alpha = 255;
++	param.info.src_image_h.format = G2D_FORMAT_ARGB8888;
++	param.info.src_image_h.laddr[0] = ((vidmem_bucket *)src->hwdata)->addr_phy;
++	param.info.src_image_h.laddr[1] = (unsigned int)0;
++	param.info.src_image_h.laddr[2] = (unsigned int)0;
++	param.info.src_image_h.haddr[0] = (unsigned int)0;
++	param.info.src_image_h.haddr[1] = (unsigned int)0;
++	param.info.src_image_h.haddr[2] = (unsigned int)0;
++	param.info.src_image_h.align[0] = 0;
++	param.info.src_image_h.align[1] = param.info.src_image_h.align[0];
++	param.info.src_image_h.align[2] = param.info.src_image_h.align[0];
++
++	param.info.dst_image_h.width = dst->w;
++	param.info.dst_image_h.height = dst->h;
++
++	param.info.dst_image_h.clip_rect.x = dstrect->x;
++	param.info.dst_image_h.clip_rect.y = dstrect->y;
++	param.info.dst_image_h.clip_rect.w = dstrect->w;
++	param.info.dst_image_h.clip_rect.h = dstrect->h;
++
++	param.info.flag_h = 1024;
++	param.info.dst_image_h.mode = 2;
++	param.info.dst_image_h.alpha = 255;
++	param.info.dst_image_h.format = G2D_FORMAT_ARGB8888;
++	param.info.dst_image_h.laddr[0] = ((vidmem_bucket *)dst->hwdata)->addr_phy;
++	param.info.dst_image_h.laddr[1] = (unsigned int)0;
++	param.info.dst_image_h.laddr[2] = (unsigned int)0;
++	param.info.dst_image_h.haddr[0] = (unsigned int)0;
++	param.info.dst_image_h.haddr[1] = (unsigned int)0;
++	param.info.dst_image_h.haddr[2] = (unsigned int)0;
++	param.info.dst_image_h.align[0] = 0;
++	param.info.dst_image_h.align[1] = param.info.dst_image_h.align[0];
++	param.info.dst_image_h.align[2] = param.info.dst_image_h.align[0];
++
++	if(ioctl(GAL_VieoIonFd, G2D_CMD_BITBLT_H, (unsigned long)(&param.info)) < 0){
++		close(GAL_VieoIonFd);
++		return -1;
++	}
++	return 0;
++}
++
+ static void FB_WaitVBL(_THIS)
+ {
+ #ifdef FBIOWAITRETRACE /* Heheh, this didn't make it into the main kernel */
+@@ -1203,6 +1298,63 @@ static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable)
+ 	return 0;
+ }
+ 
++int fb_g2dcopy(_THIS, GAL_Surface *src, GAL_Rect *rects)
++{
++	fb_g2d_params param;
++
++	param.info.src_image_h.width = src->w;
++        param.info.src_image_h.height = src->h;
++
++        param.info.src_image_h.clip_rect.x = rects->x;
++        param.info.src_image_h.clip_rect.y = rects->y;
++        param.info.src_image_h.clip_rect.w = rects->w;
++        param.info.src_image_h.clip_rect.h = rects->h;
++
++	param.info.flag_h = 1024;
++        param.info.src_image_h.mode = 2;
++        param.info.src_image_h.alpha = 255;
++
++	param.info.src_image_h.format = G2D_FORMAT_ARGB8888;
++        param.info.src_image_h.laddr[0] = flip_addr_phy[flip_phy_page];
++        param.info.src_image_h.laddr[1] = (unsigned int)0;
++        param.info.src_image_h.laddr[2] = (unsigned int)0;
++        param.info.src_image_h.haddr[0] = (unsigned int)0;
++        param.info.src_image_h.haddr[1] = (unsigned int)0;
++        param.info.src_image_h.haddr[2] = (unsigned int)0;
++        param.info.src_image_h.align[0] = 0;
++        param.info.src_image_h.align[1] = param.info.src_image_h.align[0];
++        param.info.src_image_h.align[2] = param.info.src_image_h.align[0];
++
++        param.info.dst_image_h.width = src->w;
++        param.info.dst_image_h.height = src->h;
++
++	param.info.dst_image_h.clip_rect.x = rects->x;
++        param.info.dst_image_h.clip_rect.y = rects->y;
++        param.info.dst_image_h.clip_rect.w = rects->w;
++        param.info.dst_image_h.clip_rect.h = rects->h;
++
++	param.info.flag_h = 1024;
++        param.info.dst_image_h.mode = 2;
++        param.info.dst_image_h.alpha = 255;
++        param.info.dst_image_h.format = G2D_FORMAT_ARGB8888;
++        param.info.dst_image_h.laddr[0] = flip_addr_phy[!flip_phy_page];
++        param.info.dst_image_h.laddr[1] = (unsigned int)0;
++        param.info.dst_image_h.laddr[2] = (unsigned int)0;
++        param.info.dst_image_h.haddr[0] = (unsigned int)0;
++        param.info.dst_image_h.haddr[1] = (unsigned int)0;
++        param.info.dst_image_h.haddr[2] = (unsigned int)0;
++        param.info.dst_image_h.align[0] = 0;
++        param.info.dst_image_h.align[1] = param.info.dst_image_h.align[0];
++        param.info.dst_image_h.align[2] = param.info.dst_image_h.align[0];
++
++	if(ioctl(GAL_VieoIonFd, G2D_CMD_BITBLT_H, (unsigned long)(&param.info)) < 0){
++                printf("G2D_CMD_BITBLT_H fail\n");
++                close(GAL_VieoIonFd);
++                return -1;
++        }
++	return 0;
++}
++
+ static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
+ 		BOOL enable)
+ {
+@@ -1283,8 +1435,12 @@ static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
+ 
+ 	if (rects->x == 0 && rects->y == 0, rects->w == surface->w
+ 			&& rects->h == surface->h) {
+-		GAL_memcpy(flip_address[!flip_page], flip_address[flip_page],
++		if(surface->ionflags == GAL_IONBUF){
++			fb_g2dcopy(this, surface, rects);
++		}else{
++			GAL_memcpy(flip_address[!flip_page], flip_address[flip_page],
+ 				mapped_memlen / 2);
++		}
+ 	} else {
+ 		GAL_BlitInfo info;
+ 
+@@ -1311,9 +1467,12 @@ static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
+ 		FB_BlitCopy(&info);
+ 	}
+ 
+-	flip_page = !flip_page;
+-
+-	this->screen->pixels = flip_address[flip_page];
++	if(surface->ionflags == GAL_IONBUF){
++		flip_phy_page = !flip_phy_page;
++		((vidmem_bucket *)this->screen->hwdata)->addr_phy = flip_addr_phy[flip_phy_page];
++	}
++		flip_page = !flip_page;
++		this->screen->pixels = flip_address[flip_page];
+ 
+ 	FB_UnlockHWSurface(this, surface);
+ 	return (0);
+@@ -1481,6 +1640,11 @@ static void FB_VideoQuit(_THIS)
+             memset(this->screen->pixels,0,this->screen->h*this->screen->pitch);
+ #endif
+         }
++	if(this->screen->ionflags == GAL_IONBUF){
++		close(GAL_VieoIonFd);
++		sunxi_ion_alloc_close();
++		GAL_VieoIonFd = 0;
++	}
+         /* This test fails when using the VGA16 shadow memory */
+         if ( ((char *)this->screen->pixels >= mapped_mem) &&
+              ((char *)this->screen->pixels < (mapped_mem+mapped_memlen)) ) {
+diff --git a/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.h b/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.h
+index ffa2ffe..7c5eb13 100644
+--- a/src/newgal/fbcon/fbvideo.h
++++ b/src/newgal/fbcon/fbvideo.h
+@@ -41,6 +41,8 @@
+ #include <pthread.h>
+ 
+ #include "sysvideo.h"
++#include "../../include/g2d_driver_enh.h"
++#include "../../include/g2d_driver.h"
+ 
+ /* Hidden "this" pointer for the video functions */
+ #define _THIS    GAL_VideoDevice *this
+@@ -57,6 +59,9 @@ typedef struct vidmem_bucket {
+     char *base;
+     unsigned int size;
+     struct vidmem_bucket *next;
++    int g2d_fd;
++    void *addr_phy;
++    int ion_fd;
+ } vidmem_bucket;
+ 
+ /* Private display data */
+@@ -87,7 +92,9 @@ struct GAL_PrivateVideoData {
+     char *mapped_io;
+     long mapped_iolen;
+     int flip_page;
++    int flip_phy_page;
+     char *flip_address[3];
++    char *flip_addr_phy[2];
+ 
+     vidmem_bucket surfaces;
+     int surfaces_memtotal;
+@@ -99,6 +106,11 @@ struct GAL_PrivateVideoData {
+     FB_mutex *hw_lock;
+ };
+ 
++struct private_hwdata{
++    int g2d_fd;
++    void *addr_phy;
++};
++
+ /* Old variable names */
+ #define console_fd          (this->hidden->console_fd)
+ #define current_vt          (this->hidden->current_vt)
+@@ -118,6 +130,8 @@ struct GAL_PrivateVideoData {
+ #define mapped_iolen        (this->hidden->mapped_iolen)
+ #define flip_page           (this->hidden->flip_page)
+ #define flip_address        (this->hidden->flip_address)
++#define flip_phy_page       (this->hidden->flip_phy_page)
++#define flip_addr_phy       (this->hidden->flip_addr_phy)
+ #define surfaces            (this->hidden->surfaces)
+ #define surfaces_memtotal   (this->hidden->surfaces_memtotal)
+ #define surfaces_memleft    (this->hidden->surfaces_memleft)
+diff --git a/libminigui-gpl-3.2/src/newgal/surface.c b/libminigui-gpl-3.2/src/newgal/surface.c
+index 91fe169..5ba55c3 100644
+--- a/src/newgal/surface.c
++++ b/src/newgal/surface.c
+@@ -126,11 +126,22 @@ GAL_Surface * GAL_CreateRGBSurface (Uint32 flags,
+     surface->format_version = 0;
+     GAL_SetClipRect(surface, NULL);
+ 
++    char *GAL_ionbuffer = getenv("MG_IONBUFFER");
++    if(GAL_ionbuffer != NULL && strcmp(GAL_ionbuffer, "1") == 0){
++        surface->ionflags =  GAL_IONBUF;
++    }else{
++        surface->ionflags = 0;
++    }
++
+     /* Get the pixels */
+     if ( surface->w && surface->h ) {
+         if ( ((flags&GAL_HWSURFACE) == GAL_SWSURFACE) || 
+                 (video->AllocHWSurface(this, surface) < 0) ) {
+-            surface->pixels = malloc(surface->h*surface->pitch);
++		if(surface->ionflags == GAL_IONBUF){
++			surface->pixels = video->AllocIONBUF(this, surface);
++		}else{
++			surface->pixels = malloc(surface->h*surface->pitch);
++		}
+             if ( surface->pixels == NULL ) {
+                 GAL_FreeSurface(surface);
+                 GAL_OutOfMemory();
+@@ -545,7 +556,9 @@ int GAL_LowerBlit (GAL_Surface *src, GAL_Rect *srcrect,
+ #ifdef MG_CONFIG_USE_OWN_OVERLAPPED_BITBLIT
+     ret = own_overlapped_bitblit(do_blit, src, srcrect, dst, dstrect);
+ #else
++   if(src && dst){
+     ret = do_blit(src, srcrect, dst, dstrect);
++    }
+ #endif
+ 
+ #if 0
+@@ -1758,7 +1771,11 @@ void GAL_FreeSurface (GAL_Surface *surface)
+     }
+     if ( surface->pixels &&
+          ((surface->flags & GAL_PREALLOC) != GAL_PREALLOC) ) {
+-        free(surface->pixels);
++	if(surface->ionflags == GAL_IONBUF){
++		sunxi_ion_alloc_pfree(surface->pixels);
++	}else{
++		free(surface->pixels);
++	}
+     }
+     free(surface);
+ #ifdef CHECK_LEAKS
+diff --git a/libminigui-gpl-3.2/src/newgal/sysvideo.h b/libminigui-gpl-3.2/src/newgal/sysvideo.h
+index 4d81ebf..ee043a2 100644
+--- a/src/newgal/sysvideo.h
++++ b/src/newgal/sysvideo.h
+@@ -139,11 +139,12 @@ struct GAL_VideoDevice {
+ 	/* Allocates a surface in video memory */
+ 	int (*AllocHWSurface)(_THIS, GAL_Surface *surface);
+ 
++	void * (*AllocIONBUF)(_THIS, GAL_Surface *surface);
+ 	/* Sets the hardware accelerated blit function, if any, based
+ 	   on the current flags of the surface (colorkey, alpha, etc.)
+ 	 */
+ 	int (*CheckHWBlit)(_THIS, GAL_Surface *src, GAL_Surface *dst);
+-
++	int (*HWAccelBlit)(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surface *dst, GAL_Rect *dstrect);
+ 	/* Fills a surface rectangle with the given color */
+ 	int (*FillHWRect)(_THIS, GAL_Surface *dst, GAL_Rect *rect, Uint32 color);
+ 
+diff --git a/libminigui-gpl-3.2/src/newgal/video.c b/libminigui-gpl-3.2/src/newgal/video.c
+index 1a58877..4706000 100644
+--- a/src/newgal/video.c
++++ b/src/newgal/video.c
+@@ -38,6 +38,16 @@
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#include <fcntl.h>
++#include <unistd.h>
++#include <sys/ioctl.h>
++#include <sys/mman.h>
++
++#include <linux/version.h>
++#include <linux/vt.h>
++#include <linux/kd.h>
++#include <linux/keyboard.h>
++
+ #include "common.h"
+ #include "minigui.h"
+ #include "newgal.h"
+@@ -45,7 +55,8 @@
+ #include "blit.h"
+ #include "pixels_c.h"
+ #include "license.h"
+-
++#include "../include/g2d_driver_enh.h"
++#include "../include/g2d_driver.h"
+ /* Available video drivers */
+ static VideoBootStrap *bootstrap[] = {
+ #ifdef _MGGAL_DUMMY

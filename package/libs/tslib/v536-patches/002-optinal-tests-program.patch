@@ -1,0 +1,31 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -166,6 +166,11 @@ AC_ARG_ENABLE([tools], AS_HELP_STRING([-
+ AM_CONDITIONAL([ENABLE_TOOLS], [test "$enable_tools" = "yes"])
+ AC_MSG_RESULT($enable_tools)
+ 
++AC_MSG_CHECKING([whether to enable test programs])
++AC_ARG_ENABLE([tests], AS_HELP_STRING([--disable-tests], [Disable test programs]), [], [enable_tests=yes])
++AM_CONDITIONAL([ENABLE_TESTS], [test "$enable_tests" = "yes"])
++AC_MSG_RESULT($enable_tests)
++
+ AC_DEFUN([AX_DEFINE_SUBST], [
+ AC_DEFINE_UNQUOTED([$1], [$2], [$3])
+ AC_SUBST([$1], ['$2'])
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -8,6 +8,8 @@
+ #
+ #
+ 
++if ENABLE_TESTS
++
+ AM_CFLAGS               = -DTS_POINTERCAL=\"@TS_POINTERCAL@\" $(DEBUGFLAGS)
+ AM_CPPFLAGS		= -I$(top_srcdir)/src
+ 
+@@ -99,3 +101,5 @@ endif
+ 
+ ts_finddev_SOURCES      = ts_finddev.c
+ ts_finddev_LDADD        = $(top_builddir)/src/libts.la
++
++endif

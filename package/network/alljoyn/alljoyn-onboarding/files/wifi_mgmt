@@ -1,0 +1,337 @@
+#!/bin/sh
+
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+. /lib/config/uci.sh
+. /usr/share/libubox/jshn.sh
+
+DEBUG=
+
+ERROR_NONE=0
+ERROR_UNREACHABLE=1
+ERROR_PROTOCOL=2
+ERROR_UNAUTHORIZED=3
+ERROR_GENERAL=4
+
+WPA_CLI() {
+    local iface=$1;shift
+    local opt
+    case ${iface} in
+        global) opt="-g /var/run/wpa_supplicant-${iface}" ;;
+        *) opt="-p /var/run/wpa_supplicant-${iface} -i ${iface}";;
+    esac
+    if [ -n "${DEBUG}" ]; then
+        echo wpa_cli ${opt} "$@" >&2
+        wpa_cli ${opt} "$@" || exit 2
+        return 0
+    fi
+    wpa_cli ${opt} "$@" >/dev/null 2>&1 || exit 2
+}
+
+wifi_connect() {
+    local ssid=$(uci get alljoyn-onboarding.@onboarding[0].ssid)
+    local encryption=$(uci get alljoyn-onboarding.@onboarding[0].encryption)
+    local key=$(uci get alljoyn-onboarding.@onboarding[0].key)
+
+    if [ "$encryption" = "wep" ]; then
+        local getwepkey="uci get alljoyn-onboarding.@onboarding[0].key$key"
+        uci set wireless.@wifi-iface[0].key$key="$($getwepkey)"
+    fi
+
+    uci set wireless.@wifi-iface[0].mode=sta
+    uci set wireless.@wifi-iface[0].network=obswifi
+    uci set wireless.@wifi-iface[0].ssid="$ssid"
+    uci set wireless.@wifi-iface[0].key="$key"
+    uci set wireless.@wifi-iface[0].encryption=$encryption
+    uci delete wireless.@wifi-iface[0].hidden
+    uci commit wireless
+    wifi
+
+# when in station mode, set the scan_wifi cron job to run every hour
+    /etc/init.d/cron stop
+    sed -i '/\/usr\/sbin\/wifi_scan/d' /etc/crontabs/root
+    echo '1 * * * * /usr/sbin/wifi_scan' >> /etc/crontabs/root
+    /etc/init.d/cron start
+}
+
+wifi_softap() {
+    local ssid=$(uci get alljoyn-onboarding.@onboarding[0].apssid)
+    local encryption=$(uci get alljoyn-onboarding.@onboarding[0].apencryption)
+    local key=$(uci get alljoyn-onboarding.@onboarding[0].apkey)
+    local hidden=$(uci get alljoyn-onboarding.@onboarding[0].aphidden)
+    uci set wireless.@wifi-iface[0].mode=ap
+    uci set wireless.@wifi-iface[0].network=lan
+    uci set wireless.@wifi-iface[0].ssid="$ssid"
+    uci set wireless.@wifi-iface[0].key="$key"
+    uci set wireless.@wifi-iface[0].encryption=$encryption
+    uci set wireless.@wifi-iface[0].hidden=$hidden
+    uci commit wireless
+    wifi
+
+# when in soft ap mode, set the scan_wifi cron job to run every 15 minutes
+    /etc/init.d/cron stop
+    sed -i '/\/usr\/sbin\/wifi_scan/d' /etc/crontabs/root
+    echo '*/15 * * * * /usr/sbin/wifi_scan' >> /etc/crontabs/root
+    /etc/init.d/cron start
+}
+
+wifi_reset() {
+    wifi
+}
+
+wifi_configure_commit() {
+    uci set alljoyn-onboarding.@onboarding[0].ssid="$1"
+    uci set alljoyn-onboarding.@onboarding[0].encryption="$2"
+    if [ "$2" = "wep" ]; then
+        uci set alljoyn-onboarding.@onboarding[0].key="$5"
+        uci set alljoyn-onboarding.@onboarding[0].key$5="$4"
+    else
+        uci set alljoyn-onboarding.@onboarding[0].key="$3"
+    fi
+    uci commit alljoyn-onboarding
+}
+
+wifi_connect_status() {
+    ifstatus=$(ifstatus obswifi)
+    json_load "$ifstatus"
+    json_get_var iface device
+    local timeout=4
+    local result=$ERROR_UNREACHABLE
+    local conn_state=0
+
+    if [ -z $iface ]; then
+        echo "Device not defined for obswifi" >&2
+        set_error $ERROR_UNREACHABLE "Unreachable"
+        return $result
+    fi
+
+    while [ ${timeout} -gt 0 ]; do
+        sleep 1
+        ctrl_iface=$(grep ctrl_interface /var/run/wpa_supplicant-${iface}.conf | sed s/ctrl_interface=//)
+        if [ -z "${ctrl_iface}" ]; then
+            conn_state=$(wpa_cli -i ${iface} status 2>/dev/null | grep wpa_state | cut -d= -f2)
+        else
+            conn_state=$(wpa_cli -i ${iface} -p ${ctrl_iface} status 2>/dev/null | grep wpa_state | cut -d= -f2)
+        fi
+        echo ${conn_state} >&2
+        if [ "${conn_state}" = "COMPLETED" ]; then
+            result=$ERROR_NONE
+            set_error $ERROR_NONE "Validated"
+            return $result
+        elif [ "${conn_state}" = "SCANNING" ]; then
+            result=$ERROR_UNREACHABLE
+            set_error $ERROR_UNREACHABLE "Unreachable"
+        elif [ "${conn_state}" = "4WAY_HANDSHAKE" ]; then
+            set_error $ERROR_UNAUTHORIZED "Unauthorized - 4WAY_HANDSHAKE timeout"
+            result=$ERROR_UNAUTHORIZED
+        elif [ "${conn_state}" = "DISCONNECTED" ]; then
+            set_error $ERROR_UNAUTHORIZED "Unauthorized - DISCONNECTED"
+            result=$ERROR_UNAUTHORIZED
+        else
+            result=$ERROR_PROTOCOL
+            set_error $ERROR_PROTOCOL "Unsupported protocol"
+            echo "wpa_cli returned unknown status" >&2
+        fi
+        timeout=$((--timeout))
+    done
+
+    echo "Timeout --> unreachable" >&2
+    return $result
+}
+
+showhelp() {
+    cat << EOF
+  $0 -s <ssid> -a <auth>
+     [-p <passphrase>] [-k key] [-i index] [ -t timeout ] [ -d ]
+
+  Mandatory parameters:
+    -s <ssid>: Connect to SSID <ssid>
+    -a <auth>: Use authentication <auth>, where <auth> can be one of:
+        "open": No authentication
+        "wep": WEP authentication
+        "psk": WPA authentication
+        "psk2": WPA2 authentication
+
+  Optional parameters:
+    -p <passphrase>: (WEP or WPA only) Set the WEP (string) or WPA passphrase
+    -k <key>: (WEP only) Set the key (hex key only, either 5 or 13 bytes len)
+    -i <index>: (WEP only) Set the key index (1-4)
+    -t <timeout>: Set the connection timeout (in seconds) - default=4
+    -d : enable debug
+    -h : print this help
+
+  Return value:
+    0: Connection Success
+    1: Connection Failed
+    2: Error
+EOF
+}
+
+check_params() {
+    local ssid=$1
+    local auth=$2
+    local psk=$3
+    local key=$4
+    local index=$5
+
+    if [ -z "${auth}" ] || [ -z "${ssid}" ]; then
+        echo "Error:ssid or authentication not found" >&2
+        return 1
+    fi
+
+    # Using passphrase and/or key and/or index in Open mode is inconsistent
+    if [ "${auth}" = "open" ]; then
+        if [ -n "${key}" -o -n "${index}" -o -n "${psk}" ]; then
+            echo "Open mode can't be used with passphrase/key/index" >&2
+            return 1
+        fi
+    fi
+
+    # If wep is used, make sure we also got a key & its index
+    if [ "${auth}" = "wep" ]; then
+        if [ -z "${key}" ]; then
+            echo "In WEP, please specify the key and optionally, the index" >&2
+            return 1
+        fi
+    fi
+
+    # Having a key and/or index with non-WEP encryption is inconsistent
+    if [ "${auth}" != "wep" ]; then
+        if [ -n "${key}" -o -n "${index}" ]; then
+            echo "Index/Key can't be used with non-WEP authentication " >&2
+                    return 1
+        fi
+    fi
+
+    # If wpa is used, make sure we also got a passphrase
+    case "$auth" in 
+        *psk*)
+        if [ -z "${psk}" ]; then
+            echo "In WPA, please specify a passphrase" >&2
+            return 1
+        fi
+
+            if [ $(expr length "${psk}") -lt 8 ]; then
+            echo "In WPA, please specify a passphrase of size at least 8" >&2
+                    return 1
+            fi
+
+            if [ $(expr length "${psk}") -eq 64 ]; then
+                local i=0
+                while [ $i -lt 64 ]; do
+                    char=${psk:$i:1}
+                    case "$char" in
+
+                    [a-fA-F0-9] );;
+
+                    * )
+                        echo "In WPA, please specify an ASCII passphrase of size less than 64 or a Hex passphrase of size 64" >&2
+                        return 1;;
+                    esac
+                i=$((i+1))
+                done
+            elif [ $(expr length "${psk}") -gt 64 ]; then
+                echo "In WPA, please specify an ASCII passphrase of size less than 64 or a Hex passphrase of size 64" >&2
+                return 1
+            fi
+        ;;
+        *)
+    esac
+
+    return 0
+}
+
+wifi_configure() {
+# Process arguments
+local ssid auth psk key index
+
+while [ -n "$1" ];do
+    case "$1" in
+    -s) ssid="$2"; shift;;
+    -a) auth="$2"; shift
+
+        if [ "${auth}" = "OPEN" ]; then
+            auth="none"
+        fi
+
+        if [ "${auth}" = "WEP" ]; then
+            auth="wep"
+        fi
+
+        case "$auth" in 
+        WPA2*)
+            auth="psk2+tkip+ccmp"
+            ;;
+        WPA*)
+            auth="psk+tkip+ccmp"
+            ;;
+        esac
+
+        if [ "${auth}" = "WPS" ]; then
+            auth="psk"
+        fi
+
+        [ ${auth} = "none" ] || [ ${auth} = "wep" ] || [ ${auth} = "psk+tkip+ccmp" ] || [ ${auth} = "psk2+tkip+ccmp" ] || {
+            echo "Invalid authentication \"${auth}\"" >&2
+            echo "Valid authentication values are \"none\", \"wep\", \"psk+tkip+ccmp\", \"psk2+tkip+ccmp\"" >&2
+            showhelp
+            exit 2;
+        };;
+    -p) psk="$2"; shift;;
+    -k) key="$2"; shift;;
+    -i) index="$2"; shift
+        if [ ! ${index} -ge 1 ] && [ ! ${index} -le 4 ]; then
+            echo "Invalid index \"${index}\"" >&2
+            echo "Valid index values are \"1\", \"2\", \"3\", \"4\"" >&2
+            showhelp
+            exit 2
+        fi;;
+    -t) timeout="$2"; shift;;
+    -d) DEBUG=1;;
+    -h) showhelp; exit 2;;
+    *)
+        echo "Invalid option: -${OPTARG}" >&2
+        showhelp
+        exit 2
+        ;;
+    esac
+    shift
+done
+
+if [ "${auth}" = "wep" ]; then
+    if [ -z "${index}" ]; then
+        index=1
+        echo "Defaulting index to 1" >&2
+    fi
+fi
+
+# Perform sanity checks on the script arguments
+check_params "${ssid}" "${auth}" "${psk}" "${key}" "${index}" || {
+    showhelp
+    exit 2
+}
+
+
+
+wifi_configure_commit "${ssid}" "${auth}" "${psk}" "${key}" "${index}"
+}
+
+set_error() {
+    uci set -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].lasterrorcode=$1
+    uci set -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].lasterrormsg="$2"
+    uci commit -c /etc/alljoyn-onboarding alljoyn-onboarding-state
+    printf '%s\n%s' "$1" "$2" > /tmp/state/alljoyn-onboarding-lasterror
+}

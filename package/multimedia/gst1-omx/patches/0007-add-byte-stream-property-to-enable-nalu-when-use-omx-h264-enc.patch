@@ -1,0 +1,123 @@
+diff --git a/omx/gstomxh264enc.c b/omx/gstomxh264enc.c
+index aa33ae5..48ef3d7 100644
+--- a/omx/gstomxh264enc.c
++++ b/omx/gstomxh264enc.c
+@@ -30,6 +30,7 @@
+ #include <OMX_Broadcom.h>
+ #include <OMX_Index.h>
+ #endif
++#include "OMX_IndexExt.h"
+
+ GST_DEBUG_CATEGORY_STATIC (gst_omx_h264_enc_debug_category);
+ #define GST_CAT_DEFAULT gst_omx_h264_enc_debug_category
+@@ -54,6 +55,7 @@ enum
+ #ifdef USE_OMX_TARGET_RPI
+   PROP_INLINESPSPPSHEADERS,
+ #endif
++  PROP_BYTE_STREAM,
+   PROP_PERIODICITYOFIDRFRAMES,
+   PROP_INTERVALOFCODINGINTRAFRAMES
+ };
+@@ -61,6 +63,7 @@ enum
+ #ifdef USE_OMX_TARGET_RPI
+ #define GST_OMX_H264_VIDEO_ENC_INLINE_SPS_PPS_HEADERS_DEFAULT      TRUE
+ #endif
++#define GST_OMX_H264_VIDEO_ENC_BYTE_STREAM_DEFAULT        FALSE
+ #define GST_OMX_H264_VIDEO_ENC_PERIODICITY_OF_IDR_FRAMES_DEFAULT    (0xffffffff)
+ #define GST_OMX_H264_VIDEO_ENC_INTERVAL_OF_CODING_INTRA_FRAMES_DEFAULT (0xffffffff)
+
+@@ -98,6 +101,11 @@ gst_omx_h264_enc_class_init (GstOMXH264EncClass * klass)
+           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS |
+           GST_PARAM_MUTABLE_READY));
+ #endif
++  g_object_class_install_property (gobject_class, PROP_BYTE_STREAM,
++      g_param_spec_boolean ("byte-stream", "Byte Stream",
++          "Generate byte stream format of NALU",
++          GST_OMX_H264_VIDEO_ENC_BYTE_STREAM_DEFAULT,
++          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+   g_object_class_install_property (gobject_class, PROP_PERIODICITYOFIDRFRAMES,
+       g_param_spec_uint ("periodicty-idr", "Target Bitrate",
+@@ -146,6 +154,8 @@ gst_omx_h264_enc_set_property (GObject * object, guint prop_id,
+       self->inline_sps_pps_headers = g_value_get_boolean (value);
+       break;
+ #endif
++    case PROP_BYTE_STREAM:
++      self->byte_stream = g_value_get_boolean (value);
+     case PROP_PERIODICITYOFIDRFRAMES:
+       self->periodicty_idr = g_value_get_uint (value);
+       break;
+@@ -170,6 +180,9 @@ gst_omx_h264_enc_get_property (GObject * object, guint prop_id, GValue * value,
+       g_value_set_boolean (value, self->inline_sps_pps_headers);
+       break;
+ #endif
++    case PROP_BYTE_STREAM:
++      g_value_set_boolean (value, self->byte_stream);
++      break;
+     case PROP_PERIODICITYOFIDRFRAMES:
+       g_value_set_uint (value, self->periodicty_idr);
+       break;
+@@ -189,6 +202,7 @@ gst_omx_h264_enc_init (GstOMXH264Enc * self)
+   self->inline_sps_pps_headers =
+       GST_OMX_H264_VIDEO_ENC_INLINE_SPS_PPS_HEADERS_DEFAULT;
+ #endif
++  self->byte_stream = GST_OMX_H264_VIDEO_ENC_BYTE_STREAM_DEFAULT;
+   self->periodicty_idr =
+       GST_OMX_H264_VIDEO_ENC_PERIODICITY_OF_IDR_FRAMES_DEFAULT;
+   self->interval_intraframes =
+@@ -226,6 +240,7 @@ gst_omx_h264_enc_set_format (GstOMXVideoEnc * enc, GstOMXPort * port,
+   OMX_PARAM_PORTDEFINITIONTYPE port_def;
+   OMX_VIDEO_PARAM_PROFILELEVELTYPE param;
+   OMX_VIDEO_CONFIG_AVCINTRAPERIOD config_avcintraperiod;
++  OMX_NALSTREAMFORMATTYPE config_nalstreamformattype;
+ #ifdef USE_OMX_TARGET_RPI
+   OMX_CONFIG_PORTBOOLEANTYPE config_inline_header;
+ #endif
+@@ -263,6 +278,35 @@ gst_omx_h264_enc_set_format (GstOMXVideoEnc * enc, GstOMXPort * port,
+   }
+ #endif
+
++  if (self->byte_stream != GST_OMX_H264_VIDEO_ENC_BYTE_STREAM_DEFAULT) {
++    GST_OMX_INIT_STRUCT (&config_nalstreamformattype);
++    err =
++        gst_omx_component_get_parameter (GST_OMX_VIDEO_ENC (self)->enc,
++        OMX_IndexParamNalStreamFormat, &config_nalstreamformattype);
++    if (err != OMX_ErrorNone) {
++      GST_ERROR_OBJECT (self,
++          "can't get OMX_IndexParamNalStreamFormat %s (0x%08x)",
++          gst_omx_error_to_string (err), err);
++      return FALSE;
++    }
++
++    GST_DEBUG_OBJECT (self, "default Nal Stream Format:%u",
++        (guint) config_nalstreamformattype.eNaluFormat);
++
++    if (self->byte_stream != GST_OMX_H264_VIDEO_ENC_BYTE_STREAM_DEFAULT)
++      config_nalstreamformattype.eNaluFormat = OMX_NaluFormatFourByteInterleaveLength;
++
++    err =
++        gst_omx_component_set_parameter (GST_OMX_VIDEO_ENC (self)->enc,
++        OMX_IndexParamNalStreamFormat, &config_nalstreamformattype);
++    if (err != OMX_ErrorNone) {
++      GST_ERROR_OBJECT (self,
++          "can't set OMX_IndexParamNalStreamFormat %s (0x%08x)",
++          gst_omx_error_to_string (err), err);
++      return FALSE;
++    }
++  }
++
+   if (self->periodicty_idr !=
+       GST_OMX_H264_VIDEO_ENC_PERIODICITY_OF_IDR_FRAMES_DEFAULT
+       || self->interval_intraframes !=
+diff --git a/omx/gstomxh264enc.h b/omx/gstomxh264enc.h
+index 03326e1..d962d7b 100644
+--- a/omx/gstomxh264enc.h
++++ b/omx/gstomxh264enc.h
+@@ -46,6 +46,7 @@ struct _GstOMXH264Enc
+ {
+   GstOMXVideoEnc parent;
+
++  gboolean byte_stream;
+ #ifdef USE_OMX_TARGET_RPI
+   gboolean inline_sps_pps_headers;
+ #endif

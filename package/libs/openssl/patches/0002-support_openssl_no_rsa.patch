@@ -1,0 +1,158 @@
+--- a/fuzz/asn1.c
++++ b/fuzz/asn1.c
+@@ -153,10 +153,12 @@ static ASN1_ITEM_EXP *item_type[] = {
+     ASN1_ITEM_ref(POLICYQUALINFO),
+     ASN1_ITEM_ref(PROXY_CERT_INFO_EXTENSION),
+     ASN1_ITEM_ref(PROXY_POLICY),
++#ifndef OPENSSL_NO_RSA
+     ASN1_ITEM_ref(RSA_OAEP_PARAMS),
+     ASN1_ITEM_ref(RSAPrivateKey),
+     ASN1_ITEM_ref(RSA_PSS_PARAMS),
+     ASN1_ITEM_ref(RSAPublicKey),
++#endif
+     ASN1_ITEM_ref(SXNET),
+     ASN1_ITEM_ref(SXNETID),
+     /*ASN1_ITEM_ref(TS_RESP),  want to do this, but type is hidden, however d2i exists... */
+--- a/test/enginetest.c
++++ b/test/enginetest.c
+@@ -22,7 +22,9 @@ int main(int argc, char *argv[])
+ # include <openssl/crypto.h>
+ # include <openssl/engine.h>
+ # include <openssl/err.h>
+-# include <openssl/rsa.h>
++# ifndef OPENSSL_NO_RSA
++#  include <openssl/rsa.h>
++# endif
+ # include <openssl/bn.h>
+ 
+ static void display_engine_list(void)
+@@ -62,6 +64,7 @@ static int test_encrypt(EVP_PKEY_CTX *ct
+ static int test_pkey_meths(ENGINE *e, EVP_PKEY_METHOD **pmeth,
+                            const int **pnids, int nid)
+ {
++#ifndef OPENSSL_NO_RSA
+     static const int rnid = EVP_PKEY_RSA;
+     if (pmeth == NULL) {
+         *pnids = &rnid;
+@@ -72,6 +75,7 @@ static int test_pkey_meths(ENGINE *e, EV
+         *pmeth = test_rsa;
+         return 1;
+     }
++#endif
+ 
+     *pmeth = NULL;
+     return 0;
+@@ -81,6 +85,7 @@ static int test_pkey_meths(ENGINE *e, EV
+ 
+ static EVP_PKEY *get_test_pkey(void)
+ {
++#ifndef OPENSSL_NO_RSA
+     static unsigned char n[] =
+         "\x00\xAA\x36\xAB\xCE\x88\xAC\xFD\xFF\x55\x52\x3C\x7F\xC4\x52\x3F"
+         "\x90\xEF\xA0\x0D\xF3\x77\x4A\x25\x9F\x2E\x62\xB4\xC5\xD9\x9C\xB5"
+@@ -105,6 +110,9 @@ static EVP_PKEY *get_test_pkey(void)
+     }
+ 
+     return pk;
++#else
++    return NULL;
++#endif
+ }
+ 
+ static int test_redirect(void)
+@@ -165,10 +173,14 @@ static int test_redirect(void)
+         goto err;
+     }
+ 
++#ifndef OPENSSL_NO_RSA
+     /* Setup an empty test EVP_PKEY_METHOD and set callback to return it */
+     if ((test_rsa = EVP_PKEY_meth_new(EVP_PKEY_RSA, 0)) == NULL) {
++#else
++    if (1) {
+         printf("Test RSA algorithm setup failure\n");
+         goto err;
++#endif
+     }
+     ENGINE_set_pkey_meths(e, test_pkey_meths);
+ 
+--- a/Configure
++++ b/Configure
+@@ -345,6 +345,7 @@ my @disablables = (
+     "crypto-mdebug",
+     "crypto-mdebug-backtrace",
+     "ct",
++    "rsa",
+     "deprecated",
+     "des",
+     "dgram",
+--- a/test/evp_extra_test.c
++++ b/test/evp_extra_test.c
+@@ -186,6 +186,7 @@ static const unsigned char kExampleBadEC
+ };
+ #endif
+ 
++#ifndef OPENSSL_NO_RSA
+ static EVP_PKEY *load_example_rsa_key(void)
+ {
+     EVP_PKEY *ret = NULL;
+@@ -295,6 +296,7 @@ static int test_EVP_DigestVerifyInit(voi
+ 
+     return ret;
+ }
++#endif
+ 
+ static int test_d2i_AutoPrivateKey(const unsigned char *input,
+                                    size_t input_len, int expected_id)
+@@ -364,6 +366,7 @@ int main(void)
+     CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
+ 
+ 
++#ifndef OPENSSL_NO_RSA
+     if (!test_EVP_DigestSignInit()) {
+         fprintf(stderr, "EVP_DigestSignInit failed\n");
+         return 1;
+@@ -385,6 +388,7 @@ int main(void)
+         fprintf(stderr, "d2i_AutoPrivateKey(kExampleRSAKeyPKCS8) failed\n");
+         return 1;
+     }
++#endif
+ 
+ #ifndef OPENSSL_NO_EC
+     if (!test_d2i_AutoPrivateKey(kExampleECKeyDER, sizeof(kExampleECKeyDER),
+--- a/fuzz/server.c
++++ b/fuzz/server.c
+@@ -86,6 +86,7 @@ static const uint8_t kCertificateDER[] =
+     0x76, 0x8a, 0xbb,
+ };
+ 
++#ifndef OPENSSL_NO_RSA
+ static const uint8_t kRSAPrivateKeyDER[] = {
+     0x30, 0x82, 0x04, 0xa5, 0x02, 0x01, 0x00, 0x02, 0x82, 0x01, 0x01, 0x00,
+     0xce, 0x47, 0xcb, 0x11, 0xbb, 0xd2, 0x9d, 0x8e, 0x9e, 0xd2, 0x1e, 0x14,
+@@ -188,21 +189,25 @@ static const uint8_t kRSAPrivateKeyDER[]
+     0xb2, 0xc6, 0xb2, 0x0a, 0x2a, 0x7c, 0x6d, 0x6a, 0x40, 0xfc, 0xf5, 0x50,
+     0x98, 0x46, 0x89, 0x82, 0x40,
+ };
++#endif
+ 
+ static SSL_CTX *ctx;
+ 
+ int FuzzerInitialize(int *argc, char ***argv) {
+-    const uint8_t *bufp = kRSAPrivateKeyDER;
++    const uint8_t *bufp;
+     RSA *privkey;
+     EVP_PKEY *pkey;
+     int ret;
+     X509 *cert;
+ 
+     ctx = SSL_CTX_new(SSLv23_method());
++#ifndef OPENSSL_NO_RSA
++    bufp = kRSAPrivateKeyDER;
+     privkey = d2i_RSAPrivateKey(NULL, &bufp, sizeof(kRSAPrivateKeyDER));
+     OPENSSL_assert(privkey != NULL);
+     pkey = EVP_PKEY_new();
+     EVP_PKEY_assign_RSA(pkey, privkey);
++#endif
+     ret = SSL_CTX_use_PrivateKey(ctx, pkey);
+     OPENSSL_assert(ret == 1);
+     EVP_PKEY_free(pkey);

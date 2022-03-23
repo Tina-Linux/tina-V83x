@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=/usr
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: gbm
+Description: Userspace interface to kernel DRM services
+Version: 1.1.0
+Libs: -L${libdir} -lgbm
+Cflags: -I${includedir}

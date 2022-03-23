@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=13
+STOP=98
+DEPEND=dbus
+
+USE_PROCD=1
+PROG=/bin/healthd
+OOM_ADJ=-17
+
+start_service() {
+
+	procd_open_instance
+	procd_set_param oom_adj $OOM_ADJ
+	procd_set_param command $PROG -D
+	procd_close_instance
+}
+
+shutdown() {
+	echo shutdown
+}

@@ -1,0 +1,3 @@
+#!/bin/sh
+#Add your app or script that need to start after booting
+/usr/bin/midea_uart -- &

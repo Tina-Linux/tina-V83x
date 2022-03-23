@@ -1,0 +1,350 @@
+#!/bin/sh
+
+MOUNT_ETC=0
+MOUNT_OVERLAY=1
+
+################################## functions ##################################
+
+#mkfs_jffs2() <device in /dev/by-name>
+mkfs_jffs2() {
+	! [ -x /usr/sbin/mkfs.jffs2 ] \
+		&& ! [ -x /sbin/mkfs.jffs2 ] \
+		&& echo "Not Found /usr/sbin/mkfs.jffs2 or /sbin/mkfs.jffs2" \
+		&& return 1
+
+	# format to jffs2
+	local erase_block=$(/bin/cat /proc/mtd \
+		| /bin/grep "$(basename $1)" \
+		| /usr/bin/awk '{print $3}')
+	/bin/mkdir -p /tmp/jffs2.dir/tmp
+	mkfs.jffs2 -p -e 0x${erase_block} -d /tmp/jffs2.dir \
+		-o /tmp/jffs2.img >/dev/null || return 1
+	/bin/dd if=/tmp/jffs2.img of=$1 || return 1
+	/bin/rm -rf /tmp/jffs2.img /tmp/jffs2.dir
+	return 0
+}
+
+mount_etc() {
+	local etc_update=0
+	# if enable ota, do update
+	[ -f /etc/init.d/rc.ota-upgrade ] \
+		&& source /etc/init.d/ota-upgrade
+
+	local root_dev="$(readlink /dev/by-name/rootfs)"
+
+	# if mount failed, format.
+	case "${root_dev}" in
+		/dev/mtdblock*)
+			/bin/mount -t jffs2 /dev/by-name/rootfs_data /etc \
+				&& [ -e /etc/etc_complete -a ! -e /etc/etc_need_update ] \
+				&& return
+			# /etc/etc_complete and /etc/etc_need_update both exist, that means we just need to update
+			[ -e /etc/etc_complete -a -e /etc/etc_need_update ] && /bin/echo "do etc update" && etc_update=1
+			/bin/umount /etc
+
+			[ x$etc_update = x"1" ] || {
+				# not update, format first
+				/bin/echo "Mount Failed: formating /dev/by-name/rootfs_data to jffs2 ..."
+				mkfs_jffs2 "/dev/by-name/rootfs_data" || return 1
+			}
+			mount -t jffs2 /dev/by-name/rootfs_data /mnt
+			;;
+		*)
+			/usr/sbin/fsck.ext4 -y /dev/by-name/rootfs_data &>/dev/null
+			/bin/mount -t ext4 /dev/by-name/rootfs_data /etc \
+				&& [ -e /etc/etc_complete -a ! -e /etc/etc_need_update ] \
+				&& return
+			# /etc/etc_complete and /etc/etc_need_update both exist, that means we just need to update
+			[ -e /etc/etc_complete -a -e /etc/etc_need_update ] && /bin/echo "do etc update" && etc_update=1
+
+			/bin/umount /etc
+			[ x$etc_update = x"1" ] || {
+				# not update, format first
+				/bin/echo "Mount Failed: formating /dev/by-name/rootfs_data to ext4 ..."
+				mkfs.ext4 -m 0 /dev/by-name/rootfs_data >/dev/null || return 1
+			}
+			/bin/mount -t ext4 /dev/by-name/rootfs_data /mnt
+			;;
+	esac
+	mkdir -p /tmp/etc
+	/bin/cp -af /etc/* /tmp/etc/
+	# keep the wifi config
+	[ -e /mnt/wifi/wpa_supplicant.conf ] && {
+		/bin/echo "keep the wifi config"
+		/bin/cp /mnt/wifi/wpa_supplicant.conf /tmp/etc/wifi/
+	}
+	/bin/cp -af /tmp/etc/* /mnt/
+	rm -rf /tmp/etc
+	sync
+	[ ! -e /mnt/etc_complete ] && touch /mnt/etc_complete
+	[ -e /mnt/etc_need_update ] && /bin/echo "etc update done" && rm -f /mnt/etc_need_update
+	sync
+	/bin/mount -o move /mnt /etc
+
+}
+
+mount_usr(){
+	[ -L /dev/by-name/extend ] || return
+
+	/bin/mkdir -p /tmp/usr
+	/bin/mount /dev/by-name/extend /tmp/usr >/dev/null || {
+		rm -rf /tmp/usr
+		return
+	}
+
+	! [ -d /tmp/usr/bin ] \
+		&& umount /tmp/usr \
+		&& rm -rf /tmp/usr \
+		&& return
+
+	/bin/mount -o move /tmp/usr /usr \
+		&& rm -rf /tmp/usr
+}
+
+mount_sec_storage(){
+	[ -e /dev/by-name/sec_storage ] || return
+
+	local root_dev="$(readlink /dev/by-name/rootfs)"
+
+	# mount sec_storage
+	if [ -h /dev/by-name/sec_storage -a -d /data/tee ]; then
+		case "${root_dev}" in
+			/dev/mtdblock*)
+				/bin/busybox mount -t jffs2 /dev/by-name/sec_storage /data/tee 2>/dev/null
+				if [ "$?" -ne "0" ]; then
+					mkfs_jffs2 "/dev/by-name/sec_storage"
+					/bin/busybox mount -t jffs2 /dev/by-name/sec_storage /data/tee 2>/dev/null
+				fi
+				;;
+			*)
+				/usr/sbin/fsck.ext4 -y /dev/by-name/sec_storage &>/dev/null
+				/bin/busybox mount -t ext4 /dev/by-name/sec_storage /data/tee 2>/dev/null
+				if [ "$?" -ne "0" ]; then
+					mkfs.ext4 /dev/by-name/sec_storage >/dev/null
+					/bin/busybox mount -t ext4 /dev/by-name/sec_storage /data/tee 2>/dev/null
+				fi
+				;;
+		esac
+	fi
+}
+
+mount_single_app(){
+	/usr/sbin/fsck.ext4 -y /dev/by-name/app &>/dev/null
+	/bin/mount /dev/by-name/app /mnt/app
+}
+
+mount_dual_app(){
+	local appAB=$(fw_printenv -n appAB)
+	local first_app=app
+	local second_app=app_sub
+	local applimit=$(fw_printenv -n applimit)
+	[ x"$applimit" != x"" -a "$applimit" -ne 0 ] && {
+		local appcount=$(fw_printenv -n appcount)
+		let appcount+=1
+		[ "$appcount" -gt "$applimit" ] && {
+			echo "Warning: applimit ($applimit) exceeded. Switch app partition."
+			if [ x"$appAB" = x"A" ]; then
+				appAB=B
+			elif [ x"$appAB" = x"B" ]; then
+				appAB=A
+			else
+				echo "check appAB error: appAB=$appAB"
+				appAB=A
+			fi
+			fw_setenv appAB $appAB
+			echo "Switch appAB to $appAB"
+			appcount=1
+		}
+		fw_setenv appcount $appcount
+	}
+	echo "appAB=$appAB"
+	if [ x"$appAB" = x"A" ]; then
+		first_app=app
+		second_app=app_sub
+	elif [ x"$appAB" = x"B" ]; then
+		first_app=app_sub
+		second_app=app
+	else
+		echo "check appAB error: appAB=$appAB"
+	fi
+
+	/usr/sbin/fsck.ext4 -y /dev/by-name/$first_app &> /dev/null
+	/bin/mount -t ext4 /dev/by-name/$first_app /mnt/app \
+		&& echo "mount $first_app success" \
+		&& return
+
+	echo "mount $first_app fail, now try mount $second_app"
+
+	#mount first_app fail, try second_app
+	/usr/sbin/fsck.ext4 -y /dev/by-name/$second_app &> /dev/null
+	/bin/mount -t ext4 /dev/by-name/$second_app /mnt/app \
+		&& echo "mount $second_app success" \
+		&& return
+
+	echo "mount app fail"
+}
+
+mount_app() {
+	[ -L /dev/by-name/app ] || return
+
+	if [ -L /dev/by-name/app_sub ]; then
+		mount_dual_app
+	else
+		mount_single_app
+	fi
+}
+
+mount_overlay() {
+
+	local root_dev="$(readlink /dev/by-name/rootfs)"
+
+	mkdir -p /overlay
+
+	case "${root_dev}" in
+		/dev/mtdblock*)
+			/bin/mount -t jffs2 /dev/by-name/rootfs_data /overlay || {
+				/bin/echo "Mount Failed: formating /dev/by-name/rootfs_data to jffs2 ..."
+				mkfs_jffs2 "/dev/by-name/rootfs_data" || return 1
+				mount -t jffs2 /dev/by-name/rootfs_data /overlay
+			}
+			;;
+		*)
+			/usr/sbin/fsck.ext4 -y /dev/by-name/rootfs_data &>/dev/null
+			/bin/mount -t ext4 /dev/by-name/rootfs_data /overlay || {
+				/bin/echo "Mount Failed: formating /dev/by-name/rootfs_data to ext4 ..."
+				mkfs.ext4 -m 0 /dev/by-name/rootfs_data >/dev/null || return 1
+				/bin/mount -t ext4 /dev/by-name/rootfs_data /overlay
+			}
+			;;
+	esac
+
+	fgrep -sq overlay /proc/filesystems || {
+		/bin/echo "skip mount overlayfs as kernel not support"
+		return
+	}
+
+	fgrep -sq '/dev/root / squashfs ro' /proc/mounts || {
+		/bin/echo "skip mount overlayfs as now rootfs not squashfs"
+		return
+	}
+
+	# First, try to mount without a workdir, for overlayfs v22 and before.
+	# If it fails, it means that we are probably using a v23 and
+	# later versions that require a workdir
+	# mount -n -t overlay overlayfs:/overlay -o rw,noatime,lowerdir=/,upperdir=/overlay /mnt || {
+		# mkdir -p /overlay/upper /overlay/workdir
+		# mount -n -t overlay overlayfs:/overlay -o rw,noatime,lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/workdir /mnt
+	# }
+
+	local overlay_need_workdir=1
+	# overlayfs in linux-3.4 and  linux-3.10 is v22 and before, should mount without a workdir
+	fgrep -sq 'Linux version 3' /proc/version && overlay_need_workdir=0
+
+	if [ x"$overlay_need_workdir" = x"0" ]; then
+		mount -n -t overlayfs overlayfs:/overlay -o rw,noatime,lowerdir=/,upperdir=/overlay /mnt
+	else
+		mkdir -p /overlay/upper /overlay/workdir
+		mount -n -t overlay overlayfs:/overlay -o rw,noatime,lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/workdir /mnt
+	fi
+
+	mount -n /proc -o noatime,move /mnt/proc
+	pivot_root /mnt /mnt/rom
+	mount -n /rom/dev -o noatime,move /dev
+	mount -n /rom/tmp -o noatime,move /tmp
+	mount -n /rom/sys -o noatime,move /sys
+	mount -n /rom/overlay -o noatime,move /overlay
+	fgrep -sq '/rom/usr' /proc/mounts && {
+		mount -n /rom/usr -o noatime,move /usr
+		if [ x"$overlay_need_workdir" = x"0" ]; then
+			mkdir -p /overlay/usr
+			mount -n -t overlayfs overlayfs:/overlay -o rw,noatime,lowerdir=/usr,upperdir=/overlay/usr /usr
+		else
+			mkdir -p /overlay/upper/usr /overlay/workdir/usr
+			mount -n -t overlay overlayfs:/overlay -o rw,noatime,lowerdir=/usr,upperdir=/overlay/upper/usr,workdir=/overlay/workdir/usr /usr
+		fi
+	}
+}
+
+set_parts_by_name() {
+	# create by-name
+	local parts part
+	/bin/mkdir -p /dev/by-name
+	parts=$partitions
+	for part in $(/bin/echo ${parts} | /bin/sed 's/:/ /g')
+	do
+		[ ! -e /dev/${part#*@} ] && mdev -s #for initramfs
+		/bin/ln -fs "/dev/${part#*@}" "/dev/by-name/${part%@*}"
+	done
+}
+
+etc_part=/dev/nande
+
+#hardcode rootfs_data partition as nande
+mount_etc_hardcode() {
+
+	# fix fs
+	/usr/sbin/fsck.ext4 -y $etc_part &>/dev/null
+
+	/bin/mount -t ext4 $etc_part /etc \
+		&& [ -e /etc/etc_complete ] \
+		&& return
+
+	/bin/echo "mount Failed or etc_complete not exist"
+	/bin/echo "now format $etc_part to ext4 ..."
+	/bin/umount /etc
+	mkfs.ext4 -m 0 $etc_part >/dev/null || return 1
+	/bin/mount -t ext4 $etc_part /mnt
+
+	/bin/cp -af /etc/* /mnt/
+	sync
+	/bin/mount -o move /mnt /etc
+
+	#prepare by-name in /etc for next boot
+	set_parts_by_name
+	cp -fpr /dev/by-name /etc
+	sync
+	#now rootfs_data is ready, next boot can mount it as etc
+	touch /etc/etc_complete
+	sync # this sync not necessary, but sync after modify something is good
+}
+
+set_parts_by_name_hardcode() {
+
+	#UDISK is the last partition, when UDISK is there, the /etc/by-name is ready
+	[ -e /etc/by-name/UDISK ] && {
+		#set_part_by_name may cost more than 100ms, now just copy it from /etc
+		cp -fpr /etc/by-name /dev/
+		return
+	}
+
+	#should not go here. now just show warning and do set_parts_by_name
+	echo "warning: no /etc/by-name/UDISK, please check it"
+	set_parts_by_name
+}
+
+#----------------------------------------------------------------
+/bin/mount -t proc /proc /proc
+/bin/mount -t tmpfs tmpfs /tmp
+/bin/mount -t sysfs sys /sys
+/bin/mount -t devtmpfs none /dev
+/bin/mount -t pstore pstore /sys/fs/pstore
+
+#fw_setenv, fw_printenv need /var/lock
+mkdir -p /var/lock
+
+#common but slow
+set_parts_by_name
+
+mount_sec_storage
+
+mount_usr
+[ x"$MOUNT_ETC" = x"1" ] && mount_etc
+[ x"$MOUNT_OVERLAY" = x"1" ] && mount_overlay
+mount_app
+
+#hardcode but fast
+#mount_etc_hardcode
+#set_parts_by_name_hardcode
+#mount_usr
+
+exec /sbin/init

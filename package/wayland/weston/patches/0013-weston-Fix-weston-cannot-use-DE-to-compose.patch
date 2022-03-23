@@ -1,0 +1,43 @@
+From b51c098ceec156c3fb906a3742ec4c163ab4ad3b Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 21:24:21 +0800
+Subject: [PATCH 12/12] weston: Fix weston cannot use DE to compose
+
+weston2.0's drm_sprite_crtc_supported interface has changed
+---
+ libweston/compositor-drm.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 8e278f1..4168a29 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -721,6 +721,7 @@ drm_output_repaint(struct weston_output *output_base,
+ 		.request.sequence = 1,
+ 	};
+ 
++
+ 	drmModeObjectPropertiesPtr plane_prop_ptr;
+ 	uint32_t i = 0;
+ 	drmModePropertyPtr prop_ptr;
+@@ -965,7 +966,7 @@ vblank_handler(int fd, unsigned int frame, unsigned int sec, unsigned int usec,
+ 	 */
+ 	wl_list_for_each(s, &backend->sprite_list, link) {
+ 		if ((!s->current && !s->next) ||
+-		    !drm_sprite_crtc_supported(output, s->possible_crtcs))
++		    !drm_sprite_crtc_supported(output, s))
+ 			continue;
+ 
+ 		drm_output_release_fb(output, s->current);
+@@ -1158,7 +1159,7 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 	* Because you need get bo->format imformation to choose right sprite;
+ 	*/
+ 	wl_list_for_each(s, &b->sprite_list, link) {
+-		if (!drm_sprite_crtc_supported(output, s->possible_crtcs))
++		if (!drm_sprite_crtc_supported(output, s))
+ 			continue;
+ 
+ 		/* choose perfect format plane for this sprite */
+-- 
+1.9.1
+

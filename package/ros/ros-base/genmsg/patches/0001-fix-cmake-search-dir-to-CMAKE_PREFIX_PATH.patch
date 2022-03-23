@@ -1,0 +1,10 @@
+--- a/cmake/genmsg-extras.cmake.em	2018-08-28 03:13:39.000000000 +0800
++++ b/cmake/genmsg-extras.cmake.em	2019-01-08 15:59:50.908987889 +0800
+@@ -262,6 +262,7 @@
+     list(INSERT workspaces 0 ${CATKIN_DEVEL_PREFIX})
+   endif()
+
++  list(INSERT workspaces 0 ${CMAKE_PREFIX_PATH})
+   set(pending_deps ${PROJECT_NAME} ${ARG_DEPENDENCIES})
+   set(handled_deps "")
+   while(pending_deps)

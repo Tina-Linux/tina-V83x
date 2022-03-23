@@ -1,0 +1,34 @@
+##
+# trusted execution environment (tee) daemon
+#
+type tee, domain;
+type tee_exec, exec_type, file_type;
+type tee_device, dev_type;
+type tee_data_file, file_type, data_file_type;
+# permissive tee;
+init_daemon_domain(tee)
+
+
+# allow shell tee_exec:file getattr;
+# allow tee tee_data_file:dir { write remove_name add_name create getattr };
+# allow tee self:capability { dac_override };
+# allow tee serial_device:chr_file { read write open ioctl getattr setattr };
+# allow tee tee_device:chr_file { read write open ioctl };
+# allow tee tee_data_file:dir { remove_name rmdir search add_name write read open create };
+# allow tee tee_data_file:file { link unlink write read open create };
+# #allow tee self:netlink_socket create_socket_perms_no_ioctl;
+# #allow tee self:netlink_generic_socket create_socket_perms_no_ioctl;
+# allow tee ion_device:chr_file r_file_perms;
+# allow tee shell:fd use;
+# allow tee rootfs:file { read write open ioctl execute };
+# allow tee rootfs:dir { write search remove_name add_name create getattr };
+
+# r_dir_file(tee, sysfs_type)
+
+# #allow optee system_data_file:file { getattr read };
+# #allow optee system_data_file:lnk_file r_file_perms;
+
+# #permissive tee;
+# #unconfined_domain(tee)
+# init_daemon_domain(tee)
+# domain_auto_trans(shell,tee_exec,tee)

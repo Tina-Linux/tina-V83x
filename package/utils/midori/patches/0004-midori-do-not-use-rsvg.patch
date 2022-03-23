@@ -1,0 +1,39 @@
+Fix the need of librsvg for the host.
+
+Midori install script uses rsvg-convert to convert some SVG images to PNG. So,
+we need to build librsvg for the host but this requires to build some heavy
+other packages like Cairo and Pango for the host. Therefore, we hack the build
+to remove the use of rsvg-convert and we copy prerendered PNGs to the target.
+
+Signed-off-by: Hadrien Boutteville <[hidden email]>
+
+--- a/data/CMakeLists.txt
++++ b/data/CMakeLists.txt
+@@ -1,10 +1,5 @@
+ # Copyright (C) 2013 Christian Dywan <[hidden email]>
+
+-include(FindConvert)
+-if (NOT CONVERT_FOUND)
+-    message(FATAL_ERROR "rsvg-convert not found")
+-endif ()
+-
+ include(FindIntltool)
+ if (NOT INTLTOOL_MERGE_FOUND)
+     message(FATAL_ERROR "intltool-merge not found")
+@@ -28,16 +23,6 @@
+             string(REPLACE ".appdata.xml.in" "" DESKTOP_ID ${FILE})
+             INTLTOOL_MERGE_APPDATA (${DESKTOP_ID} po)
+         endif ()
+-    elseif (${FILE} MATCHES "\\.svg$")
+-        string(REPLACE ".svg" "" IMG_ID ${FILE})
+-        string (FIND ${FILE} "/" IS_DIR)
+-        if (IS_DIR GREATER -1)
+-            string(REPLACE "/" ";" DIR_LIST ${FILE})
+-            LIST(GET DIR_LIST 0 S_DIR)
+-            SVG2PNG (${IMG_ID} "${CMAKE_INSTALL_DATADIR}/midori/res/${S_DIR}")
+-        else ()
+-            SVG2PNG (${IMG_ID} "${CMAKE_INSTALL_DATADIR}/midori/res/")
+-        endif()
+     # These are being handled in add_executable for the "midori" binary
+     elseif (${FILE} MATCHES "\\.ico$")
+     elseif (${FILE} MATCHES "\\.rc$")

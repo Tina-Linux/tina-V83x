@@ -1,0 +1,7 @@
+null::sysinit:/bin/mount -o remount,rw /
+null::sysinit:/bin/mkdir -p /dev/pts
+null::sysinit:/bin/mount -a
+::sysinit:/etc/init.d/rcS boot
+/dev/console::respawn:-/bin/sh
+::ctrlaltdel:/sbin/reboot
+null::shutdown:/bin/umount -a -r

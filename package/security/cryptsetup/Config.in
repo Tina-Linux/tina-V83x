@@ -1,0 +1,18 @@
+if PACKAGE_cryptsetup
+
+choice
+
+prompt "use crypt lib"
+default CRYPTSETUP_OPENSSL
+help
+  "select the crypt libs for cryptsetup"
+
+config CRYPTSETUP_GCRYPT
+	bool "use libgcrypt"
+
+config CRYPTSETUP_OPENSSL
+	bool "use libopenssl"
+
+endchoice
+
+endif

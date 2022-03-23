@@ -1,0 +1,9 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_OUTLOG_MARKDOWN
+    bool "Markdown"
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_OUTLOG_MARKDOWN
+    config TINATEST_SYS_GLOBAL_INFO_OUTLOG_MARKDOWN_OUTDIR
+        string "outdir"
+        default "/mnt/UDISK/md"
+endif

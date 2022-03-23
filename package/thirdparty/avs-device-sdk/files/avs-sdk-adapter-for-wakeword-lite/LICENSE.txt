@@ -1,0 +1,12 @@
+Copyright 2018 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+
+The AVS SDK Adapter for Wakeword Lite (the "materials") are licensed as "Program Materials" under the Program Materials License Agreement (the "Agreement") in connection with the Alexa Voice Service Program.  The Agreement is available at https://developer.amazon.com/public/support/pml.html.  See the Agreement for the specific terms and conditions of the Agreement.  Capitalized terms not defined in this file have the meanings given to them in the Agreement.
+
+In addition to the terms and conditions of the Agreement, the following terms and conditions apply to these materials.  In the event of a conflict between the terms and conditions of the Agreement and those of this file, the terms and conditions of this file will apply.
+
+1.  These materials may only be used in connection with the Alexa Voice Service Program.
+
+2.  You may only use these materials if you have separately obtained a license from Amazon to use the Low Power Wake Word Engine in your products.
+
+3. These materials and all related documentation are Restricted Program Materials as defined in the Agreement.
+

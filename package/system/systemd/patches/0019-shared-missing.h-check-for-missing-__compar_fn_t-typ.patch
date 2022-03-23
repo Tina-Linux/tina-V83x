@@ -1,0 +1,29 @@
+From 481b42c89f2e02d65a1ba14a43fd3b58ece84cc4 Mon Sep 17 00:00:00 2001
+From: Emil Renner Berthing <systemd@esmil.dk>
+Date: Thu, 18 Sep 2014 15:24:50 +0200
+Subject: [PATCH 19/31] shared/missing.h: check for missing __compar_fn_t
+ typedef
+
+---
+ src/basic/missing.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/basic/missing.h b/src/basic/missing.h
+index 5ee3b7a5..bf9b490 100644
+--- a/src/basic/missing.h
++++ b/src/basic/missing.h
+@@ -1049,6 +1049,11 @@ static inline int kcmp(pid_t pid1, pid_t pid2, int type, unsigned long idx1, uns
+ }
+ #endif
+ 
++#ifndef __COMPAR_FN_T
++#define __COMPAR_FN_T
++typedef int (*__compar_fn_t)(const void *, const void *);
++#endif
++
+ #ifndef KCMP_FILE
+ #define KCMP_FILE 0
+ #endif
+-- 
+2.5.2
+

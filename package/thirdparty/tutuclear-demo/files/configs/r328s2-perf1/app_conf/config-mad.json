@@ -1,0 +1,173 @@
+{
+    "capture_pipeline" : {
+        "standby_interval" : 2,
+        "standby_delay" : 200000,
+        "capture_delay" : 0,
+        "bgm_delay" : 0,
+        "has_bgm" : false,
+        "is_mad_test" : true,
+        "engine" : "alsa_src",
+        "elements" : {
+            "alsa_src" : {
+                "element_type" : "AlsaSrc",
+                "devices" : {
+                    "capture_both" : {
+                        "device" : "tutuclear_demo_mad_capture",
+                        "loop_frames" : 160,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 16000,
+                        "channels" : 3,
+                        "period_frames" : 1024,
+                        "periods" : 4,
+                        "timestamp_type" : "GETTIMEOFDAY",
+                        "overrun_message" : {
+                            "priority" : "normal",
+                            "content" : "CaptureOverrun"
+                        }
+                    }
+                },
+                "src_pads" : {
+                    "capture_both" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "from_alsa_src"
+                    }
+                }
+            },
+            "converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : {
+                    "from_alsa_src" : {}
+                },
+                "src_pads" : {
+                    "common_out" : {
+                        "channels" : 2,
+                        "storage" : "noninterleaved",
+                        "peer_element" : "tutuclear",
+                        "peer_pad" : "common"
+                    },
+                    "reference_out" : {
+                        "channels" : 1,
+                        "storage" : "noninterleaved",
+                        "peer_element" : "tutuclear",
+                        "peer_pad" : "reference"
+                    }
+                },
+                "channel_map" : {
+                    "common_out.0" : "from_alsa_src.0",
+                    "common_out.1" : "from_alsa_src.1",
+                    "reference_out.0" : "from_alsa_src.2"
+                }
+            },
+            "tutuclear" : {
+                "element_type" : "TutuclearElement",
+                "prm_file" : "/etc/tutuclear/tutuClearA1_ns4wakeup.prm",
+                "keyword_file" : "/etc/tutuclear/tutuKeyword.raw",
+                "format" : "S16_LE",
+                "rate" : 16000,
+                "loop_frames" : 160,
+                "storage" : "noninterleaved",
+                "keyword_detected_message" : {
+                    "priority" : "normal",
+                    "content" : "TutuclearKwd"
+                },
+                "sink_pads" : {
+                    "common" : {
+                        "channels" : 2
+                    },
+                    "reference" : {
+                        "channels" : 1
+                    }
+                },
+                "src_pads" : {
+                    "output" : {
+                        "channels" : 3,
+                        "peer_element" : "dummy_sink",
+                        "peer_pad" : "from_tutuclear"
+                    }
+                }
+            },
+            "dummy_sink" : {
+                "element_type" : "CommonSink",
+                "sink_pads" : {
+                    "from_tutuclear" : {}
+                }
+            }
+        }
+    },
+    "background_music_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/etc/tutuclear/background_music.wav",
+                "repeated" : true,
+                "src_pads" : {
+                    "default" : {
+                        "peer_element" : "alsa_sink",
+                        "peer_pad" : "default"
+                    }
+                }
+            },
+            "alsa_sink" : {
+                "element_type" : "AlsaSink",
+                "devices" : {
+                    "default" : {
+                        "device" : "tutuclear_demo_playback",
+                        "loop_frames" : 6000,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 48000,
+                        "channels" : 2,
+                        "period_frames" : 6000,
+                        "periods" : 4,
+                        "timestamp_type" : "GETTIMEOFDAY",
+                        "underrun_message" : {
+                            "priority" : "normal",
+                            "content" : "BgmUnderrun"
+                        }
+                    }
+                },
+                "sink_pads" : {
+                    "default" : {}
+                }
+            }
+        }
+    },
+    "wakeup_hint_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/etc/tutuclear/wakeup_hint.wav",
+                "repeated" : false,
+                "src_pads" : {
+                    "default" : {
+                        "peer_element" : "alsa_sink",
+                        "peer_pad" : "default"
+                    }
+                }
+            },
+            "alsa_sink" : {
+                "element_type" : "AlsaSink",
+                "devices" : {
+                    "default" : {
+                        "device" : "tutuclear_demo_playback",
+                        "loop_frames" : 2000,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 16000,
+                        "channels" : 2,
+                        "period_frames" : 2000,
+                        "periods" : 4
+                    }
+                },
+                "sink_pads" : {
+                    "default" : {}
+                }
+            }
+        }
+    }
+}

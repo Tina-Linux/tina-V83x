@@ -1,0 +1,6 @@
+config onboarding
+        option state '0'
+        option lasterrorcode '0'
+        option lasterrormsg 'Unconfigured'
+        option config_retry_duration '180'
+        option connect_retry_max '2'

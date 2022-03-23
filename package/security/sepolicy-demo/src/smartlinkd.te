@@ -1,0 +1,10 @@
+# smartlinkd - smartlinkd
+type smartlinkd, domain;
+# permissive smartlinkd;
+type smartlinkd_exec, exec_type, file_type;
+
+init_daemon_domain(smartlinkd)
+
+domain_auto_trans(shell,smartlinkd_exec,smartlinkd)
+
+

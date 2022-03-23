@@ -1,0 +1,10 @@
+This package contains the Bluetooth Deamon server and the Bluetooth USB driver software ported on Linux.
+The BTE version is BTE3.14.2 (with few modifications to remove compilation warnings).
+
+
+For PC/Linux target, the server application executable is located in build/x86 folder.
+To execute it, you have to type:
+> ./x86/bt_server
+
+For MIPS target, the server application executable is located in build/mips folder.
+To execute it, you have to copy and to execute it on the MIPS platform

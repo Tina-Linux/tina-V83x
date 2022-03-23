@@ -1,0 +1,27 @@
+#!/bin/sh
+
+#amixer -D hw:audiocodec cset name='Left Input Mixer MIC1 Boost Switch' 1
+#amixer -D hw:audiocodec cset name='Right Input Mixer MIC2 Boost Switch' 1
+#amixer -D hw:audiocodec cset name='Xadc Input Mixer MIC3 Boost Switch' 1
+
+amixer -D hw:audiocodec cset name='codec I2S Port'  2
+amixer -D hw:audiocodec cset name='sndcodec bind mad Function' 1
+
+if [ $? != 0 ];then
+    exit ;
+fi
+
+if [ $# = 1 ]; then
+    [ $1 = "dump" ] && {
+        tutuclear-demo -c /etc/tutuclear/config-mad-dump.json
+    }
+    [ $1 = "kill" ] && {
+        killall tutuclear-demo
+    }
+    [ $1 = "standby" ] && {
+	kill -s SIGUSR1 `ps |grep tutuclear-demo |grep -v grep | awk '{print $1}'`
+    }
+else
+    tutuclear-demo -c /etc/tutuclear/config-mad.json
+fi
+

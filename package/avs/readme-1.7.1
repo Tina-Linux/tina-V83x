@@ -1,0 +1,32 @@
+avs-device-sdk v1.7以后token的获取方式发生了变化。
+变化前： 通过其他工具把开发者、消费者、设备ID生成token给设备使用。
+变化后： 设备启动时，跳出验证码，消费者拿到验证码，去相关的网址上注册。
+
+avs-sdk-v1.7.1的启动方法：
+1、第一次启动前，需要填设备ID。
+    /etc/avs/AlexaClientSDKConfig.json 中的 deviceInfo:deviceSerialNumber 字段。
+    可以通过小工具去把R18的chipid填入：
+    fetch-device-sn /etc/avs/AlexaClientSDKConfig.json
+    可以自己随意填写。
+
+    以后的启动可以跳过这个步。
+
+2、第一次启动SampleApp，验证设备。
+    SampleApp /etc/avs/AlexaClientSDKConfig.json /etc/avs/ DEBUG9
+    连接服务器成功后，就会出现校验的提示：
+##################################
+#       NOT YET AUTHORIZED       #
+##################################
+
+################################################################################################
+#       To authorize, browse to: 'https://amazon.com/us/code' and enter the code: DFVELG       #
+################################################################################################
+
+#################################################
+#       Checking for authorization (1)...       #
+#################################################
+
+
+    浏览器访问 https://amazon.com/us/code， 输入消费者的亚马逊账号，然后在Register Your Device中输入验证码即可。
+
+    后续的启动，会自动跳过这步，除非设备内的配置文件被删除。

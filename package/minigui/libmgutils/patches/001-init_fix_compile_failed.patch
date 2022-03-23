@@ -1,0 +1,22 @@
+--- a/src/vcongui/vc.c
++++ b/src/vcongui/vc.c
+@@ -40,7 +40,7 @@
+ #include <sys/time.h>
+ #include <fcntl.h>
+ #include <signal.h>
+-#include <termio.h>
++#include <termios.h>
+ #include <dirent.h>
+ 
+ #include <minigui/common.h>
+--- a/src/vcongui/vt.c
++++ b/src/vcongui/vt.c
+@@ -43,7 +43,7 @@
+ #include <sys/time.h>
+ #include <fcntl.h>
+ #include <signal.h>
+-#include <termio.h>
++#include <termios.h>
+ 
+ #include <minigui/common.h>
+ #include <minigui/minigui.h>

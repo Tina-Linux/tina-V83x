@@ -1,0 +1,6 @@
+#!/bin/sh
+# get kernel_version
+# output: 3.4.39
+# example: var=`get_kernel_version`
+
+uname -r

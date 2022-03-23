@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+#
+# Launch weston in boot stage
+#
+
+START=90
+STOP=50
+
+start(){
+	printf "Starting weston: "
+	chmod 0700 /dev/shm/
+	export XDG_RUNTIME_DIR=/dev/shm
+	export XDG_CONFIG_HOME=/etc/xdg
+#	weston --backend=fbdev-backend.so --tty=1 --idle-time=0 &
+	weston --backend=drm-backend.so --tty=1 --idle-time=0 &
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+stop(){
+	killall weston
+}
+

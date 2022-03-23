@@ -1,0 +1,77 @@
+CROSS_COMPILE ?=
+KDIR ?=
+#ifeq ($(V),64)
+#	CC := $(TOOLCHAIN_DIR)/aarch64-linux-gnu-gcc
+#else
+#	CC := $(TOOLCHAIN_DIR)/arm-linux-gnueabi-gcc
+#endif
+
+CFLAGS	:= -O2 -Wall -Iinclude -Iinclude/V4l2Camera -Iinclude/device -fPIC
+LDFLAGS	:= -L out
+LIBS	:= -lisp_dev -lisp_base -lisp_math -lisp_ae -lisp_af -lisp_afs -lisp_awb \
+		-lisp_md -lisp_iso -lisp_gtm -lisp_pltm -lisp_rolloff -lisp_ini -liniparser  -lmatrix -lpthread -lrt -lm
+LIBS	+= -static
+
+OBJ_SERVER := isp.o isp_test.o isp_events/events.o isp_tuning/isp_tuning.o isp_manage/isp_manage.o
+
+OBJ_VINTEST := vin_test.o
+
+OBJ_VINISPTEST := vin_isp_test.o isp.o isp_events/events.o isp_tuning/isp_tuning.o isp_manage/isp_manage.o
+
+OBJ_TOOLS := tuning_app/awTuningApp.o tuning_app/log_handle.o tuning_app/socket_protocol.o tuning_app/thread_pool.o \
+		tuning_app/server/capture_image.o tuning_app/server/isp_handle.o tuning_app/server/mini_shell.o \
+		tuning_app/server/server.o tuning_app/server/server_api.o tuning_app/server/server_core.o \
+		tuning_app/server/register_opt.o tuning_app/server/raw_flow_opt.o \
+		isp.o isp_events/events.o isp_tuning/isp_tuning.o isp_manage/isp_manage.o
+
+%.o : %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+all: __isp_dev __libisp_cfg __libiniparser server vin_test vin_isp_test awTuningApp
+
+server: $(OBJ_SERVER)
+	$(CC) $(LDFLAGS) $(SNAP_LDFLAGS) -o $@ $(OBJ_SERVER) $(LIBS)
+
+vin_test: $(OBJ_VINTEST)
+	$(CC) $(LDFLAGS) $(SNAP_LDFLAGS) -o $@ $(OBJ_VINTEST) $(LIBS)
+
+vin_isp_test: $(OBJ_VINISPTEST)
+	$(CC) $(LDFLAGS) $(SNAP_LDFLAGS) -o $@ $(OBJ_VINISPTEST) $(LIBS)
+
+awTuningApp: $(OBJ_TOOLS)
+	$(CC) $(LDFLAGS) $(SNAP_LDFLAGS) -o $@ $(OBJ_TOOLS) $(LIBS)
+
+	$(STP) vin_test
+	$(STP) vin_isp_test
+	$(STP) server
+	$(STP) awTuningApp
+
+	mv vin_test ../../../to_server/output/vin_test
+	mv vin_isp_test ../../../to_server/output/vin_isp_test
+	mv server ../../../to_server/output/server
+	mv awTuningApp ../../../to_server/output/awTuningApp
+
+__isp_dev:
+	$(MAKE) -C isp_dev CROSS_COMPILE=$(CROSS_COMPILE) KDIR=$(KDIR)
+
+__libisp_cfg:
+	$(MAKE) -C isp_cfg CROSS_COMPILE=$(CROSS_COMPILE) KDIR=$(KDIR)
+
+__libiniparser:
+	$(MAKE) -C iniparser CROSS_COMPILE=$(CROSS_COMPILE) KDIR=$(KDIR)
+
+clean:
+	$(MAKE) -C isp_dev clean
+	$(MAKE) -C isp_cfg clean
+	$(MAKE) -C iniparser clean
+	-$(RM) *.o
+	-$(RM) server
+	-$(RM) vin_test
+	-$(RM) vin_isp_test
+	-$(RM) isp_events/*.o
+	-$(RM) isp_tuning/*.o
+	-$(RM) isp_manage/*.o
+	-$(RM) awTuningApp
+	-$(RM) tuning_app/*.o
+	-$(RM) tuning_app/server/*.o
+

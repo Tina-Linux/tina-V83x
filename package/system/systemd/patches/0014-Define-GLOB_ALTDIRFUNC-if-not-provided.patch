@@ -1,0 +1,30 @@
+From f0044093d5002357248f61150b40695b6f4a53c8 Mon Sep 17 00:00:00 2001
+From: Khem Raj <raj.khem@gmail.com>
+Date: Fri, 20 Feb 2015 00:38:44 +0000
+Subject: [PATCH 14/31] Define GLOB_ALTDIRFUNC if not provided
+
+helps compile on musl
+
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+---
+ src/tmpfiles/tmpfiles.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/tmpfiles/tmpfiles.c b/src/tmpfiles/tmpfiles.c
+index 8f29256..30956b4 100644
+--- a/src/tmpfiles/tmpfiles.c
++++ b/src/tmpfiles/tmpfiles.c
+@@ -63,6 +63,10 @@
+  * properly owned directories beneath /tmp, /var/tmp, /run, which are
+  * volatile and hence need to be recreated on bootup. */
+ 
++#ifndef GLOB_ALTDIRFUNC
++#define GLOB_ALTDIRFUNC 0
++#endif
++
+ typedef enum ItemType {
+         /* These ones take file names */
+         CREATE_FILE = 'f',
+-- 
+2.5.2
+

@@ -1,0 +1,223 @@
+From 2d90ba8732e262005b251669542873b74bf8bdc2 Mon Sep 17 00:00:00 2001
+From: xielinfei <xielinfei@allwinnertech.com>
+Date: Fri, 9 Mar 2018 11:20:46 +0800
+Subject: [PATCH] waylandsink: resize window and position
+
+Signed-off-by: xielinfei <xielinfei@allwinnertech.com>
+---
+ ext/wayland/gstwaylandsink.c | 85 +++++++++++++++++++++++++++++++++++++++++++-
+ ext/wayland/gstwaylandsink.h |  5 +++
+ ext/wayland/wldisplay.h      |  4 +++
+ ext/wayland/wlwindow.c       | 21 ++++++++++-
+ 4 files changed, 113 insertions(+), 2 deletions(-)
+
+diff --git a/ext/wayland/gstwaylandsink.c b/ext/wayland/gstwaylandsink.c
+index ff08194..c697ef7 100644
+--- a/ext/wayland/gstwaylandsink.c
++++ b/ext/wayland/gstwaylandsink.c
+@@ -61,7 +61,11 @@ enum
+ enum
+ {
+   PROP_0,
+-  PROP_DISPLAY
++  PROP_DISPLAY,
++  PROP_WAYLAND_POSITION_X, /* add property (position_x) */
++  PROP_WAYLAND_POSITION_Y, /* add property (position_y) */
++  PROP_WAYLAND_OUT_WIDTH,  /* add property (out_width) */
++  PROP_WAYLAND_OUT_HEIGHT  /* add property (out_height) */
+ };
+
+ GST_DEBUG_CATEGORY (gstwayland_debug);
+@@ -202,6 +206,44 @@ gst_wayland_sink_class_init (GstWaylandSinkClass * klass)
+       g_param_spec_string ("display", "Wayland Display name", "Wayland "
+           "display name to connect to, if not supplied via the GstContext",
+           NULL, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
++  /* install property (position_x) */
++  g_object_class_install_property (G_OBJECT_CLASS(klass), PROP_WAYLAND_POSITION_X,
++      g_param_spec_int ("x",
++                        "X",
++                        "Wayland  Position X value from the application ",
++                        0,
++                        4864,
++                        0,
++                        G_PARAM_READWRITE));
++
++  /* install property (position_y) */
++  g_object_class_install_property (G_OBJECT_CLASS(klass), PROP_WAYLAND_POSITION_Y,
++      g_param_spec_int ("y",
++                        "Y",
++                        "Wayland  Position Y value from the application ",
++                        0,
++                        1080,
++                        0,
++                        G_PARAM_READWRITE));
++  /* install property (out_width) */
++  g_object_class_install_property (G_OBJECT_CLASS(klass), PROP_WAYLAND_OUT_WIDTH,
++      g_param_spec_int ("width",
++                        "width",
++                        "Wayland  Out_width value from the application",
++                        0,
++                        3840,
++                        0,
++                        G_PARAM_READWRITE));
++
++  /* install property (out_height) */
++  g_object_class_install_property (G_OBJECT_CLASS(klass), PROP_WAYLAND_OUT_HEIGHT,
++      g_param_spec_int ("height",
++                        "height",
++                        "Wayland  Out_height value from the application",
++                        0,
++                        1080,
++                        0,
++                        G_PARAM_READWRITE));
+ }
+
+ static void
+@@ -209,6 +251,11 @@ gst_wayland_sink_init (GstWaylandSink * sink)
+ {
+   g_mutex_init (&sink->display_lock);
+   g_mutex_init (&sink->render_lock);
++  sink->position_x = -1;
++  sink->position_y = -1;
++  sink->scale = 0;
++  sink->out_width = 0;
++  sink->out_height = 0;
+ }
+
+ static void
+@@ -223,6 +270,22 @@ gst_wayland_sink_get_property (GObject * object,
+       g_value_set_string (value, sink->display_name);
+       GST_OBJECT_UNLOCK (sink);
+       break;
++    case PROP_WAYLAND_POSITION_X:
++      /* set position_x property */
++      g_value_set_int (value, sink->position_x);
++      break;
++    case PROP_WAYLAND_POSITION_Y:
++      /* set position_y property */
++      g_value_set_int (value, sink->position_y);
++      break;
++	case PROP_WAYLAND_OUT_WIDTH:
++	  /* set out_width property */
++	  g_value_set_int (value, sink->out_width);
++	  break;
++	  case PROP_WAYLAND_OUT_HEIGHT:
++	  /* set out_height property */
++	  g_value_set_int (value, sink->out_height);
++	  break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -241,6 +304,22 @@ gst_wayland_sink_set_property (GObject * object,
+       sink->display_name = g_value_dup_string (value);
+       GST_OBJECT_UNLOCK (sink);
+       break;
++	case PROP_WAYLAND_POSITION_X:
++	  /* get position_x property */
++	  sink->position_x = g_value_get_int (value);
++	  break;
++	case PROP_WAYLAND_POSITION_Y:
++	  /* get position_y property */
++	  sink->position_y = g_value_get_int (value);
++	  break;
++	case PROP_WAYLAND_OUT_WIDTH:
++	  /* get out_width property */
++	  sink->out_width = g_value_get_int (value);
++	  break;
++	  case PROP_WAYLAND_OUT_HEIGHT:
++	  /* get out_height property */
++	  sink->out_height = g_value_get_int (value);
++	  break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -325,6 +404,10 @@ gst_wayland_sink_find_display (GstWaylandSink * sink)
+         /* if the application didn't set a display, let's create it ourselves */
+         GST_OBJECT_LOCK (sink);
+         sink->display = gst_wl_display_new (sink->display_name, &error);
++		sink->display->position_x = sink->position_x;
++		sink->display->position_y = sink->position_y;
++		sink->display->out_width = sink->out_width;
++		sink->display->out_height = sink->out_height;
+         GST_OBJECT_UNLOCK (sink);
+
+         if (error) {
+diff --git a/ext/wayland/gstwaylandsink.h b/ext/wayland/gstwaylandsink.h
+index 2704d00..c3ec0df 100644
+--- a/ext/wayland/gstwaylandsink.h
++++ b/ext/wayland/gstwaylandsink.h
+@@ -66,6 +66,11 @@ struct _GstWaylandSink
+   gboolean redraw_pending;
+   GMutex render_lock;
+   GstBuffer *last_buffer;
++  gint position_x;  /* property(position_x) */
++  gint position_y;  /* property(position_y) */
++  gint out_width;   /* property out_width */
++  gint out_height;  /* property out_height */
++  uint32_t scale;
+ };
+
+ struct _GstWaylandSinkClass
+diff --git a/ext/wayland/wldisplay.h b/ext/wayland/wldisplay.h
+index 7c89212..ca8e152 100644
+--- a/ext/wayland/wldisplay.h
++++ b/ext/wayland/wldisplay.h
+@@ -66,6 +66,10 @@ struct _GstWlDisplay
+   GMutex buffers_mutex;
+   GHashTable *buffers;
+   gboolean shutting_down;
++  gint position_x;  /* property(position_x) */
++  gint position_y;  /* property(position_y) */
++  gint out_width;   /* property out_width */
++  gint out_height;  /* property out_height */
+ };
+
+ struct _GstWlDisplayClass
+diff --git a/ext/wayland/wlwindow.c b/ext/wayland/wlwindow.c
+index c64c77a..c9e1ebb 100644
+--- a/ext/wayland/wlwindow.c
++++ b/ext/wayland/wlwindow.c
+@@ -234,12 +234,22 @@ gst_wl_window_resize_video_surface (GstWlWindow * window, gboolean commit)
+   src.h = window->video_height;
+   dst.w = window->render_rectangle.w;
+   dst.h = window->render_rectangle.h;
++  gint position_x = window->display->position_x;
++  gint position_y = window->display->position_y;
++  gint out_width = window->display->out_width;
++  gint out_height = window->display->out_height;
+
+   if (window->video_viewport) {
+     gst_video_sink_center_rect (src, dst, &res, TRUE);
+     wp_viewport_set_destination (window->video_viewport, res.w, res.h);
+   } else {
+     gst_video_sink_center_rect (src, dst, &res, FALSE);
++	if (out_width > 0 && out_height > 0) {
++		res.x = position_x;
++		res.y = position_y;
++		res.w = out_width;
++		res.h = out_height;
++	}
+   }
+
+   wl_subsurface_set_position (window->video_subsurface, res.x, res.y);
+@@ -376,7 +386,16 @@ gst_wl_window_set_render_rectangle (GstWlWindow * window, gint x, gint y,
+     gint w, gint h)
+ {
+   g_return_if_fail (window != NULL);
+-
++  gint position_x = window->display->position_x;
++  gint position_y = window->display->position_y;
++  gint out_width = window->display->out_width;
++  gint out_height = window->display->out_height;
++  if (out_width > 0 && out_height > 0) {
++		x = position_x;
++		y = position_y;
++		w = out_width;
++		h = out_height;
++  }
+   window->render_rectangle.x = x;
+   window->render_rectangle.y = y;
+   window->render_rectangle.w = w;
+--
+1.9.1
+

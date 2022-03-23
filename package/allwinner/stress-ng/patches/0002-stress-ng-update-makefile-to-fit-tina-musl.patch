@@ -1,0 +1,29 @@
+From cb3b4b749354daf3e4891e92aad4803df6b3d126 Mon Sep 17 00:00:00 2001
+From: flyranchao <flyranchao@allwinnertech.com>
+Date: Fri, 7 Dec 2018 09:23:45 +0800
+Subject: [PATCH 2/3] stress-ng: update makefile to fit tina musl
+
+Signed-off-by: flyranchao <flyranchao@allwinnertech.com>
+---
+ Makefile | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index e566294..ddf138e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -401,11 +401,3 @@ clean:
+ fast-test-all: stress-ng
+ 	STRESS_NG=./stress-ng debian/tests/fast-test-all
+ 
+-.PHONY: install
+-install: stress-ng stress-ng.1.gz
+-	mkdir -p ${DESTDIR}${BINDIR}
+-	cp stress-ng ${DESTDIR}${BINDIR}
+-	mkdir -p ${DESTDIR}${MANDIR}
+-	cp stress-ng.1.gz ${DESTDIR}${MANDIR}
+-	mkdir -p ${DESTDIR}${JOBDIR}
+-	cp -rp example-jobs/*.job ${DESTDIR}${JOBDIR}
+-- 
+1.9.1
+

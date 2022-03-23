@@ -1,0 +1,13 @@
+if PACKAGE_pulseaudio-daemon
+
+config PULSEAUDIO_DAEMON_ENABLE_UDEV
+    bool "Enable UDEV support"
+    default n
+    select PACKAGE_eudev
+
+config PULSEAUDIO_DAEMON_ENABLE_DBUS
+    bool "Enable D-Bus support"
+    default n
+    select PACKAGE_dbus
+
+endif

@@ -1,0 +1,30 @@
+if PACKAGE_eyesee-mpp-system
+
+choice
+
+prompt "select wifi-chip"
+default wifi_xr819
+help
+  "tell eyesee-mpp-system the used wifi chip"
+
+config wifi_8189ftv
+	bool "use wifi 8189ftv"
+
+config wifi_ap6181
+	bool "use wifi ap6181"
+
+config wifi_ap6255
+	bool "use wifi ap6255"
+
+config wifi_ap6335
+	bool "use wifi ap6335"
+
+config wifi_xr819
+	bool "use wifi xr819"
+
+config wifi_disable
+	bool "wifi disable"
+
+endchoice
+
+endif

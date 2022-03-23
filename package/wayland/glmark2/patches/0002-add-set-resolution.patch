@@ -1,0 +1,160 @@
+--- a/src/canvas-generic.cpp	2018-05-29 21:12:48.572424783 +0800
++++ b/src/canvas-generic.cpp	2018-05-29 20:45:04.016472804 +0800
+@@ -34,6 +34,7 @@
+  * Public methods *
+  ******************/
+ 
++extern char *argv_char[8];
+ bool
+ CanvasGeneric::init()
+ {
+@@ -249,10 +250,13 @@ CanvasGeneric::resize_no_viewport(int wi
+     }
+ 
+     native_window_ = native_state_.window(cur_properties);
+-
+-    width_ = cur_properties.width;
+-    height_ = cur_properties.height;
+-
++    if(Options::resolution && Options::offscreen){
++	    width_ = atoi(argv_char[3]);
++	    height_ = atoi(argv_char[4]);
++    }else{
++        width_ = cur_properties.width;
++        height_ = cur_properties.height;
++    }
+     if (color_renderbuffer_) {
+         glBindRenderbuffer(GL_RENDERBUFFER, color_renderbuffer_);
+         glRenderbufferStorage(GL_RENDERBUFFER, gl_color_format_,
+@@ -264,7 +268,6 @@ CanvasGeneric::resize_no_viewport(int wi
+         glRenderbufferStorage(GL_RENDERBUFFER, gl_depth_format_,
+                               width_, height_);
+     }
+-
+     projection_ = LibMatrix::Mat4::perspective(60.0, width_ / static_cast<float>(height_),
+                                                1.0, 1024.0);
+ 
+--- a/src/main.cpp	2018-05-29 21:12:39.516425044 +0800
++++ b/src/main.cpp	2018-05-29 20:45:03.656472814 +0800
+@@ -56,6 +56,7 @@ using std::vector;
+ using std::map;
+ using std::string;
+ 
++char *argv_char[8];
+ static void
+ list_scenes()
+ {
+@@ -151,7 +152,9 @@ main(int argc, char *argv[])
+         Options::print_help();
+         return 0;
+     }
+-
++    for(int i = 0; i < argc; ++i){
++        argv_char[i] = argv[i];
++    }
+     /* Force 800x600 output for validation */
+     if (Options::validate &&
+         Options::size != std::pair<int,int>(800, 600))
+--- a/src/native-state-fbdev.cpp	2018-05-29 21:13:16.252423984 +0800
++++ b/src/native-state-fbdev.cpp	2018-05-29 20:45:03.652472814 +0800
+@@ -31,6 +31,7 @@
+ #include <unistd.h>
+ #include <sys/ioctl.h>
+ #include <linux/fb.h>
++#include "options.h"
+ #if HAS_MALI
+ #include <EGL/egl.h>
+ #endif
+@@ -43,7 +44,7 @@
+ /******************
+  * Public methods *
+  ******************/
+-
++extern char *argv_char[8];
+ bool
+ NativeStateFBDEV::init_display()
+ {
+@@ -62,6 +63,8 @@ bool
+ NativeStateFBDEV::create_window(WindowProperties const& /*properties*/)
+ {
+     struct fb_var_screeninfo fb_var;
++    unsigned int resolution_width;
++    unsigned int resolution_height;
+     if (fd == -1) {
+         Log::error("Error: display has not been initialized!\n");
+         return false;
+@@ -71,9 +74,26 @@ NativeStateFBDEV::create_window(WindowPr
+         Log::error("Error: cannot get variable frame buffer info\n");
+         return false;
+     }
+-    winprops.width = fb_var.xres;
+-    winprops.height = fb_var.yres;
+-    winprops.fullscreen = true;
++    if(Options::resolution){
++        resolution_width = atoi(argv_char[2]);
++        resolution_height = atoi(argv_char[3]);
++            if(!Options::offscreen){
++            if(resolution_width > fb_var.xres || resolution_height > fb_var.yres){
++                printf("Error:resolution > fb\n");
++                return false;
++            }else{
++                fb_var.xres = resolution_width;
++                fb_var.yres = resolution_height;
++            }
++            }
++        }else if(Options::offscreen){
++             winprops.width = fb_var.xres;
++             winprops.height = fb_var.yres;
++             winprops.fullscreen = true;
++        }
++        winprops.width = fb_var.xres;
++        winprops.height = fb_var.yres;
++        winprops.fullscreen = true;
+     return true;
+ }
+ 
+--- a/src/options.cpp	2018-05-29 21:12:12.484425824 +0800
++++ b/src/options.cpp	2018-05-29 20:45:03.640472814 +0800
+@@ -41,6 +41,7 @@ bool Options::reuse_context = false;
+ bool Options::run_forever = false;
+ bool Options::annotate = false;
+ bool Options::offscreen = false;
++bool Options::resolution = false;
+ GLVisualConfig Options::visual_config;
+ 
+ static struct option long_options[] = {
+@@ -50,6 +51,7 @@ static struct option long_options[] = {
+     {"validate", 0, 0, 0},
+     {"frame-end", 1, 0, 0},
+     {"off-screen", 0, 0, 0},
++    {"resolution", 0, 0, 0},
+     {"visual-config", 1, 0, 0},
+     {"reuse-context", 0, 0, 0},
+     {"run-forever", 0, 0, 0},
+@@ -125,6 +127,7 @@ Options::print_help()
+            "                         running the benchmarks\n"
+            "      --frame-end METHOD How to end a frame [default,none,swap,finish,readpixels]\n"
+            "      --off-screen       Render to an off-screen surface\n"
++           "      --resolution       screen resolution\n"
+            "      --visual-config C  The visual configuration to use for the rendering\n"
+            "                         target: 'red=R:green=G:blue=B:alpha=A:buffer=BUF'.\n"
+            "                         The parameters may be defined in any order, and any\n"
+@@ -175,6 +178,8 @@ Options::parse_args(int argc, char **arg
+             Options::frame_end = frame_end_from_str(optarg);
+         else if (!strcmp(optname, "off-screen"))
+             Options::offscreen = true;
++	else if (!strcmp(optname, "resolution"))
++	    Options::resolution = true;
+         else if (!strcmp(optname, "visual-config"))
+             Options::visual_config = GLVisualConfig(optarg);
+         else if (!strcmp(optname, "reuse-context"))
+--- a/src/options.h	2018-05-29 21:12:15.868425726 +0800
++++ b/src/options.h	2018-05-29 20:45:03.944472806 +0800
+@@ -53,6 +53,7 @@ struct Options {
+     static bool run_forever;
+     static bool annotate;
+     static bool offscreen;
++    static bool resolution;
+     static GLVisualConfig visual_config;
+ };
+ 

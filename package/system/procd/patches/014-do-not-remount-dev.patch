@@ -1,0 +1,19 @@
+diff --git a/plug/coldplug.c b/plug/coldplug.c
+index 215be02..f6ad4af 100644
+--- a/plug/coldplug.c
++++ b/plug/coldplug.c
+@@ -44,12 +44,14 @@ void procd_coldplug(void)
+ 	unsigned int oldumask = umask(0);
+ 
+ 	umount2("/dev/pts", MNT_DETACH);
++#if 0
+ 	umount2("/dev/", MNT_DETACH);
+ #if DEVTMPFS_ENABLED
+ 	mount("devtmpfs", "/dev", "devtmpfs", MS_NOSUID, "mode=0755,size=512K");
+ #else
+ 	mount("tmpfs", "/dev", "tmpfs", MS_NOSUID, "mode=0755,size=512K");
+ #endif
++#endif
+ 	ignore(symlink("/tmp/shm", "/dev/shm"));
+ 	mkdir("/dev/pts", 0755);
+ 	umask(oldumask);

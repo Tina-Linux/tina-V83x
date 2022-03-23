@@ -1,0 +1,99 @@
+menuconfig SWUPDATE_CONFIG_SURICATTA
+	bool "Suricatta"
+	help
+	  Suricatta is a daemon mode of SWUpdate.
+
+	  Suricatta regularly polls a remote server for updates,
+	  downloads, and installs them. Thereafter, it reboots the
+	  system and reports the update status to the server, based
+	  on an update state variable currently stored in bootloader’s
+	  environment ensuring persistent storage across reboots. Some
+	  U-Boot script logics or U-Boot’s bootcount feature may be
+	  utilized to alter this update state variable, e.g., by
+	  setting it to reflect failure in case booting the newly
+	  flashed root file system has failed and a switchback had to
+	  be performed.
+
+if SWUPDATE_CONFIG_SURICATTA
+
+menu "Features"
+
+config SWUPDATE_CONFIG_SURICATTA_SSL
+	bool "SSL support"
+	default SWUPDATE_DEFAULT_SURICATTA_SSL
+	depends on SWUPDATE_CONFIG_HAVE_LIBSSL
+	depends on SWUPDATE_CONFIG_HAVE_LIBCRYPTO
+	help
+	  Enable SSL and checksum verification support in suricatta.
+
+comment "SSL support needs libcrypto, libssl"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBSSL || !SWUPDATE_CONFIG_HAVE_LIBCRYPTO
+
+choice
+	prompt "Update Status Storage"
+	help
+	  Place for suricatta to persistently store the update
+	  status for, e.g., communicating it to the server after
+	  a reboot.
+
+config SWUPDATE_CONFIG_SURICATTA_STATE_CHOICE_NONE
+	bool "None"
+	help
+	  Do not store update status.
+
+config SWUPDATE_CONFIG_SURICATTA_STATE_CHOICE_BOOTLOADER
+	bool "Bootloader"
+	help
+	  Store update status in Bootloader's environment.
+	  Specify Bootloader environment variable name to store update status in.
+
+endchoice
+
+config SWUPDATE_CONFIG_SURICATTA_STATE_BOOTLOADER
+	string "Store Update Status in Bootloader Environment variable"
+	default SWUPDATE_DEFAULT_SURICATTA_STATE_BOOTLOADER
+	depends on SWUPDATE_CONFIG_SURICATTA_STATE_CHOICE_BOOTLOADER
+	help
+	  Store update information in Bootloader's environment.
+
+endmenu
+
+menu "Server"
+
+choice
+	prompt "Server Type"
+	default SWUPDATE_CONFIG_SURICATTA_HAWKBIT
+	help
+	  Choose the server type. Currently, just hawkBit is
+	  supported.
+
+config SWUPDATE_CONFIG_SURICATTA_HAWKBIT
+	bool "hawkBit support"
+	depends on SWUPDATE_CONFIG_HAVE_LIBCURL
+	depends on SWUPDATE_CONFIG_HAVE_JSON_C
+	select SWUPDATE_CONFIG_CHANNEL_CURL
+	select SWUPDATE_CONFIG_JSON
+	help
+	  Support for hawkBit server.
+	  https://projects.eclipse.org/projects/iot.hawkbit
+
+comment "hawkBit support needs libcurl, json-c"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBCURL || !SWUPDATE_CONFIG_HAVE_JSON_C
+
+config SWUPDATE_CONFIG_SURICATTA_GENERAL
+	bool "General HTTP support"
+	depends on SWUPDATE_CONFIG_HAVE_LIBCURL
+	select SWUPDATE_CONFIG_CHANNEL_CURL
+	help
+	  Support for Simple HTTP coded server
+	  The server uses HTTP return codes to detect if an update
+	  is available. See documentation for more details.
+
+comment "General HTTP backend support needs libcurl"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBCURL
+
+endchoice
+
+endmenu
+
+endif

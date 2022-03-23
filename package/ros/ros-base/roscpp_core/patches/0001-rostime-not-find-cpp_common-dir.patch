@@ -1,0 +1,20 @@
+--- a/rostime/CMakeLists.txt	2018-11-01 01:51:08.000000000 +0800
++++ b/rostime/CMakeLists.txt	2019-01-10 15:21:30.809811947 +0800
+@@ -1,7 +1,7 @@
+ cmake_minimum_required(VERSION 2.8.3)
+ project(rostime)
+
+-find_package(catkin REQUIRED COMPONENTS cpp_common)
++find_package(catkin REQUIRED COMPONENTS)
+ find_package(Boost REQUIRED COMPONENTS date_time system thread)
+ catkin_package(
+   INCLUDE_DIRS include
+@@ -10,7 +10,7 @@
+   DEPENDS Boost
+ )
+
+-include_directories(include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
++include_directories(include ${CMAKE_CURRENT_SOURCE_DIR}/../cpp_common/include ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+
+ add_library(rostime
+   src/duration.cpp

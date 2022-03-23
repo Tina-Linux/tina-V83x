@@ -1,0 +1,69 @@
+--- a/src/ime_pinyin.c	2018-10-10 19:52:28.000000000 +0800
++++ b/src/ime_pinyin.c	2018-10-10 19:56:29.000000000 +0800
+@@ -330,7 +330,7 @@
+ 
+     lenth =0;
+     {
+-        sprintf (lookfor_bk, "%s", lookfor);
++        /*sprintf (lookfor_bk, "%s", lookfor);*/
+         bzero (seltab, 16*MAX_PHRASE_LENGTH);
+         putstr ((unsigned char *)lookfor);
+         page =0;
+@@ -478,13 +478,16 @@
+             key = cur_table->KeyMap[(int)(*(strokes+idex))];
+             InpKey [InputCount++] = key;
+         }
+-
++        if(len == 0){
++            return -1;
++	}else{
+         FindMatchKey ();
+         CurrentPageIndex = StartKey;
+         MultiPageMode    = 1;
+         FillMatchChars(StartKey);
+         if (InputMatch<InputCount)
+             return -1;
++        }
+     }
+ 
+     lensum  =0;
+--- a/src/softkeyboard/softkeyboard/en_kbd.c	2018-10-10 19:52:28.000000000 +0800
++++ b/src/softkeyboard/softkeyboard/en_kbd.c	2018-10-10 19:53:31.000000000 +0800
+@@ -422,7 +422,7 @@
+     vw->clear_elements  = vw_clear_elements;
+     vw->get_element     = vw_get_element;
+ 
+-    vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-14-ISO8859-1");
++    vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-24-GB2312");
+ #if 0
+     vw->view_font = CreateLogFont ("ttf", fontname, "ISO8859-1",
+             FONT_WEIGHT_REGULAR,
+@@ -501,7 +501,7 @@
+ 
+     memset(sw->str, 0, SW_STR_LEN);
+ 
+-    sw->stroke_font = CreateLogFontByName ("*-fixed-rrncnn-*-9-ISO8859-1");
++    sw->stroke_font = CreateLogFontByName ("*-fixed-rrncnn-*-24-GB2312");
+ #if 0
+     sw->stroke_font = CreateLogFont ("rbf", "fixed", "ISO8859-1",
+                         FONT_WEIGHT_REGULAR, FONT_SLANT_ROMAN,
+--- a/src/softkeyboard/softkeyboard/pinyin_kbd.c	2018-10-10 19:52:28.000000000 +0800
++++ b/src/softkeyboard/softkeyboard/pinyin_kbd.c	2018-10-10 19:54:38.000000000 +0800
+@@ -373,7 +373,7 @@
+     vw->get_element = vw_get_element;
+ 
+ 
+-    vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-12-GB2312");
++    vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-24-GB2312");
+ #if 0
+     vw->view_font = CreateLogFontByName (NULL, fontname, "GB2312",
+             FONT_WEIGHT_BOLD,
+@@ -464,7 +464,7 @@
+                         FONT_UNDERLINE_NONE, FONT_STRUCKOUT_NONE,
+                         9, 0);
+ #endif
+-    sw->stroke_font = CreateLogFontByName ("*-times-rrncnn-*-9-ISO8859-1");
++    sw->stroke_font = CreateLogFontByName ("*-fixed-rrncnn-*-24-GB2312");
+     if (NULL == sw->stroke_font){
+         _MY_PRINTF("create logfont for stroke window error.\n");
+         return -1;

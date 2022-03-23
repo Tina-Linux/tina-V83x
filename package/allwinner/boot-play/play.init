@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+
+START=1
+STOP=98
+DEPEND=done
+PROG=boot-play
+
+start() {
+	$PROG boot &
+}
+
+stop() {
+	$PROG shutdown
+}
+

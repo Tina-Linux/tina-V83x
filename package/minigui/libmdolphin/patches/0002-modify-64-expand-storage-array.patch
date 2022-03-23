@@ -1,0 +1,11 @@
+--- a/Source/JavaScriptCore/runtime/JSGlobalData.cpp	2018-05-16 13:42:48.117607077 +0800
++++ b/Source/JavaScriptCore/runtime/JSGlobalData.cpp	2018-05-16 14:10:56.365558373 +0800
+@@ -110,7 +110,7 @@
+ {
+     // Enough storage to fit a JSArray, JSByteArray, JSString, or JSFunction.
+     // COMPILE_ASSERTS below check that this is true.
+-    char storage[64];
++    char storage[128];
+ 
+     COMPILE_ASSERT(sizeof(JSArray) <= sizeof(storage), sizeof_JSArray_must_be_less_than_storage);
+     JSCell* jsArray = new (storage) JSArray(JSArray::VPtrStealingHack);

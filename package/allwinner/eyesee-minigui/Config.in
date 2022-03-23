@@ -1,0 +1,18 @@
+if PACKAGE_eyesee-minigui
+
+choice
+prompt "Tslib mode for MiniGUI"
+	default SUNXITSLIB_SUPPORT
+	help
+		Select sunxi-key-tslib or minigui-tslib for minigui.
+		Enabling tslib ial support for minigui.
+		You need config ialengine in MiniGUI.cfg.
+		And add pointercal in /etc directory.
+
+config SUNXITSLIB_SUPPORT
+	bool "sunxi-tslib"
+config AWMINIGUI_TSLIB_SUPPORT
+	bool "minigui-tslib"
+endchoice
+
+endif

@@ -1,0 +1,6 @@
+usage:
+1. Start by running the server. Open a new shell and type:
+		rosrun beginner_tutorials add_two_ints_server
+
+2. Now let's run the client with the necessary arguments, in another shell:
+		rosrun beginner_tutorials add_two_ints_client 1 3

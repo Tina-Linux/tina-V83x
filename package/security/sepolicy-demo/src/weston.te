@@ -1,0 +1,39 @@
+# weston -
+type weston, domain;
+type weston_exec, exec_type, file_type;
+# permissive weston;
+init_daemon_domain(weston)
+# domain_auto_trans(weston,busybox_exec,busybox)
+# domain_auto_trans(weston,kmodloader_exec,kmodloader)
+# # domain_auto_trans(adbd,adbd_exec,adbd)
+# allow weston weston_exec:file rwx_file_perms;
+
+# allow weston self:capability { sys_tty_config sys_admin setuid };
+# allow weston self:netlink_kobject_uevent_socket *;
+
+# allow weston console_device:chr_file rw_file_perms;
+# allow weston sysfs:file rw_file_perms;
+
+# allow weston system_file:file { execute execute_no_trans open execmod };
+# allow weston { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow weston { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+# allow weston shell_exec:file rx_file_perms;
+# allow weston shell_exec:lnk_file r_file_perms;
+# allow weston etc_initd:dir search;
+# allow weston etc_initd:file r_file_perms;
+# allow weston etc_selinux:dir { search open read getattr };
+# allow weston etc_selinux:{ file lnk_file } { open read getattr };
+
+# allow weston device:dir { setattr write add_name remove_name };
+# allow weston device:file create_file_perms;
+# # allow weston device:chr_file rw_file_perms;
+# allow weston device:sock_file { create getattr open read write setattr };
+# allow weston gpu_device:chr_file rw_file_perms;
+# allow weston tty_device:chr_file rw_file_perms;
+
+# allow weston udevd_tmpfs:file r_file_perms;
+
+# allow weston input_device:dir r_dir_perms;
+# allow weston input_device:chr_file rw_file_perms;
+

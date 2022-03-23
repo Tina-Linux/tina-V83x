@@ -1,0 +1,34 @@
+--- a/src/printdlg.c
++++ b/src/printdlg.c
+@@ -484,11 +484,11 @@ static WNDPROC old_edit_proc;
+ #define MM(n) (int)((n * 720 + 127) / 254)
+ #define IN(n) (int)(n * 72)
+ 
+-typedef struct PAGE_SIZE {
++typedef struct {
+     int width, height;
+-} PAGE_SIZE;
++} page_size;
+ 
+-static const PAGE_SIZE PageSizes [NPageSize] = 
++static const page_size PageSizes [NPageSize] = 
+ {
+     {  MM(210), MM(297) },      // A4
+     {  MM(176), MM(250) },      // B5
+--- a/src/printing.c
++++ b/src/printing.c
+@@ -46,11 +46,11 @@
+ #define MM(n) (int)((n * 720 + 127) / 254)
+ #define IN(n) (int)(n * 72)
+ 
+-typedef struct PAGE_SIZE {
++typedef struct {
+     int width, height;
+-} PAGE_SIZE;
++} page_size;
+ 
+-static const PAGE_SIZE PageSizes [NPageSize] = 
++static const page_size PageSizes [NPageSize] = 
+ {
+     {  MM(210), MM(297) },      // A4
+     {  MM(176), MM(250) },      // B5

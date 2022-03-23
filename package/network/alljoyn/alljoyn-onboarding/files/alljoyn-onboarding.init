@@ -1,0 +1,209 @@
+#!/bin/sh /etc/rc.common
+
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+. /usr/sbin/wifi_mgmt
+
+START=66
+SERVICE_DAEMONIZE=1
+SERVICE_WRITE_PID=1
+CONFIGFILE=/etc/alljoyn-onboarding/OnboardingService.conf
+FACTORYCONFIGFILE=/etc/alljoyn-onboarding/FactoryOnboardingService.conf
+
+EXTRA_COMMANDS="state error connect softap offboard configure validate reset retry poll_connection"
+EXTRA_HELP=<<EOF
+    state             Get onboarding state
+    error             Get onboarding error
+    connect           Connect to AP with provided configuration
+    softap            Disconnect from AP and enable soft AP
+    offboard          softap + wipe configuration
+    configure         Configure device with personal AP credentials
+    validate          Validate the provided configuration
+    reset             Reset the radio
+    retry             Enter SoftAP mode temporarily to allow reconfig
+    poll_connection   Poll the status of the connection
+EOF
+
+STATE_NOTCONFIGURED=0
+STATE_CONFIGURED=1
+STATE_VALIDATING=2
+STATE_VALIDATED=3
+STATE_ERROR=4
+STATE_RETRY=5
+
+boot() {
+    local obswifi=$(uci get network.obswifi)
+    if [ -z "$obswifi" ]; then
+        uci set network.obswifi=interface
+        uci set network.obswifi.proto=dhcp
+        uci commit network
+        /etc/init.d/network reload
+    fi
+
+    start
+}
+
+start() {
+    cache_state
+    cache_error
+    connect
+    service_start /usr/bin/onboarding-daemon --config-file=$CONFIGFILE --factory-config-file=$FACTORYCONFIGFILE
+}
+
+stop() {
+    service_stop /usr/bin/onboarding-daemon
+}
+
+state() {
+    return $(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].state)
+}
+
+error() {
+    return $(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].lasterrorcode)
+}
+
+connect() {
+    local state="$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].state)"
+
+    if [ ${state} -eq $STATE_NOTCONFIGURED ]; then
+        return
+    fi
+
+    if [ ${state} -eq $STATE_CONFIGURED ] || [ ${state} -eq $STATE_ERROR ]; then
+        validate
+        return
+    fi
+
+    if [ ${state} -eq $STATE_VALIDATING ]; then
+        retries=2
+    else
+        retries=$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].connect_retry_max)
+    fi
+
+    local status=$ERROR_NONE
+    while [ $retries -gt 0 ]; do
+        wifi_connect
+        sleep 2
+        wifi_connect_status
+        status=$?
+        echo "status: $status"
+        if [ ${status} -eq $ERROR_NONE ]; then
+            set_state $STATE_VALIDATED
+            return $status
+        else
+            retries=$((--retries))
+        fi
+    done
+
+    if [ ${state} -eq $STATE_VALIDATED ] || [ ${state} -eq $STATE_RETRY ]; then
+        if [ $(ps -w | grep "/etc/init.d/alljoyn-onboarding retry" | grep -v "grep" | wc -l) -eq 0 ]; then
+            /etc/init.d/alljoyn-onboarding retry &
+            status=$((status+8))  # set a bit saying we are in retry
+        fi
+    elif [ ${state} -eq ${STATE_VALIDATING} ]; then
+        set_state $STATE_ERROR
+        softap
+    fi
+
+    return $status
+}
+
+offboard() {
+    set_state $STATE_NOTCONFIGURED
+    softap
+
+    uci delete alljoyn-onboarding.@onboarding[0].ssid
+
+    local enc=$(uci get alljoyn-onboarding.@onboarding[0].encryption)
+    if [ $enc == "wep" ]; then
+        local index=$(uci get alljoyn-onboarding.@onboarding[0].key)
+        uci delete alljoyn-onboarding.@onboarding[0].key$index
+    fi
+
+    uci delete alljoyn-onboarding.@onboarding[0].encryption
+    uci delete alljoyn-onboarding.@onboarding[0].key
+
+    uci commit alljoyn-onboarding
+
+    set_error $ERROR_NONE "Unconfigured"
+}
+
+softap() {
+    wifi_softap
+}
+
+reset() {
+    wifi_reset
+}
+
+retry() {
+    echo "STATE_RETRY"
+    set_state $STATE_RETRY
+    local retry_duration="$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].config_retry_duration)"
+    softap
+    sleep $retry_duration
+    local state="$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].state)"
+    if [ ${state} -eq $STATE_RETRY ]; then
+        /etc/init.d/alljoyn-onboarding connect &
+    fi
+}
+
+configure() {
+    local codeoption="-p"
+    if [ "$2" = "WEP" ]; then
+        codeoption="-k"
+    fi
+    wifi_configure -s "$1" -a "$2" $codeoption "$3"
+    set_state $STATE_CONFIGURED
+}
+
+validate() {
+    set_state $STATE_VALIDATING
+    connect
+}
+
+set_state() {
+    uci set -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].state=$1
+    uci commit -c /etc/alljoyn-onboarding alljoyn-onboarding-state
+    cache_state $1
+}
+
+cache_state(){
+    local state="$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].state)"
+    printf '%d\n' "$state" > /tmp/state/alljoyn-onboarding
+}
+
+cache_error() {
+    local code=$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].lasterrorcode)
+    local msg=$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].lasterrormsg)
+    printf '%s\n%s' "$code" "$msg" > /tmp/state/alljoyn-onboarding-lasterror
+}
+
+poll_connection() {
+    local state="$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].state)"
+    if [ ${state} -eq $STATE_VALIDATED ]; then
+        wifi_connect_status
+        local status=$?
+        if [ ${status} -ne $ERROR_NONE ]; then
+            ## check state again in case it changed since last get
+            state="$(uci get -c /etc/alljoyn-onboarding alljoyn-onboarding-state.@onboarding[0].state)"
+            if [ ${state} -ne $STATE_VALIDATED ]; then
+                return
+            fi
+            /etc/init.d/alljoyn-onboarding connect &
+        fi
+    fi
+}

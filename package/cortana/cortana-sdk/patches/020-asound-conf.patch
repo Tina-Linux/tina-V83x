@@ -1,0 +1,45 @@
+--- a/c/public/res/Linux/etc/asound.conf
++++ b/c/public/res/Linux/etc/asound.conf
+@@ -2,9 +2,16 @@ pcm.!default {
+ 	type asym
+ 	playback.pcm {
+ 		type plug
+-		slave.pcm "dmixer"
++		slave.pcm {
++			type softvol
++			slave.pcm "dmixer"
++			control.name "default"
++			control.card 0
++			min_dB -30.0
++			max_dB 30.0
++		}
+ 	}
+-	
++
+ 	capture.pcm {
+ 		type plug
+ 		slave.pcm "dsnooped"
+@@ -21,7 +28,11 @@ pcm.dmixer {
+     ipc_key 102500
+     ipc_key_add_uid false
+     ipc_perm 0666
+-    slave.pcm "hw:0,0"
++    slave {
++        pcm "hw:0,0"
++        channels 2
++        rate 16000
++    }
+ }
+ 
+ pcm.voice {
+@@ -89,8 +100,8 @@ pcm.call {
+ pcm.dsnooped {
+     type dsnoop
+     slave {
+-        pcm "hw:1,0" 
+-        channels 2 
++        pcm "hw:0,0"
++        channels 2
+         rate 16000
+     }
+     ipc_key 102400

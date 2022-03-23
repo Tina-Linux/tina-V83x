@@ -1,0 +1,30 @@
+From 89847de58a17dacedab36ef07ec4c12ef8c0e84a Mon Sep 17 00:00:00 2001
+From: Jo-Philipp Wich <jo@mein.io>
+Date: Mon, 25 Apr 2016 17:49:38 +0200
+Subject: [PATCH] block: respect mount flags for /overlay
+
+Instead of hardcoding no-flags in the mount syscall, use the user configured
+values, this is useful when mounting external overlays with "sync" or "ro"
+flags.
+
+Signed-off-by: Jo-Philipp Wich <jo@mein.io>
+---
+ block.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/block.c b/block.c
+index c6d1b90..2d44a8a 100644
+--- a/block.c
++++ b/block.c
+@@ -1101,7 +1101,8 @@ static int mount_extroot(char *cfg)
+ 		if (check_fs)
+ 			check_filesystem(pr);
+ 
+-		err = mount(pr->dev, path, pr->id->name, 0, (m->options) ? (m->options) : (""));
++		err = mount(pr->dev, path, pr->id->name, m->flags,
++		            (m->options) ? (m->options) : (""));
+ 
+ 		if (err) {
+ 			ULOG_ERR("extroot: mounting %s (%s) on %s failed: %d (%s)\n",
+-- 
+2.7.0

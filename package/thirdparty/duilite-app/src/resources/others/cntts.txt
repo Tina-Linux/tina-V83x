@@ -1,0 +1,49 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "duilite.h"
+
+char *auth_cfg = "{\"productId\":\"278570028\",\"savedProfile\":\"third/res/auth/278570028.txt\"}";
+
+static int _callback(void *user_data, int type, char *msg, int len) {
+	FILE *audio = NULL;
+	int w_len = 0;
+	if (len == 0){
+		goto end;
+	}
+
+	audio = fopen("./cntts.wav", "a+");
+	if (NULL == audio){
+		printf("create file error!\n");
+		goto end;
+	}
+
+	w_len = fwrite(msg, 1, len, audio);
+	if (w_len != len){
+		printf("write audio file error!\n");
+	} else {
+		printf("write audio file!\n");
+	}
+	fclose(audio);
+
+end:
+return 0;
+}
+
+int main(int argc, char **argv) {
+	char *cfg = "{\"resBinPath\": \"./third/res/cntts/zhilingf.bin\", \
+	\"dictPath\": \"./third/res/cntts/aitts_sent_dict_v3.17.db\"}";
+	char *param = "{}";duilite_library_load(auth_cfg);
+	struct duilite_cntts *cntts = duilite_cntts_new(cfg, _callback, NULL);
+	assert(cntts != NULL);
+
+	duilite_cntts_start(cntts, param);
+	duilite_cntts_feed(cntts, "");
+	system("aplay -r 16000 -f S16_LE cntts.wav");
+	remove("./cntts.wav");
+	duilite_cntts_delete(cntts);
+	duilite_library_release();
+
+	return 0;
+}

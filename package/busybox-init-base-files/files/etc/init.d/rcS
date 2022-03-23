@@ -1,0 +1,125 @@
+#!/bin/sh
+
+#mkfs_jffs2() <device in /dev/by-name>
+mkfs_jffs2() {
+	! [ -x /usr/sbin/mkfs.jffs2 ] \
+		&& ! [ -x /sbin/mkfs.jffs2 ] \
+		&& echo "Not Found /usr/sbin/mkfs.jffs2 or /sbin/mkfs.jffs2" \
+		&& return 1
+
+	# format to jffs2
+	local erase_block=$(/bin/cat /proc/mtd \
+		| /bin/grep "$(basename $1)" \
+		| /usr/bin/awk '{print $3}')
+	/bin/mkdir -p /tmp/jffs2.dir/tmp
+	mkfs.jffs2 -p -e 0x${erase_block} -d /tmp/jffs2.dir \
+		-o /tmp/jffs2.img >/dev/null || return 1
+	/bin/dd if=/tmp/jffs2.img of=$1 || return 1
+	/bin/rm -rf /tmp/jffs2.img /tmp/jffs2.dir
+	return 0
+}
+
+rc_preboot()
+{
+	[ -f /etc/init.d/rc.preboot ] \
+		&& source /etc/init.d/rc.preboot
+}
+
+rc_init()
+{
+	## set loglevel
+	local level=$(sed 's#.*loglevel=\([0-8]\).*#\1#' /proc/cmdline)
+	[ -n "${level}" ] && echo ${level} > /proc/sys/kernel/printk
+
+	# hostname
+	[ -z "$HOSTNAME" -o "$HOSTNAME" == "(none)" ] && HOSTNAME=TinaLinux
+	/bin/hostname $HOSTNAME
+	ifconfig lo up
+}
+
+rc_log()
+{
+	[ -f /etc/init.d/rc.log ] \
+		&& source /etc/init.d/rc.log
+}
+
+rc_mount_filesystem()
+{
+	local fs_src="$1"
+	local fs_mntpt="$2"
+	# mount filesystem
+	if [ -e "$fs_src" -a -d "$fs_mntpt" ]; then
+		[ -L "$fs_src" ] && fs_src=$(readlink "$fs_src")
+		case "$fs_src" in
+			/dev/mtdblock*)
+				mount -t jffs2 "$fs_src" "$fs_mntpt" 2>/dev/null
+				if [ "$?" -ne "0" ]; then
+					mkfs_jffs2 "$fs_src"
+					mount -t jffs2 "$fs_src" "$fs_mntpt" 2>/dev/null
+				fi
+				;;
+			*)
+				/usr/sbin/fsck.ext4 -y "$fs_src" &>/dev/null
+				mount -t ext4 "$fs_src" "$fs_mntpt" 2>/dev/null
+				if [ "$?" -ne "0" ]; then
+					mkfs.ext4 -m 0 "$fs_src" >/dev/null
+					mount -t ext4 "$fs_src" "$fs_mntpt" 2>/dev/null
+				fi
+				;;
+		esac
+
+		# restore /mnt file contexts
+		if [ -f /sbin/restorecon ]; then
+			/sbin/restorecon -R /mnt
+		fi
+	fi
+}
+
+rc_mount()
+{
+	rc_mount_filesystem "/dev/by-name/UDISK" "/mnt/UDISK"
+# 	rc_mount_filesystem "/dev/by-name/user-res" "/mnt/user"
+
+	# enable hotplug
+	echo /sbin/mdev > /proc/sys/kernel/hotplug
+	/sbin/mdev -s
+}
+
+rc_load_modules()
+{
+	[ -f /etc/init.d/rc.modules ] \
+		&& source /etc/init.d/rc.modules
+}
+
+rc_load_script()
+{
+	[ -f /etc/init.d/load_script.conf ] && \
+	for script in $(awk '{print}' /etc/init.d/load_script.conf); do
+		[ -f "/etc/init.d/$script" ] || continue
+		grep '#!/bin/sh /etc/rc.common' /etc/init.d/$script >/dev/null || continue;
+		/etc/init.d/$script "boot" >/dev/null &
+	done
+
+}
+
+rc_ota()
+{
+	[ -f /sbin/aw_upgrade_log.sh ] && /sbin/aw_upgrade_log.sh &
+}
+
+rc_final()
+{
+	[ -f /etc/init.d/rc.final ] \
+		&& source /etc/init.d/rc.final
+}
+
+rc_preboot
+rc_init
+rc_log
+rc_mount
+rc_load_modules
+rc_load_script
+rc_final
+#the ota should be last
+rc_ota
+

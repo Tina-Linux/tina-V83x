@@ -1,0 +1,46 @@
+# Copyright (C) 2018 Allwinner Technology Co., Ltd.
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+if PACKAGE_busybox-init-base-files
+
+config BUSYBOX_INIT_BASE_FILES_OPTIONS
+	bool "Customize busybox init base files options"
+	default n
+	help
+	   These options are used to customize busybox-init-base-files
+
+config BUSYBOX_INIT_BASE_FILES_PATH
+	string
+	prompt "PATH for busybox base files" if BUSYBOX_INIT_BASE_FILES_OPTIONS
+	default "busybox-init-base-files"
+	help
+	   PATH for busybox init base files
+
+
+config BUSYBOX_INIT_BASE_FILES_RC_LOG
+	bool "Use the rc.log"
+	default n
+	help
+	Optimiaztions to use TOPDIR/packge/busybox-init-files/files/etc/init.d/rc.log file,which is logging junk.
+
+	you can also customize a rc.log file under path:
+		TOPDIR/target/allwinner/xxx_platform/busybox-init-files/etc/init.d.
+
+config BUSYBOX_INIT_BASE_FILES_RC_LOAD_SCRIPT
+	bool "Auto load the script in /etc/rc.d"
+	default n
+	help
+		Optimiaztions to load the script in /etc/rc.d.
+
+config BUSYBOX_INIT_BASE_FILES_RC_MODULES
+	bool "Use the rc.modules"
+	default n
+	help
+	Optimiaztions to use TOPDIR/packge/busybox-init-files/files/etc/init.d/rc.modules,which Automatically load the kernel module.
+
+	you can also customize a rc.user file under path:
+		TOPDIR/target/allwinner/xxx_platform/busybox-init-files/etc/rc.modules.
+
+endif

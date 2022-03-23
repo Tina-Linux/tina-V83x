@@ -1,0 +1,25 @@
+#!/bin/sh
+
+device="hw:sndac1081003b"
+#设置唤醒通道,例如设置通道0作为唤醒通道
+amixer -D$device cset name='lpsd channel sel Function' 0
+#使能mad,绑定mad到i2s中
+amixer -D$device cset name='daudio bind mad Function' 1
+[ $? != 0 ] && {
+    echo "set mixer failed. no such sound card or mad not enable."
+    exit
+}
+
+if [ $# = 1 ]; then
+    [ $1 = "dump" ] && {
+	mad-capture -D$device -f S16_LE -r 16000 -c 4 -d 5 /mnt/UDISK/mad-test.wav
+    }
+    [ $1 = "kill" ] && {
+        killall mad-capture
+    }
+    [ $1 = "standby" ] && {
+	kill -s SIGUSR1 `ps |grep mad-capture |grep -v grep | awk '{print $1}'`
+    }
+else
+    mad-capture -D$device -f S16_LE -r 16000 -c 4 -d 5
+fi

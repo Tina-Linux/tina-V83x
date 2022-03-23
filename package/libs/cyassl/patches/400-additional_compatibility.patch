@@ -1,0 +1,26 @@
+--- a/cyassl/openssl/ssl.h
++++ b/cyassl/openssl/ssl.h
+@@ -28,6 +28,9 @@
+ #define CYASSL_OPENSSL_H_
+
+ #include <cyassl/ssl.h>
++#ifndef HAVE_SNI
++#undef CYASSL_SNI_HOST_NAME
++#endif
+ #include <wolfssl/openssl/ssl.h>
+
+ #endif
+--- a/wolfssl/wolfio.h
++++ b/wolfssl/wolfio.h
+@@ -302,11 +302,6 @@
+         typedef struct hostent          HOSTENT;
+     #endif /* HAVE_SOCKADDR */
+
+-    /* use gethostbyname for c99 */
+-    #ifdef WOLF_C99
+-        #undef HAVE_GETADDRINFO
+-    #endif
+-
+     #ifdef HAVE_GETADDRINFO
+         typedef struct addrinfo         ADDRINFO;
+     #endif

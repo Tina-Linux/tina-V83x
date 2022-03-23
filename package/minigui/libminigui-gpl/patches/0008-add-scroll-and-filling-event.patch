@@ -1,0 +1,118 @@
+--- a/src/kernel/init.c
++++ b/src/kernel/init.c
+@@ -85,6 +85,15 @@
+     MSG Msg;
+     static int mouse_x = 0, mouse_y = 0;
+ 
++    static unsigned int scrolltime;
++    static int scrollX;
++    static int scrollY;
++    static int flingX;
++    static int flingY;
++    int deltX;
++    int deltY;
++    int direction = 0;
++    int velocity = 0;
+     ke = &(lwe->data.ke);
+     me = &(lwe->data.me);
+     Msg.hwnd = HWND_DESKTOP;
+@@ -126,6 +135,11 @@
+             break;
+         case ME_LEFTDOWN:
+             Msg.message = MSG_LBUTTONDOWN;
++            scrolltime = __mg_timer_counter;
++            scrollX = me->x;
++            scrollY = me->y;
++            flingX  = me->x;
++            flingY  = me->y;
+             break;
+         case ME_LEFTUP:
+             Msg.message = MSG_LBUTTONUP;
+@@ -155,6 +169,55 @@
+         }
+ 
+         QueueDeskMessage (&Msg);
++		if (Msg.message == MSG_MOUSEMOVE) {
++            if (__mg_timer_counter >(scrolltime+2)) {
++                deltX = me->x - scrollX;
++                deltY = me->y - scrollY;
++                scrolltime = __mg_timer_counter;
++                scrollX = me->x;
++                scrollY = me->y;
++                if (abs(deltX) > abs(deltY)) {
++                    velocity = abs(deltX);
++                    if(deltX>0)
++                        direction = MOUSE_RIGHT;
++                    else
++                        direction = MOUSE_LEFT;
++                } else {
++                    velocity = abs(deltY);
++                    if(deltY>0)
++                        direction = MOUSE_DOWN;
++                    else
++                        direction = MOUSE_UP;
++                }
++                Msg.message = MSG_MOUSE_SCROLL;
++                Msg.wParam  = MAKELONG (direction, velocity);
++                Msg.lParam  = MAKELONG (me->x, me->y);
++                QueueDeskMessage (&Msg);
++            }
++        }
++        if (Msg.message == MSG_LBUTTONUP) {
++            deltX = me->x - flingX;
++            deltY = me->y - flingY;
++            if (abs(deltX)>20 || abs(deltY)>20) {
++                if (abs(deltX) > abs(deltY)) {
++                    velocity = abs(deltX);
++                    if(deltX>0)
++                        direction = MOUSE_RIGHT;
++                    else
++                        direction = MOUSE_LEFT;
++                } else {
++                    velocity = abs(deltY);
++                    if(deltY>0)
++                        direction = MOUSE_DOWN;
++                    else
++                        direction = MOUSE_UP;
++                }
++                Msg.message = MSG_MOUSE_FLING;
++                Msg.wParam  = MAKELONG (direction, velocity);
++                Msg.lParam  = MAKELONG (me->x, me->y);
++                QueueDeskMessage (&Msg);
++            }
++        }
+     }
+ }
+ 
+--- a/src/kernel/desktop-comm.c
++++ b/src/kernel/desktop-comm.c
+@@ -2142,6 +2142,29 @@
+             dskRefreshAllWindow (&invrc);
+         }
+         break;
++		case MSG_MOUSE_SCROLL:
++        case MSG_MOUSE_FLING:
++        {
++            flags = (int)wParam;
++            x = LOSWORD (lParam);
++            y = HISWORD (lParam);
++            PMAINWIN pUnderPointer;
++            PMAINWIN pCtrlPtrIn;
++            if (__mg_capture_wnd) {
++                 PostMessage (__mg_capture_wnd, message,
++                                 flags | KS_CAPTURED, MAKELONG (x, y));
++                 return 0;
++             }
++             pCtrlPtrIn = gui_GetMainWindowPtrUnderPoint (x, y);
++             if (pCtrlPtrIn && pCtrlPtrIn->WinType == TYPE_CONTROL)
++			 	pUnderPointer = pCtrlPtrIn->pMainWin;
++			 else {
++                 pUnderPointer = pCtrlPtrIn;
++                 pCtrlPtrIn = NULL;
++             }
++             PostMessage((HWND)pUnderPointer, message, wParam, lParam);
++        }
++        break;
+ 
+         case MSG_BROADCASTMSG:
+             return dskBroadcastMessage ((PMSG)lParam);

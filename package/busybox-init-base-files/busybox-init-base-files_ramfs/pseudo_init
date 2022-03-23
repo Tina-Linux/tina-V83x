@@ -1,0 +1,132 @@
+#!/bin/sh
+[ -f /sbin/aw_upgrade_image.sh ] && . /sbin/aw_upgrade_image.sh
+################################## functions ##################################
+
+#mkfs_jffs2() <device in /dev/by-name>
+mkfs_jffs2() {
+	# format to jffs2
+	local erase_block=$(cat /proc/mtd | grep "$(basename $1)" | awk '{print $3}')
+	mkdir -p /tmp/jffs2.dir/tmp
+	mkfs.jffs2 -p -e 0x${erase_block} -d /tmp/jffs2.dir -o /tmp/jffs2.img
+	dd if=/tmp/jffs2.img of=$1
+	rm -rf /tmp/jffs2.img /tmp/jffs2.dir
+}
+
+mount_etc() {
+	# fs check
+	local root_dev="$(readlink /dev/by-name/rootfs)"
+	echo ${root_dev} | grep -q "mtdblock" \
+		|| /usr/sbin/fsck.ext4 -y /dev/by-name/rootfs_data &>/dev/null
+
+	# if mount failed, format.
+	case "${root_dev}" in
+		/dev/mtdblock*)
+			mount -t jffs2 /dev/by-name/rootfs_data /etc && [ -f /etc/init.d/rcS ] && return
+			echo "Mount Failed: formating /dev/by-name/rootfs_data to jffs2 ..."
+			umount /etc
+			mkfs_jffs2 "/dev/by-name/rootfs_data"
+			mount -t jffs2 /dev/by-name/rootfs_data /mnt
+			;;
+		*)
+			mount -t ext4 /dev/by-name/rootfs_data /etc && [ -f /etc/init.d/rcS ] && return
+			umount /etc
+			echo "Mount Failed: formating /dev/by-name/rootfs_data to ext4 ..."
+			mkfs.ext4 /dev/by-name/rootfs_data
+			mount -t ext4 /dev/by-name/rootfs_data /mnt
+			;;
+	esac
+	cp -af /etc/* /mnt/
+	mount -o move /mnt /etc
+}
+
+upgrade_etc() {
+	[ -f /sbin/aw_upgrade_image.sh ] || return
+	[ "$(get_system_flag)" == "upgrade_etc" ] || return
+	echo "upgrade etc now"
+
+	local root_dev="$(readlink /dev/by-name/rootfs)"
+	case "${root_dev}" in
+		/dev/mtdblock*)
+			mount -t jffs2 /dev/by-name/rootfs_data /mnt
+			;;
+		*)
+			mount -t ext4 /dev/by-name/rootfs_data /mnt
+			;;
+	esac
+	cp -af /etc/* /mnt/
+	umount /mnt
+	set_system_flag "upgrade_end"
+	echo "upgrade etc end"
+}
+
+mount_usr(){
+	[ -e /dev/by-name/extend ] || return
+	flag=`get_system_flag`
+	if [ "${flag}" != "boot-recovery" -a -h "/dev/by-name/extend" ]; then
+		mount /dev/by-name/extend /usr
+	fi
+}
+
+set_parts_by_name() {
+	# create by-name
+	local parts part
+	mkdir -p /dev/by-name
+	parts=$(sed 's/ /\n/g' /proc/cmdline \
+		| awk -F'=' '/^partitions/{print $2}')
+	for part in $(echo ${parts} | sed 's/:/ /g')
+	do
+		[ ! -e /dev/${part#*@} ] && mdev -s
+		ln -s "/dev/${part#*@}" "/dev/by-name/${part%@*}"
+	done
+}
+
+mount_UDISK()
+{
+    local root_dev="$(readlink /dev/by-name/rootfs)"
+    # fix UDISK
+    if [ -h /dev/by-name/UDISK ]; then
+        echo ${root_dev} | grep -q "mtdblock" \
+            || /usr/sbin/fsck.ext4 -y /dev/by-name/UDISK &>/dev/null
+    fi
+
+    # mount UDISK
+    if [ -h /dev/by-name/UDISK -a -d /mnt/UDISK ]; then
+        case "${root_dev}" in
+            /dev/mtdblock*)
+                mount -t jffs2 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                if [ "$?" -ne "0" ]; then
+                    mkfs_jffs2 "/dev/by-name/UDISK"
+                    mount -t jffs2 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                fi
+                ;;
+            *)
+                mount -t ext4 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                if [ "$?" -ne "0" ]; then
+                    mkfs.ext4 /dev/by-name/UDISK >/dev/null
+                    mount -t ext4 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                fi
+                ;;
+        esac
+    fi
+
+    # enable hotplug
+    echo /sbin/mdev > /proc/sys/kernel/hotplug
+}
+#----------------------------------------------------------------
+
+mount -t proc /proc /proc
+mount -t tmpfs tmpfs /dev
+mount -t tmpfs tmpfs /tmp
+mount -t sysfs sys /sys
+
+set_parts_by_name
+
+mount_usr
+
+upgrade_etc
+
+mount_etc
+
+mount_UDISK
+
+exec /sbin/init

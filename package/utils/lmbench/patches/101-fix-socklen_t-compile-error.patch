@@ -1,0 +1,11 @@
+--- a/src/bench.h	2017-05-27 13:59:24.000000000 +0800
++++ b/src/bench.h	2017-05-27 13:35:15.000000000 +0800
+@@ -78,7 +78,7 @@
+ #endif /* HAVE_int64 */
+
+ #if (!defined(HAVE_socklen_t) && !defined(__socklen_t_defined))
+-typedef int socklen_t;
++//typedef int socklen_t;
+ #endif
+
+ #ifndef HAVE_off64_t

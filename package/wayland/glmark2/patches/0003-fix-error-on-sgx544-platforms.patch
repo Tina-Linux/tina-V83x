@@ -1,0 +1,33 @@
+--- a/wscript	2018-09-28 14:55:04.887666243 +0800
++++ b/wscript	2018-09-28 14:54:35.499667091 +0800
+@@ -44,6 +44,8 @@
+     opt.parser.set_default('flavors', [])
+     opt.add_option('--for-fbdev', action='store_true', dest = 'fbdev',
+                    default = False, help='enable fbdev support')
++    opt.add_option('--img_gpu', action='store_true', dest = 'img_gpu',
++                   default = False, help='enable img gpu support')
+     opt.add_option('--no-debug', action='store_false', dest = 'debug',
+                    default = True, help='disable compiler debug information')
+     opt.add_option('--no-opt', action='store_false', dest = 'opt',
+@@ -135,6 +137,8 @@
+         ctx.env.prepend_value('CXXFLAGS', '-g')
+     if ctx.options.fbdev:
+         ctx.env.append_unique('DEFINES','HAS_FBDEV=1')
++    if ctx.options.img_gpu:
++        ctx.env.append_unique('DEFINES','IMG_GPU=1')
+
+     ctx.env.HAVE_EXTRAS = False
+     if ctx.options.extras_path is not None:
+--- a/src/canvas-generic.cpp	2018-09-28 13:50:56.447777267 +0800
++++ b/src/canvas-generic.cpp	2018-09-28 13:48:25.703781616 +0800
+@@ -277,8 +277,9 @@
+ bool
+ CanvasGeneric::do_make_current()
+ {
++#ifndef IMG_GPU
+     gl_state_.init_surface(native_window_);
+-
++#endif
+     if (!gl_state_.valid()) {
+         Log::error("CanvasGeneric: Invalid EGL state\n");
+         return false;

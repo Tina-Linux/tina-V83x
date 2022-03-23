@@ -1,0 +1,7 @@
+menuconfig TINATEST_BASE_AUDIO_COMMON
+    bool "common"
+
+if TINATEST_BASE_AUDIO_COMMON
+    source captureloop/Config.in
+    source playbackloop/Config.in
+endif

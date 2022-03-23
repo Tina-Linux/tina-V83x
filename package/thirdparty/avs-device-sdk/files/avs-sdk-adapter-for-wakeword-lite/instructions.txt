@@ -1,0 +1,29 @@
+## Prerequisites
+
+Before building the SDK with the AVS SDK Adapter for Wakeword Lite, follow these steps:
+
+1. The AmazonLite folder must be placed in the KWD folder. For example: ../KWD/AmazonLite.
+2. Replace the existing KWDProvider folder with the KWDProvider folder provided in this package. For example: ../KWD/KWDProvider.
+
+## Build instructions
+
+To build the AVS Device SDK with the AmazonLite WWE, these CMake flags must be set:
+
+-DAMAZONLITE_KEY_WORD_DETECTOR=ON
+-DAMAZONLITE_KEY_WORD_DETECTOR_LIB_PATH=<path-to-lib>
+-DAMAZONLITE_KEY_WORD_DETECTOR_INCLUDE_DIR=<path-to-directory-including-the-header-file>
+-DAMAZONLITE_KEY_WORD_DETECTOR_DYNAMIC_MODEL_LOADING=<OFF-or-ON>
+
+### On/off behavior
+
+* OFF if model compilation is desired.
+ - In this case, -DAMAZONLITE_KEY_WORD_DETECTOR_MODEL_CPP_PATH must be specified with the path to the desired model.cpp file.
+* ON if model compilation is not desired.
+ - In this case, the path to the model.bin file must be passed in as a parameter to the wrapper class.
+ - For the SampleApp to behave, an additional field *MUST* be added to your AlexaClientSDKConfig.json file in the "sampleApp" section as follows:
+    "PryonLiteModelPath":"<absolute-path-to-desired-wake-word-model.bin-file>"
+
+## Release Notes
+
+v1.1.0 released 2018-12-05:
+* Wakeword Lite v1.0.0 or later is required.

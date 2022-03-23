@@ -1,0 +1,53 @@
+--- a/src/rospack.cpp	2017-11-17 07:08:49.000000000 +0800
++++ b/src/rospack.cpp	2018-12-29 15:16:11.354984325 +0800
+@@ -186,7 +186,7 @@
+       }
+       // Get license texts, where there may be multiple elements for.
+       std::string tagname_license = "license";
+-      for(TiXmlElement* el = root->FirstChildElement(tagname_license); el; el = el->NextSiblingElement(tagname_license ))
++      for(TiXmlElement* el = root->FirstChildElement(tagname_license.data()); el; el = el->NextSiblingElement(tagname_license.data() ))
+       {
+         licenses_.push_back(el->GetText());
+       }
+@@ -1022,9 +1022,9 @@
+   {
+     bool os_match = false;
+     const char *best_match = NULL;
+-    for(TiXmlElement* ele2 = ele->FirstChildElement(lang);
++    for(TiXmlElement* ele2 = ele->FirstChildElement(lang.data());
+         ele2;
+-        ele2 = ele2->NextSiblingElement(lang))
++        ele2 = ele2->NextSiblingElement(lang.data()))
+     {
+       const char *os_str;
+       if ((os_str = ele2->Attribute("os")))
+@@ -1126,9 +1126,9 @@
+         ele;
+         ele = ele->NextSiblingElement(MANIFEST_TAG_EXPORT))
+     {
+-      for(TiXmlElement* ele2 = ele->FirstChildElement(name);
++      for(TiXmlElement* ele2 = ele->FirstChildElement(name.data());
+           ele2;
+-          ele2 = ele2->NextSiblingElement(name))
++          ele2 = ele2->NextSiblingElement(name.data()))
+       {
+         const char *att_str;
+         if((att_str = ele2->Attribute(attrib.c_str())))
+@@ -1552,7 +1552,7 @@
+   if(stackage->manifest_loaded_)
+     return;
+
+-  if(!stackage->manifest_.LoadFile(stackage->manifest_path_))
++  if(!stackage->manifest_.LoadFile(stackage->manifest_path_.data()))
+   {
+     std::string errmsg = std::string("error parsing manifest of package ") +
+             stackage->name_ + " at " + stackage->manifest_path_;
+@@ -1603,7 +1603,7 @@
+
+   TiXmlNode *dep_node = NULL;
+   const char* dep_pkgname;
+-  while((dep_node = root->IterateChildren(depend_tag, dep_node)))
++  while((dep_node = root->IterateChildren(depend_tag.data(), dep_node)))
+   {
+     TiXmlElement *dep_ele = dep_node->ToElement();
+     if (!stackage->is_wet_package_)

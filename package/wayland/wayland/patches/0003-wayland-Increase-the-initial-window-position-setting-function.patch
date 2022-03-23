@@ -1,0 +1,20 @@
+diff --git a/protocol/wayland.xml b/protocol/wayland.xml
+index 29b63be..5fd2d3f 100644
+--- a/protocol/wayland.xml
++++ b/protocol/wayland.xml
+@@ -1220,6 +1220,15 @@
+       </description>
+       <arg name="class_" type="string" summary="surface class"/>
+     </request>
++    
++    <request name="set_window_position">
++      <description summary="set window position">
++	You can set the absolute coordinates of the window, if not set,
++	it is the random coordinates.
++      </description>
++      <arg name="x" type="int" summary="window x coordinate"/>
++      <arg name="y" type="int" summary="window y coordinate"/>
++    </request>
+ 
+     <event name="ping">
+       <description summary="ping client">

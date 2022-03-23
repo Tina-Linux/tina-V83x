@@ -1,0 +1,34 @@
+# netif daemon
+type netifd, domain;
+# permissive netifd;
+type netifd_exec, exec_type, file_type;
+
+domain_auto_trans(init,netifd_exec,netifd)
+domain_auto_trans(netifd,shell_exec,shell)
+domain_auto_trans(netifd,busybox_exec,busybox)
+# domain_auto_trans(netifd,hotplug-call_exec,hotplug-call)
+
+allow netifd kernel:system module_request;
+allow netifd self:netlink_kobject_uevent_socket *;
+allow netifd self:netlink_route_socket *;
+allow netifd self:capability { net_admin sys_module };
+
+allow netifd logd:unix_dgram_socket sendto;
+
+# allow netifd system_file:file { execute execute_no_trans open execmod };
+# allow netifd { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow netifd { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+allow netifd sysfs:file rw_file_perms;
+
+allow netifd tmpfs:dir rw_dir_perms;
+allow netifd tmpfs:sock_file rw_file_perms;
+allow netifd tmpfs:file create_file_perms;
+
+allow netifd ubusd:unix_stream_socket connectto;
+
+# allow netifd network:fifo_file write;
+
+allow netifd device:sock_file rw_file_perms;
+
+allow netifd proc_net:file rw_file_perms;

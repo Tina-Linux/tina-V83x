@@ -1,0 +1,20 @@
+ALSA configuration file for Allwinner R series Soc
+
+pcm devices name:
+default
+	use internal codec with dmix plugin
+	playback: dmix:audiocodec
+	capture:  dsnoop:audiocodec
+Playback
+	playback with dmix and softvol
+PlaybackSpeaker
+	playback with hook which can set the kcontrol, contains Speaker audio map
+PlaybackHeadphone
+	playback with hook which can set the kcontrol, contains Headphone audio map
+CaptureMic
+	capture with hook which can set the kcontrol, contains Mic audio map
+CaptureCodec,PlaybackCodec
+	capture with external codec, such as CaptureAc108,CaptureAc101,PlaybackTas5731
+Loopback
+	PlaybackLoopback: playback with internal codec, and Loopback device at the same time
+	CaptureLoopback:  capture with Loopback device

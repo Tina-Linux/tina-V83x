@@ -1,0 +1,17 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_OUTLOG_DRAGONMAT
+    bool "DragonMAT"
+    select TINATEST_SYS_BUILD_BOOT_SCRIPT
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_OUTLOG_DRAGONMAT
+    config TINATEST_SYS_GLOBAL_INFO_OUTLOG_DRAGONMAT_WAIT_TILL_CONNECTED
+        bool "wait_till_connected"
+        default y
+
+    config TINATEST_SYS_GLOBAL_INFO_OUTLOG_DRAGONMAT_EXIT_WHEN_END
+        bool "exit_when_end"
+        default n
+
+    config TINATEST_SYS_GLOBAL_INFO_OUTLOG_DRAGONMAT_EXIT_CALL
+        string "exit_call"
+endif

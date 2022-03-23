@@ -1,0 +1,13 @@
+#!/bin/sh
+
+bluealsa=`ps | grep "bluealsa" | grep -v grep`
+
+[ -z "$bluealsa" ] && /etc/bluetooth/bt-init
+
+play=`ps | grep "bluealsa-aplay" | grep -v grep`
+[ -n "$play" ] && {
+	killall bluealsa-aplay
+	sleep 1
+}
+
+bluealsa-aplay 00:00:00:00:00:00 &

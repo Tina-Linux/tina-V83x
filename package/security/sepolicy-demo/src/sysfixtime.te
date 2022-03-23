@@ -1,0 +1,32 @@
+type sysfixtime, domain, mlstrustedsubject;
+type sysfixtime_exec, exec_type, file_type;
+# permissive sysfixtime;
+#domain_auto_trans(shell,sysfixtime_exec,sysfixtime)
+domain_auto_trans(init,sysfixtime_exec,sysfixtime)
+# domain_auto_trans(sysfixtime,busybox_exec,busybox)
+
+# allow sysfixtime init:fifo_file { write ioctl };
+
+# allow sysfixtime console_device:chr_file { read write };
+# allow sysfixtime serial_device:chr_file rw_file_perms;
+# allow sysfixtime rtc_device:chr_file rw_file_perms;
+# allow sysfixtime device:sock_file rw_file_perms;
+
+# allow sysfixtime system_file:file { execute execute_no_trans open execmod };
+# allow sysfixtime { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow sysfixtime { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+# allow sysfixtime self:capability sys_time;
+
+# allow sysfixtime { etc_selinux etc_initd }:dir { search open read getattr };
+# allow sysfixtime etc_passwd:file r_file_perms;
+
+# allow sysfixtime logd:unix_dgram_socket sendto;
+
+# allow sysfixtime tmpfs:file r_file_perms;
+
+# #allow sysfixtime { adbd_exec etc_initd boot_exec cron_exec dbusd_exec etc_initd gpio_switch_exec led_exec }:file getattr;
+# allow sysfixtime file_type:file getattr;
+# allow sysfixtime file_type:dir getattr;
+
+# allow sysfixtime wpa_cfg:dir r_dir_perms;

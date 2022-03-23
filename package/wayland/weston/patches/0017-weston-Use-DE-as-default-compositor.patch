@@ -1,0 +1,1495 @@
+diff --git a/clients/desktop-shell.c b/clients/desktop-shell.c
+old mode 100644
+new mode 100755
+index b133d86..ad301b3
+--- a/clients/desktop-shell.c
++++ b/clients/desktop-shell.c
+@@ -751,7 +751,7 @@ background_draw(struct widget *widget, void *data)
+ 	surface = window_get_surface(background->window);
+ 
+ 	cr = widget_cairo_create(background->widget);
+-	cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
++	cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+ 	cairo_set_source_rgba(cr, 0.0, 0.0, 0.2, 1.0);
+ 	cairo_paint(cr);
+ 
+diff --git a/clients/window.c b/clients/window.c
+old mode 100644
+new mode 100755
+index 95796d4..9e2b5c4
+--- a/clients/window.c
++++ b/clients/window.c
+@@ -42,6 +42,9 @@
+ #include <sys/timerfd.h>
+ #include <stdbool.h>
+ 
++#define HAVE_CAIRO_EGL 1
++#define USE_CAIRO_GLESV2 1
++
+ #ifdef HAVE_CAIRO_EGL
+ #include <wayland-egl.h>
+ 
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+old mode 100644
+new mode 100755
+index 34cee59..6b30941
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -47,6 +47,7 @@
+ #include <gbm.h>
+ #include <libudev.h>
+ 
++#include "compositor/weston.h"
+ #include "compositor.h"
+ #include "compositor-drm.h"
+ #include "shared/helpers.h"
+@@ -112,7 +113,9 @@ struct drm_backend {
+ 	int cursors_are_broken;
+ 
+ 	int use_pixman;
+-
++#ifdef DRM_OVERLAY_SUPPORT		
++	int use_overlay;
++#endif
+ 	struct udev_input input;
+ 
+ 	int32_t cursor_width;
+@@ -147,7 +150,78 @@ struct drm_edid {
+ 	char serial_number[13];
+ };
+ 
++#ifdef DRM_OVERLAY_SUPPORT	
++
++#define LAYER_BY_CHANNEL 4
++#define LAYER_NUM_BY_POOL 32
++
++
++typedef enum {
++	DRM_COMPOSITION_INVALID = 0,
++	DRM_COMPOSITION_GPU,
++	DRM_COMPOSITION_OVERLAY,
++	DMR_COMPOSITION_CURSOR,
++} drm_composition_t;
++
++
++typedef enum {
++	NOT_ASSIGN = 0,
++	VIDEO_CHANNEL,
++	UI_CHANNEL,
++	UI_CHANNEL_NO_ALPHA,
++} drm_overlay_channel_type_t;
++
++typedef struct {
++	uint8_t pixel_alpha;
++	bool pre_multiply;
++	bool video_layer;
++	bool zorder_up;
++	uint32_t zorder;
++	uint32_t layer_id;
++	uint32_t channel_id;
++	uint32_t format;
++	drm_composition_t composition_type;
++	struct weston_view *view;
++	//drm_overlay_channel_t *channel;
++	struct wl_list link;
++}drm_layer_t;
++
++typedef struct {
++	uint32_t layer_num;
++	drm_overlay_channel_type_t type;
++	float plane_alpha;
++	uint32_t zorder;
++	float scale_width;
++	float scale_height;	
++	drm_layer_t *layer[LAYER_BY_CHANNEL];//Z-Order up
++}drm_overlay_channel_t;
++
++typedef struct {
++	//bool video_layer_top;
++	bool need_gpu_compositor;
++	int32_t gpu_plane_id;	
++	uint32_t overlay_layer_num;
++	uint32_t gpu_layer_num;
++	uint32_t video_layer_num;
++	//uint32_t alpha_layer_num;
++	uint32_t channel_num;
++	uint32_t video_channel_num;
++	//uint32_t current_channel;
++	uint32_t used_video_channel;
++	uint32_t used_alpha_channel;	
++	uint32_t used_channel;
++	//uint32_t gpu_alpha;
++	struct wl_list layer_list;
++	drm_layer_t *video_layer[LAYER_BY_CHANNEL];//Z-Order up
++	drm_layer_t *layer_pool;
++	drm_overlay_channel_t *overlay_channel;
++} drm_overlay_manager_t;
++
++#endif
++
+ struct drm_output {
++	int32_t gpu_plane_id;
++	uint32_t gpu_plane_zorder;
+ 	struct weston_output base;
+ 	drmModeConnector *connector;
+ 
+@@ -182,8 +256,41 @@ struct drm_output {
+ 
+ 	struct vaapi_recorder *recorder;
+ 	struct wl_listener recorder_frame_listener;
++#ifdef DRM_OVERLAY_SUPPORT	
++	drm_overlay_manager_t overlay_mgr;
++#endif
+ };
+ 
++#ifdef DRM_OVERLAY_SUPPORT	
++#define DRM_DEBUG_SUPPORT
++
++static struct weston_plane *
++drm_output_prepare_view(struct drm_output *output,
++				struct weston_view *ev, drm_layer_t *layer);
++static void reassign_layer_to_channel(struct drm_output *output);
++static bool drm_layer_has_alpha(drm_layer_t* layer);
++static drm_layer_t* assign_layer_to_channel(struct drm_output *output, 
++					drm_layer_t *layer);
++static void drm_destroy_layer_list(struct wl_list *layer_list);
++static void drm_output_setup_render_plane(struct drm_output *output);
++
++static bool drm_ouput_setup_overlay_plane(struct drm_output *output);
++static void drm_overlay_init(drm_overlay_manager_t * overlay_mgr);
++static int
++vlog_continue(const char *fmt, va_list argp)
++{
++	return 0;
++}
++
++
++static int
++vlog(const char *fmt, va_list ap)
++{
++	vfprintf(stderr, fmt, ap);
++	return 0;
++}
++
++#endif
+ /*
+  * An output has a primary display plane plus zero or more sprites for
+  * blending display contents.
+@@ -201,6 +308,7 @@ struct drm_sprite {
+ 	uint32_t plane_id;
+ 	uint32_t count_formats;
+ 	uint64_t zorder;
++	uint32_t alpha_value;
+ 
+ 	int32_t src_x, src_y;
+ 	uint32_t src_w, src_h;
+@@ -506,7 +614,7 @@ drm_output_release_fb(struct drm_output *output, struct drm_fb *fb)
+ 						   fb->bo);
+ 	}
+ }
+-
++#ifndef DRM_OVERLAY_SUPPORT
+ static uint32_t
+ drm_output_check_scanout_format(struct drm_output *output,
+ 				struct weston_surface *es, struct gbm_bo *bo)
+@@ -592,7 +700,7 @@ drm_output_prepare_scanout_view(struct drm_output *output,
+ 
+ 	return &output->fb_plane;
+ }
+-
++#endif
+ static void
+ drm_output_render_gl(struct drm_output *output, pixman_region32_t *damage)
+ {
+@@ -751,22 +859,13 @@ drm_output_repaint(struct weston_output *output_base,
+ 		output_base->set_dpms(output_base, WESTON_DPMS_ON);
+ 	}
+ 
+-	if (drmModePageFlip(backend->drm.fd, output->crtc_id,
+-			    output->next->fb_id,
+-			    DRM_MODE_PAGE_FLIP_EVENT, output) < 0) {
+-		weston_log("queueing pageflip failed: %m\n");
+-		goto err_pageflip;
+-	}
+-
+-	output->page_flip_pending = 1;
+-
+ 	drm_output_set_cursor(output);
+ 
+ 	/*
+ 	 * Now, update all the sprite surfaces
+ 	 */
+ 	wl_list_for_each(s, &backend->sprite_list, link) {
+-		if ((!s->current && !s->next) ||
++		if ((/*!s->current &&*/!s->next) ||
+ 		    !drm_sprite_crtc_supported(output, s))
+ 			continue;
+ 
+@@ -814,13 +913,14 @@ drm_output_repaint(struct weston_output *output_base,
+ 		}
+ 
+ 		ret = drmModeObjectSetProperty(backend->drm.fd, s->plane_id,
+-					DRM_MODE_OBJECT_PLANE, alpha_value_prop_id, 0xff);
++					DRM_MODE_OBJECT_PLANE, alpha_value_prop_id, s->alpha_value);
+ 		if (ret) {
+ 			weston_log("set property alpha value failed: %d: %s\n", ret, strerror(errno));
+ 			drmModeFreeObjectProperties(plane_prop_ptr);
+ 			goto err_pageflip;
+ 		}
+-
++		weston_log_continue("overlay channel config: plane_id=%d,dest(%d,%d,%d,%d)\n",s->plane_id,s->dest_x,s->dest_y,s->dest_w,s->dest_h);
++		//weston_log("drmModeSetPlane %d,(%d,%d,%d,%d)\n",s->plane_id,s->src_x,s->src_y,s->src_w,s->src_h);
+ 		ret = drmModeSetPlane(backend->drm.fd, s->plane_id,
+ 				      output->crtc_id, fb_id, flags,
+ 				      s->dest_x, s->dest_y,
+@@ -836,8 +936,15 @@ drm_output_repaint(struct weston_output *output_base,
+ 		drmModeFreeObjectProperties(plane_prop_ptr);
+ 
+ 		s->output = output;
+-		output->vblank_pending = 1;
+ 	}
++	weston_log_continue("gpu render channel config: plane_id=%d,zorder=%d\n",output->gpu_plane_id,output->gpu_plane_zorder);
++	if (drmModePageFlip(backend->drm.fd, output->crtc_id,
++			    output->next->fb_id,
++			    DRM_MODE_PAGE_FLIP_EVENT, output) < 0) {
++		weston_log("queueing pageflip failed: %m\n");
++		goto err_pageflip;
++	}
++	output->page_flip_pending = 1;
+ 
+ 	vbl.request.type |= drm_waitvblank_pipe(output);
+ 
+@@ -852,6 +959,7 @@ drm_output_repaint(struct weston_output *output_base,
+ 			ret, strerror(errno));
+ 		goto err_pageflip;
+ 	}
++	output->vblank_pending = 1;
+ 
+ 	return 0;
+ 
+@@ -952,27 +1060,12 @@ vblank_handler(int fd, unsigned int frame, unsigned int sec, unsigned int usec,
+ 	       void *data)
+ {
+ 	struct drm_output *output = (struct drm_output *)data;
+-	struct drm_backend *backend =
+-		to_drm_backend(output->base.compositor);
+-	struct drm_sprite *s = NULL;
+ 	struct timespec ts;
+ 	uint32_t flags = WP_PRESENTATION_FEEDBACK_KIND_HW_COMPLETION |
+ 			 WP_PRESENTATION_FEEDBACK_KIND_HW_CLOCK;
+ 
+ 	drm_output_update_msc(output, frame);
+ 
+-	/*
+-	 * Now, update all the sprite surfaces
+-	 */
+-	wl_list_for_each(s, &backend->sprite_list, link) {
+-		if ((!s->current && !s->next) ||
+-		    !drm_sprite_crtc_supported(output, s))
+-			continue;
+-
+-		drm_output_release_fb(output, s->current);
+-		s->current = s->next;
+-		s->next = NULL;
+-	}
+ 	output->vblank_pending = 0;
+ 
+ 	if (!output->page_flip_pending) {
+@@ -990,6 +1083,9 @@ page_flip_handler(int fd, unsigned int frame,
+ 		  unsigned int sec, unsigned int usec, void *data)
+ {
+ 	struct drm_output *output = data;
++	struct drm_backend *backend =
++		to_drm_backend(output->base.compositor);
++	struct drm_sprite *s = NULL;
+ 	struct timespec ts;
+ 	uint32_t flags = WP_PRESENTATION_FEEDBACK_KIND_VSYNC |
+ 			 WP_PRESENTATION_FEEDBACK_KIND_HW_COMPLETION |
+@@ -1004,8 +1100,21 @@ page_flip_handler(int fd, unsigned int frame,
+ 		drm_output_release_fb(output, output->current);
+ 		output->current = output->next;
+ 		output->next = NULL;
+-	}
+ 
++		wl_list_for_each(s, &backend->sprite_list, link) {
++			if ((!s->current && !s->next) ||
++				!drm_sprite_crtc_supported(output, s))
++				continue;
++			drm_output_release_fb(output, s->current);
++			s->current = s->next;
++			s->next = NULL;
++		}
++#ifdef DRM_OVERLAY_SUPPORT			
++		drm_destroy_layer_list(&output->overlay_mgr.layer_list);		
++
++
++#endif
++	}
+ 	output->page_flip_pending = 0;
+ 
+ 	if (output->destroy_pending)
+@@ -1059,7 +1168,7 @@ drm_view_transform_supported(struct weston_view *ev)
+ 	return !ev->transform.enabled ||
+ 		(ev->transform.matrix.type < WESTON_MATRIX_TRANSFORM_ROTATE);
+ }
+-
++#ifndef DRM_OVERLAY_SUPPORT
+ static struct weston_plane *
+ drm_output_prepare_overlay_view(struct drm_output *output,
+ 				struct weston_view *ev)
+@@ -1306,6 +1415,7 @@ drm_output_prepare_cursor_view(struct drm_output *output,
+ 
+ 	return &output->cursor_plane;
+ }
++#endif
+ 
+ /**
+  * Update the image for the current cursor surface
+@@ -1405,8 +1515,8 @@ drm_assign_planes(struct weston_output *output_base)
+ 	struct drm_backend *b = to_drm_backend(output_base->compositor);
+ 	struct drm_output *output = to_drm_output(output_base);
+ 	struct weston_view *ev, *next;
+-	pixman_region32_t overlap, surface_overlap;
+-	struct weston_plane *primary, *next_plane;
++	pixman_region32_t overlap;
++	struct weston_plane *primary;
+ 	struct weston_compositor *ec = output_base->compositor;
+ 	/*
+ 	* Temp to use de0 16 layers to display
+@@ -1429,6 +1539,71 @@ drm_assign_planes(struct weston_output *output_base)
+ 	pixman_region32_init(&overlap);
+ 	primary = &output_base->compositor->primary_plane;
+ 
++#ifdef DRM_OVERLAY_SUPPORT
++	int layer_num = 0, top = 0xff;
++	drm_layer_t *current_layer = NULL,*next_layer = NULL;
++
++	drm_overlay_init(&output->overlay_mgr);
++
++	wl_list_for_each_safe(ev, next, &output_base->compositor->view_list, link) {
++			struct weston_surface *es = ev->surface;
++			if (b->use_pixman ||
++			    (es->buffer_ref.buffer &&
++			    (!wl_shm_buffer_get(es->buffer_ref.buffer->resource) ||
++			     (ev->surface->width <= b->cursor_width &&
++			      ev->surface->height <= b->cursor_height))))
++				es->keep_buffer = true;
++			else
++				es->keep_buffer = false;
++
++		
++			current_layer = &output->overlay_mgr.layer_pool[layer_num++];
++
++			/* the view prepare to overlay*/
++			if (drm_output_prepare_view(output, ev, current_layer)) {
++				ev->psf_flags = WP_PRESENTATION_FEEDBACK_KIND_ZERO_COPY;
++					
++			}
++			else {/* the view is assigned to gpu render*/
++				weston_view_move_to_plane(ev, primary);
++				current_layer->composition_type = DRM_COMPOSITION_GPU;
++				output->overlay_mgr.need_gpu_compositor = true;
++				ev->psf_flags = 0;
++			}
++
++			current_layer->view = ev;
++			current_layer->zorder = top--;
++			wl_list_insert(&output->overlay_mgr.layer_list, &current_layer->link);
++			
++	}
++
++	//zoder up in layer list
++	wl_list_for_each_safe(current_layer, next_layer, &output->overlay_mgr.layer_list, link) {
++	    	assign_layer_to_channel(output, current_layer);
++			if (current_layer->composition_type == DRM_COMPOSITION_GPU){
++				weston_view_move_to_plane(current_layer->view, primary);
++				output->overlay_mgr.need_gpu_compositor = true;
++				current_layer->view->psf_flags = 0;
++				output->overlay_mgr.gpu_layer_num++;
++				weston_log_continue("view(%p) will be assigned to gpu render channel\n",current_layer->view);
++			}
++			else {
++				weston_log_continue("view(%p) will be assigned to overlay channel\n",current_layer->view);
++				output->overlay_mgr.overlay_layer_num++;
++			}
++	}	
++
++
++	drm_output_setup_render_plane(output);
++
++	reassign_layer_to_channel(output);
++
++	drm_ouput_setup_overlay_plane(output);
++
++#else
++	struct weston_plane *next_plane;
++	pixman_region32_t surface_overlap;
++
+ 	wl_list_for_each_safe(ev, next, &output_base->compositor->view_list, link) {
+ 		struct weston_surface *es = ev->surface;
+ 
+@@ -1484,6 +1659,7 @@ drm_assign_planes(struct weston_output *output_base)
+ 
+ 		pixman_region32_fini(&surface_overlap);
+ 	}
++#endif
+ 	pixman_region32_fini(&overlap);
+ }
+ 
+@@ -2647,6 +2823,10 @@ drm_output_destroy(struct weston_output *base)
+ 
+ 	if (output->backlight)
+ 		backlight_destroy(output->backlight);
++#ifdef DRM_OVERLAY_SUPPORT	
++	free(output->overlay_mgr.overlay_channel);
++	free(output->overlay_mgr.layer_pool);
++#endif
+ 
+ 	free(output);
+ }
+@@ -2726,6 +2906,61 @@ create_output_for_connector(struct drm_backend *b,
+ 	weston_output_init(&output->base, b->compositor);
+ 	weston_compositor_add_pending_output(&output->base, b->compositor);
+ 
++
++	
++#ifdef DRM_OVERLAY_SUPPORT	
++	drmModePropertyPtr prop_ptr;
++	drmModeObjectPropertiesPtr crtc_prop_ptr = NULL;
++
++	/*
++	 * Get the hardware resource from driver:
++	 * 1) the number of all overlay channels 
++	 * 2) the number of video channels
++	 *
++	 */
++
++	crtc_prop_ptr = drmModeObjectGetProperties(b->drm.fd, output->crtc_id,
++				DRM_MODE_OBJECT_CRTC);
++	if (!crtc_prop_ptr) {
++		weston_log("get mode properties failed\n");
++		return 0;
++	}	
++	
++	for (uint32_t i = 0; i < crtc_prop_ptr->count_props; i++) {
++		prop_ptr = drmModeGetProperty(b->drm.fd, *(crtc_prop_ptr->props + i));
++		if (!prop_ptr) {
++			weston_log("get propertie failed\n");
++			return 0;
++		}			
++		
++		if (!strcmp(prop_ptr->name, "channel_id")) {
++			output->overlay_mgr.channel_num = crtc_prop_ptr->prop_values[i];		
++		}
++		else if (!strcmp(prop_ptr->name, "video_channel")) {
++			output->overlay_mgr.video_channel_num = crtc_prop_ptr->prop_values[i];			
++		}
++
++	}
++	
++	if (output->overlay_mgr.channel_num != 0){
++		output->overlay_mgr.overlay_channel = zalloc(output->overlay_mgr.channel_num*sizeof(drm_overlay_channel_t));
++		if (output->overlay_mgr.overlay_channel == NULL) {
++			free(output);
++			weston_log("zalloc overlay channel failed\n");
++			return -1;	
++		}
++
++		/*malloc layer pool*/
++		output->overlay_mgr.layer_pool = zalloc(LAYER_NUM_BY_POOL*sizeof(drm_layer_t));
++		if (output->overlay_mgr.layer_pool == NULL) {
++			free(output);
++			weston_log("zalloc layer pool failed\n");
++			return -1;	
++		}
++
++	}
++#endif
++
+ 	return 0;
+ }
+ 
+@@ -3315,10 +3550,24 @@ drm_backend_create(struct weston_compositor *compositor,
+ 	 *
+ 	 * These can be enabled again when nuclear/atomic support lands.
+ 	 */
+-	b->sprites_are_broken = 1;
++	b->sprites_are_broken = 0;
+ 	b->compositor = compositor;
+ 	b->use_pixman = config->use_pixman;
+ 
++#ifdef DRM_OVERLAY_SUPPORT	
++		struct weston_config_section *section;
++		section = weston_config_get_section(wet_get_config(compositor), "core", NULL, NULL);
++		weston_config_section_get_bool(section, "use-overlay",
++						   &config->use_overlay, true);
++		weston_config_section_get_bool(section, "log-open",
++						   &config->log_open, false);
++		b->use_overlay = config->use_overlay;
++		if (!config->log_open) {
++			weston_log_set_handler(vlog, vlog_continue);
++		}
++#endif
++
++
+ 	if (parse_gbm_format(config->gbm_format, GBM_FORMAT_XRGB8888, &b->gbm_format) < 0)
+ 		goto err_compositor;
+ 
+@@ -3500,3 +3749,915 @@ weston_backend_init(struct weston_compositor *compositor,
+ 
+ 	return 0;
+ }
++#ifdef DRM_OVERLAY_SUPPORT	
++
++static void drm_destroy_layer_list(struct wl_list *layer_list)
++{
++	drm_layer_t *current,*next;
++	wl_list_for_each_safe(current, next, layer_list, link) {
++		wl_list_remove(&current->link);
++		//free(current);
++	}
++
++}
++
++static bool drm_layer_intersect(drm_layer_t *src_layer, 
++				drm_layer_t *dest_layer)
++{
++	pixman_region32_t overlap;
++	pixman_region32_init(&overlap);
++	pixman_region32_intersect(&overlap, &src_layer->view->transform.boundingbox,
++				  &dest_layer->view->transform.boundingbox);
++	
++	if (pixman_region32_not_empty(&overlap))
++		return true;
++	else
++		return false;
++
++}
++
++static bool check_layer_channel_intersect(drm_overlay_channel_t *channel, drm_layer_t *layer)
++{
++	uint32_t i = 0;
++	bool intersect = false;
++
++	for (i = 0; i < channel->layer_num; i++) {
++		if (channel->layer[i] != NULL)
++			intersect |= drm_layer_intersect(channel->layer[i], layer);
++		if (intersect)
++			break;
++	}
++	return intersect;
++}
++
++static bool check_gpulayer_intersect(drm_overlay_manager_t *overlay_mgr, drm_layer_t *layer, bool top)
++{
++	bool intersect = false;
++	drm_layer_t *current = NULL,*next = NULL;
++
++	wl_list_for_each_safe(current, next, &overlay_mgr->layer_list, link) {
++		if ((!top && current->zorder >= layer->zorder) || intersect)
++			break;
++		else if ((top && current->zorder < layer->zorder) || intersect)
++			break;
++		if (current->composition_type == DRM_COMPOSITION_GPU)
++			intersect |= drm_layer_intersect(current, layer);
++	}
++	
++	return intersect;
++}
++
++
++static bool drm_layer_has_alpha(drm_layer_t* layer)
++{
++	if (layer->pixel_alpha < 0xff || layer->view->alpha != 1.0)
++		return true;
++
++	return false;
++}
++
++static bool check_float_same(float x, float y)
++{
++	if (x >= y)
++		return x - y < 0.001 ? 1 : 0;
++	else
++		return y - x < 0.001 ? 1 : 0;
++}
++
++static bool is_same_format(drm_layer_t* src_layer, drm_layer_t* dest_layer)
++{
++	if (src_layer->format == dest_layer->format)
++		return true;
++
++	return false;
++}
++
++static void calc_layer_factor(drm_layer_t *layer, float *width, float *hight)
++{
++	
++	float srcW, srcH;
++	int dstW,dstH;
++
++	dstW = (layer->view->transform.boundingbox.extents.x2 - 
++						layer->view->transform.boundingbox.extents.x1);
++	dstH = (layer->view->transform.boundingbox.extents.y2 - 
++						layer->view->transform.boundingbox.extents.y1);
++	srcW = layer->view->surface->width;;
++	srcH =  layer->view->surface->height;
++	/*if(layer->transform & HAL_TRANSFORM_ROT_90) {
++		swap = srcW;
++		srcW = srcH;
++		srcH = swap;
++	}*/
++	*width = dstW / srcW;
++	*hight = dstH / srcH;
++
++}
++#if 0
++static bool layer_is_scale(drm_layer_t *layer)
++{
++    float wFactor = 1;
++    float hFactor = 1;
++
++
++    calc_layer_factor(layer, &wFactor, &hFactor);
++
++    return !check_float_same(wFactor, 1.0) || !check_float_same(hFactor, 1.0);
++}
++#endif
++
++static bool check_same_channel_scale(drm_overlay_channel_t *channel, drm_layer_t *layer)
++{
++	float wFactor = 1;
++	float hFactor = 1;
++
++	calc_layer_factor(layer, &wFactor, &hFactor);
++	return check_float_same(wFactor, channel->scale_width) && check_float_same(hFactor, channel->scale_height);
++}
++
++static void set_channel_scale(drm_overlay_channel_t *channel, drm_layer_t *layer)
++{
++	float w, h;
++	
++	w = layer->view->surface->width;
++	h = layer->view->surface->height;
++	/*
++	if (layer->transform & WL_OUTPUT_TRANSFORM_90) {
++		tmp = w;
++		w = h;
++		h = tmp;
++	}*/
++	
++	channel->scale_width= (layer->view->transform.boundingbox.extents.x2 - 
++						layer->view->transform.boundingbox.extents.x1) / w;
++	channel->scale_height = (layer->view->transform.boundingbox.extents.y2 - 
++						layer->view->transform.boundingbox.extents.y1) / h;
++}
++static bool match_channel_attribute(drm_overlay_manager_t *overlay_mgr, 
++				uint32_t channel_num, drm_layer_t *layer)
++{
++	drm_overlay_channel_t *current_channel = &overlay_mgr->overlay_channel[channel_num];
++	//printf("match_channel_attribute view=0x%x,alpha=%f\n",layer->view,layer->view->alpha);
++#if 0
++	/*if need gpu render,the last channel will assign to gpu render layer*/
++	if (overlay_mgr->need_gpu_compositor && 
++		channel_num >= overlay_mgr->channel_num - 1) {
++		printf("channel_num >= overlay_mgr->channel_num\n");
++		goto not_assign;	
++	}
++#endif
++
++	if (current_channel->layer_num == 0) {
++		//current layer is video layer 
++		if (layer->video_layer) {
++				if (overlay_mgr->used_video_channel >= overlay_mgr->video_channel_num){
++				//printf("overlay_mgr->used_video_channel >= overlay_mgr->video_channel_num\n");
++					goto not_assign;
++				}
++		}
++
++		//current layer is UI layer with alpha 
++		if (drm_layer_has_alpha(layer)){
++			if (overlay_mgr->used_alpha_channel >= 
++				overlay_mgr->channel_num - overlay_mgr->video_channel_num){
++				//printf("overlay_mgr->used_alpha_channel >= overlay_mgr->channel_num - overlay_mgr->video_channel_num\n");
++				goto not_assign;
++			}
++		}
++		return true; 	
++	}
++
++
++	if (current_channel->layer_num >= LAYER_BY_CHANNEL){
++		//printf("current_channel->layer_num >= LAYER_BY_CHANNEL\n");
++		goto not_assign;
++	}
++#if 0
++
++	if (!check_float_same(layer->view->alpha, current_channel->plane_alpha))
++		goto not_assign;
++#endif
++
++	if (!check_same_channel_scale(current_channel, layer)){
++		//printf("!check_same_channel_scale\n");
++		goto not_assign;
++	}
++		
++	//layer in video channel must be the same format
++	if (current_channel->type == VIDEO_CHANNEL) {
++		if (!layer->video_layer)
++			goto not_assign;
++		
++		if(!is_same_format(current_channel->layer[0], layer)){
++			//printf("!is_same_format\n");
++			goto not_assign;
++		}
++	}
++
++	if (current_channel->type == UI_CHANNEL_NO_ALPHA ||
++		current_channel->type == UI_CHANNEL) {
++		if (layer->video_layer){
++			//printf("video_layer\n");
++			goto not_assign;
++		}
++	}
++
++	if (drm_layer_has_alpha(layer)) {
++		if (check_layer_channel_intersect(current_channel, layer)){
++			//printf("check_layer_channel_intersect\n");
++			goto not_assign;
++		}
++	}
++
++		
++	return true;
++	
++	not_assign:
++		return false;
++
++}
++
++static drm_layer_t* assign_layer_to_channel(struct drm_output *output, 
++					drm_layer_t *layer)
++{
++	drm_overlay_channel_t *match_channel = NULL;
++	drm_overlay_manager_t* overlay_mgr = &output->overlay_mgr;
++
++	/* when current layer' zoder is greater than the gpu render layer's,and intersect between the two layers.
++	*  current layer will assign to gpu render.
++	*/
++ 	if (check_gpulayer_intersect(overlay_mgr, layer, false)) {
++		if (layer->video_layer && layer->composition_type != DRM_COMPOSITION_GPU) {
++			overlay_mgr->video_layer[overlay_mgr->video_layer_num++] = layer;
++		}		
++		layer->composition_type = DRM_COMPOSITION_GPU;
++		return layer;
++	}
++
++	for (unsigned int i = 0; i < overlay_mgr->channel_num; i++){
++		drm_overlay_channel_t *current_channel = &overlay_mgr->overlay_channel[i];
++		if (match_channel == NULL && layer->composition_type != DRM_COMPOSITION_GPU &&
++			match_channel_attribute(overlay_mgr, i, layer)) {
++			match_channel = current_channel;
++			//overlay_mgr->current_channel = i;
++			weston_log_continue("view(%p) match to channel[%d]\n",layer->view,i);
++			if (match_channel->layer_num == 0)
++				break;
++
++			continue;
++		}
++
++		if (current_channel->layer_num == 0)
++			break;
++
++		/*if some layers assigned to high order channel,and the layer intersect with current layer,
++		* current layer will assign to higher order channel
++		*/
++		if (match_channel && 
++			check_layer_channel_intersect(current_channel, layer)) {
++			weston_log_continue("view(%p) will match to higher zorder channel\n",layer->view);
++			match_channel = NULL;
++		}
++
++	}
++
++	if (match_channel == NULL){
++		if (layer->video_layer && layer->composition_type != DRM_COMPOSITION_GPU) {
++			overlay_mgr->video_layer[overlay_mgr->video_layer_num++] = layer;
++		}
++		
++		layer->composition_type = DRM_COMPOSITION_GPU;
++	
++	}
++
++	if (match_channel){
++		if (match_channel->layer_num == 0) {
++			overlay_mgr->used_channel++;
++
++			if (layer->video_layer) {
++				match_channel->type = VIDEO_CHANNEL;
++				overlay_mgr->used_video_channel++;
++				//weston_log_continue("assign view(0x%x) to video channel\n",layer->view);
++			}
++			else if (drm_layer_has_alpha (layer)) {
++				match_channel->type = UI_CHANNEL;
++				overlay_mgr->used_alpha_channel++;
++				//weston_log_continue("assign view(0x%x) to ui channel\n",layer->view);
++			}
++			else {
++				match_channel->type = UI_CHANNEL_NO_ALPHA;
++				//weston_log_continue("assign view(0x%x) to no alpha channel\n",layer->view);
++			}
++			
++			match_channel->plane_alpha = layer->view->alpha;
++			set_channel_scale(match_channel, layer);
++		}
++
++		match_channel->layer[match_channel->layer_num++] = layer;
++		layer->composition_type = DRM_COMPOSITION_OVERLAY;
++		//weston_log_continue("match_channel=%d,view=0x%x\n",overlay_mgr->current_channel,layer->view);
++	}
++
++	return layer;
++}
++static void reassign_layer_to_channel(struct drm_output *output)
++{
++	
++	drm_overlay_manager_t* overlay_mgr = &output->overlay_mgr;
++	unsigned int i = 0, j = 0, z = 0, zorder = 0, ui_bigen = overlay_mgr->video_channel_num, vi_bigen = 0, channel_id = 0;
++	drm_layer_t *layer = NULL;
++	drm_overlay_channel_t *channel = NULL;
++
++	for (i = 0; i < overlay_mgr->channel_num; i++) {
++		channel = &overlay_mgr->overlay_channel[i];
++		if (channel->type == NOT_ASSIGN)
++			continue;
++		
++		/* the z=0 chanel must no alpha */
++		if (channel->type  == UI_CHANNEL) {
++			channel_id = ui_bigen++;
++		} else if (channel->type  == VIDEO_CHANNEL) {
++			channel_id = vi_bigen++;
++		} else {
++			if (overlay_mgr->used_video_channel >= overlay_mgr->video_channel_num) {
++				channel_id = ui_bigen++;
++			} else {
++				channel_id = vi_bigen++;
++				overlay_mgr->used_video_channel++;
++			}
++		}
++
++		for (j = 0, z = 0; j < LAYER_BY_CHANNEL; j++) {
++			layer = channel->layer[j];
++			if (layer != NULL) {
++				layer->channel_id = channel_id;
++				layer->layer_id = z;
++				layer->zorder = zorder;	
++				if (layer->video_layer && layer->zorder_up)
++					layer->zorder++;
++				
++				zorder++;
++				z++;
++				weston_log_continue("view(%p) is reassigned to overlay channel_[%d],layer_id=%d,zorder=%d\n",layer->view,channel_id,layer->layer_id,layer->zorder);
++			}
++		}
++	}
++}
++
++
++
++static void drm_overlay_init(drm_overlay_manager_t * overlay_mgr)
++{
++	
++	overlay_mgr->gpu_plane_id = -1;
++	overlay_mgr->need_gpu_compositor = false;
++	//overlay_mgr->video_layer_top = false;
++	overlay_mgr->overlay_layer_num = 0;
++	overlay_mgr->gpu_layer_num = 0;
++	overlay_mgr->video_layer_num = 0;
++	overlay_mgr->used_channel = 0;
++	overlay_mgr->used_video_channel = 0;
++	overlay_mgr->used_alpha_channel = 0;
++	//overlay_mgr->video_channel_num = 1;
++	wl_list_init(&overlay_mgr->layer_list);
++	memset(overlay_mgr->overlay_channel, 0, overlay_mgr->channel_num * sizeof(drm_overlay_channel_t));
++	memset(overlay_mgr->layer_pool, 0, LAYER_NUM_BY_POOL * sizeof(drm_layer_t));
++	memset(overlay_mgr->video_layer, 0, LAYER_BY_CHANNEL * sizeof(drm_layer_t *));
++
++}
++
++static void reset_channel_to_render_plane(struct drm_output *output, unsigned int from, unsigned int to)
++{
++	struct weston_compositor *ec = output->base.compositor;
++	struct weston_plane *primary = &ec->primary_plane;
++	struct weston_view *ev;	
++	unsigned int i,j;
++	weston_log_continue("reset_channel_to_render_plane,channel:%d->%d\n",from,to);
++	for (j = from; j <= to; j++) {
++		unsigned int layer_num = output->overlay_mgr.overlay_channel[j].layer_num;
++		output->overlay_mgr.used_channel--;
++
++		if (output->overlay_mgr.overlay_channel[j].type == UI_CHANNEL) {
++			output->overlay_mgr.used_alpha_channel--;
++		}
++		
++		for (i = 0; i < layer_num; i++) {
++			if (output->overlay_mgr.overlay_channel[j].layer[i]) {
++				drm_layer_t *layer = output->overlay_mgr.overlay_channel[j].layer[i];
++				output->overlay_mgr.overlay_channel[j].layer[i] = NULL;
++				output->overlay_mgr.overlay_channel[j].layer_num--;
++				output->overlay_mgr.overlay_channel[j].type = NOT_ASSIGN;
++				layer->composition_type = DRM_COMPOSITION_GPU;
++				ev = layer->view; 
++				ev->psf_flags = 0;
++				output->overlay_mgr.gpu_layer_num++;
++				output->overlay_mgr.overlay_layer_num--;
++				weston_view_move_to_plane(ev, primary);
++				
++				weston_log_continue("view(%p) is reassigned to gpu render channel\n",layer->view);
++			}
++				
++		}
++
++	}
++		
++
++}
++	
++static void drm_output_setup_render_plane(struct drm_output *output)
++{
++	struct drm_sprite *s;
++	struct weston_compositor *ec = output->base.compositor;
++	struct drm_backend *b = to_drm_backend(ec);
++	drm_overlay_manager_t *overlay_mgr = &output->overlay_mgr;
++	unsigned int plane_id = 0;
++	static bool first = false;
++	int video_layer_num = 0;
++
++	if (overlay_mgr->need_gpu_compositor){
++
++		drm_layer_t *current;
++		for (unsigned int i = 0; i < overlay_mgr->video_layer_num; i++){
++			current = overlay_mgr->video_layer[i];
++			if (current && current->composition_type == DRM_COMPOSITION_GPU) {
++				/*the gpu render layer's zorder is greater than the video layer,and not  intersect*/
++				if (!check_gpulayer_intersect(overlay_mgr, current, true)) {
++		
++					if (!first && overlay_mgr->used_channel == overlay_mgr->channel_num) {
++						reset_channel_to_render_plane(output, overlay_mgr->channel_num - 2, overlay_mgr->channel_num - 1);
++					}
++
++					first = true;
++					
++					for (unsigned int i = 0; i < overlay_mgr->channel_num; i++){
++						drm_overlay_channel_t *current_channel = &overlay_mgr->overlay_channel[i];
++						if (match_channel_attribute(overlay_mgr, i, current)) {
++							current->composition_type = DRM_COMPOSITION_OVERLAY;
++							current->view->psf_flags = WP_PRESENTATION_FEEDBACK_KIND_ZERO_COPY;
++							overlay_mgr->overlay_layer_num++;
++							overlay_mgr->gpu_layer_num--;
++							current_channel->type = VIDEO_CHANNEL;
++							if (current_channel->layer_num == 0){
++								overlay_mgr->used_video_channel++;
++								overlay_mgr->used_channel++;
++							}
++							current->zorder_up = true;
++						
++							current_channel->layer[current_channel->layer_num++] = current;		
++							video_layer_num++;
++							//weston_log("reset video layer,match_id=%d\n",i);
++							weston_log_continue("view(%p) is reassigned to channel[%d]\n",current->view,i);
++							break;
++						}	
++					}
++					
++				}
++			}
++		}
++		
++		if (overlay_mgr->gpu_layer_num > 0 ) {
++			/*one UI channel must reserved for gpu render layer.
++			* if 	no UI channel(has alpha) assign for  gpu render layer,then reset the last UI channel,
++			*/
++			if (overlay_mgr->used_alpha_channel >= overlay_mgr->channel_num - 
++				overlay_mgr->video_channel_num) {
++				unsigned int i = 0, alpha_channel = 0; 
++				for (i = 0; i < overlay_mgr->channel_num; i++) { 
++					if (overlay_mgr->overlay_channel[i].type == UI_CHANNEL)
++						alpha_channel++;
++					
++					if (alpha_channel == overlay_mgr->used_alpha_channel){
++						reset_channel_to_render_plane(output, i, i);	
++						break;
++					}
++				}
++			}
++		
++
++			/*assign one actual plane for the gpu render layer*/
++			wl_list_for_each_reverse(s, &b->sprite_list, link) {
++				if (!drm_sprite_crtc_supported(output, s))
++					continue;
++
++				/*overlay layer and gpu render layer are present in the same time*/
++				if (overlay_mgr->overlay_layer_num > 0) {
++					if (plane_id == (overlay_mgr->video_channel_num + 
++						overlay_mgr->used_alpha_channel) * LAYER_BY_CHANNEL ){
++							overlay_mgr->gpu_plane_id = s->plane_id;
++							weston_log_continue("assign render plane to overlay channel_[%d] \n",overlay_mgr->video_channel_num + 
++						    overlay_mgr->used_alpha_channel);
++							break;
++						}
++				}
++				else {
++				    /*only gpu render layer is present*/
++					if (plane_id == overlay_mgr->video_channel_num * LAYER_BY_CHANNEL) {
++						overlay_mgr->gpu_plane_id = s->plane_id;
++						weston_log_continue("assign render plane to overlay channel_[%d] \n",overlay_mgr->video_channel_num);
++						break;
++					}
++				}
++				plane_id++;
++			
++			}
++		}
++	}
++
++	output->gpu_plane_zorder = overlay_mgr->overlay_layer_num - video_layer_num;
++	output->gpu_plane_id = overlay_mgr->gpu_plane_id;
++
++}
++static bool drm_ouput_setup_overlay_plane(struct drm_output *output)
++
++{
++	struct weston_compositor *ec = output->base.compositor;
++	struct drm_backend *b = to_drm_backend(ec);
++	struct weston_buffer_viewport *viewport;
++	struct wl_resource *buffer_resource;
++	struct drm_sprite *s;
++	struct weston_view *ev;
++	struct gbm_bo *bo;	
++	struct linux_dmabuf_buffer *dmabuf;
++	drm_layer_t *layer = NULL;
++	drm_overlay_channel_t *channel = NULL;	
++	uint32_t i = 0, j = 0, channel_id = 0, layer_id = 0;
++	uint32_t format;
++	pixman_region32_t dest_rect, src_rect;
++	pixman_box32_t *box, tbox;
++	wl_fixed_t sx1, sy1, sx2, sy2;	
++
++
++/*
++	* Why move choose right sprite code after gbm_bo_import():
++	* Because you need get bo->format imformation to choose right sprite;
++	*/
++	for (i = 0; i < output->overlay_mgr.channel_num; i++) {
++		channel = &output->overlay_mgr.overlay_channel[i];
++		for (j = 0; j < LAYER_BY_CHANNEL; j++) {
++			layer = channel->layer[j];
++			if (layer && layer->composition_type == DRM_COMPOSITION_OVERLAY) {
++				channel_id = 0;
++				layer_id = 0;
++				uint32_t z = 0;
++				wl_list_for_each_reverse(s, &b->sprite_list, link) {
++					if (!drm_sprite_crtc_supported(output, s))
++						continue;
++					if (layer->channel_id == channel_id && layer->layer_id == layer_id) {
++				
++						ev = layer->view;
++						viewport = &ev->surface->buffer_viewport;
++						buffer_resource = ev->surface->buffer_ref.buffer->resource;
++
++						if ((dmabuf = linux_dmabuf_buffer_get(buffer_resource))) {
++#ifdef HAVE_GBM_FD_IMPORT
++								/* XXX: TODO:
++								 *
++								 * Use AddFB2 directly, do not go via GBM.
++								 * Add support for multiplanar formats.
++								 * Both require refactoring in the DRM-backend to
++								 * support a mix of gbm_bos and drmfbs.
++								 */
++								struct gbm_import_fd_data gbm_dmabuf = {
++									.fd 	= dmabuf->attributes.fd[0],
++									.width	= dmabuf->attributes.width,
++									.height = dmabuf->attributes.height,
++									.stride = dmabuf->attributes.stride[0],
++									.format = dmabuf->attributes.format
++								};
++						
++						/* If the video layer comes, the n_planes must > 1, so comment it */
++#if 0
++										/* XXX: TODO:
++										 *
++										 * Currently the buffer is rejected if any dmabuf attribute
++										 * flag is set.  This keeps us from passing an inverted /
++										 * interlaced / bottom-first buffer (or any other type that may
++										 * be added in the future) through to an overlay.  Ultimately,
++										 * these types of buffers should be handled through buffer
++										 * transforms and not as spot-checks requiring specific
++										 * knowledge. */
++								if (dmabuf->attributes.n_planes != 1 ||
++											dmabuf->attributes.offset[0] != 0 ||
++									dmabuf->attributes.flags)
++									return false;
++#endif
++						
++								bo = gbm_bo_import(b->gbm, GBM_BO_IMPORT_FD, &gbm_dmabuf,
++										   GBM_BO_USE_SCANOUT);
++#else
++								return false;
++#endif
++						} else {
++					
++						
++							
++								bo = gbm_bo_import(b->gbm, GBM_BO_IMPORT_WL_BUFFER,
++										   buffer_resource, GBM_BO_USE_SCANOUT);
++			
++						
++							}
++							if (!bo)
++								return false;
++
++						format = layer->format;
++						s->next = drm_fb_get_from_bo(bo, b, format);
++						if (!s->next) {
++							gbm_bo_destroy(bo);
++							return false;
++						}
++					
++						
++						drm_fb_set_buffer(s->next, ev->surface->buffer_ref.buffer);
++						
++						box = pixman_region32_extents(&ev->transform.boundingbox);
++						s->plane.x = box->x1;
++						s->plane.y = box->y1;
++						
++						/*
++						 * Calculate the source & dest rects properly based on actual
++						 * position (note the caller has called weston_view_update_transform()
++						 * for us already).
++						 */
++						pixman_region32_init(&dest_rect);
++						//printf("ev=0x%x,boundingbox[%d,%d,%d,%d]\n",ev,ev->transform.boundingbox.extents.x1,ev->transform.boundingbox.extents.y1,ev->transform.boundingbox.extents.x2,ev->transform.boundingbox.extents.y2);
++						pixman_region32_intersect(&dest_rect, &ev->transform.boundingbox,
++									  &output->base.region);
++						pixman_region32_translate(&dest_rect, -output->base.x, -output->base.y);
++						box = pixman_region32_extents(&dest_rect);
++						tbox = weston_transformed_rect(output->base.width,
++										   output->base.height,
++										   output->base.transform,
++										   output->base.current_scale,
++										   *box);
++						//printf("output[%d,%d],%d,%d\n",output->base.width,output->base.height,output->base.transform,output->base.current_scale);
++						s->dest_x = tbox.x1;
++						s->dest_y = tbox.y1;
++						s->dest_w = tbox.x2 - tbox.x1;
++						s->dest_h = tbox.y2 - tbox.y1;
++						pixman_region32_fini(&dest_rect);
++						
++						pixman_region32_init(&src_rect);
++						pixman_region32_intersect(&src_rect, &ev->transform.boundingbox,
++									  &output->base.region);
++						box = pixman_region32_extents(&src_rect);
++						
++						weston_view_from_global_fixed(ev,
++										  wl_fixed_from_int(box->x1),
++										  wl_fixed_from_int(box->y1),
++										  &sx1, &sy1);
++						weston_view_from_global_fixed(ev,
++										  wl_fixed_from_int(box->x2),
++										  wl_fixed_from_int(box->y2),
++										  &sx2, &sy2);
++						
++						if (sx1 < 0)
++							sx1 = 0;
++						if (sy1 < 0)
++							sy1 = 0;
++						if (sx2 > wl_fixed_from_int(ev->surface->width))
++							sx2 = wl_fixed_from_int(ev->surface->width);
++						if (sy2 > wl_fixed_from_int(ev->surface->height))
++							sy2 = wl_fixed_from_int(ev->surface->height);
++						
++						tbox.x1 = sx1;
++						tbox.y1 = sy1;
++						tbox.x2 = sx2;
++						tbox.y2 = sy2;
++						
++						tbox = weston_transformed_rect(wl_fixed_from_int(ev->surface->width),
++										   wl_fixed_from_int(ev->surface->height),
++										   viewport->buffer.transform,
++										   viewport->buffer.scale,
++										   tbox);
++						
++						s->src_x = tbox.x1 << 8;
++						s->src_y = tbox.y1 << 8;
++						s->src_w = (tbox.x2 - tbox.x1) << 8;
++						s->src_h = (tbox.y2 - tbox.y1) << 8;
++						pixman_region32_fini(&src_rect);
++						s->zorder = layer->zorder;
++						//weston_log("view(0x%x) assign to plane[%d],plane_id=%d,zorder=%d\n", layer->view, z,s->plane_id,s->zorder);
++						ec->plane_zorder -= 1;
++						s->alpha_value = (uint32_t)ceilf(255 * layer->view->alpha);
++						//printf("s->alpha_value=0x%x,view=0x%x\n",s->alpha_value,layer->view);
++						weston_view_move_to_plane(ev, &s->plane);
++						break;
++
++					}
++			
++					z++;	
++					channel_id =  z / LAYER_BY_CHANNEL;
++					layer_id  = z % LAYER_BY_CHANNEL;
++				
++					if (z >= LAYER_BY_CHANNEL * output->overlay_mgr.channel_num)
++						break;
++							
++				}
++				
++			}
++
++		}
++	}
++
++	return true;
++}
++
++static struct weston_plane *
++drm_output_prepare_view(struct drm_output *output,
++				struct weston_view *ev, drm_layer_t *layer)
++{
++	struct weston_compositor *ec = output->base.compositor;
++	struct drm_backend *b = to_drm_backend(ec);
++	struct weston_buffer_viewport *viewport = &ev->surface->buffer_viewport;
++	struct wl_resource *buffer_resource;
++	struct drm_sprite *s;
++	struct linux_dmabuf_buffer *dmabuf;
++	//int found = 0;
++	struct gbm_bo *bo;
++	uint32_t format;
++
++	/*edit this config in weston.ini*/
++	if (!b->use_overlay) {
++		weston_log_continue("use gpu render\n");
++		return NULL;
++
++	}
++	
++	if (b->sprites_are_broken){
++		weston_log_continue("sprites are broken\n");
++		return NULL;
++	}
++	/* Don't import buffers which span multiple outputs. */
++	if (ev->output_mask != (1u << output->base.id)){
++		weston_log_continue("ev->output_mask (0x%x)!= (1u << output->base.id)(0x%x)\n",ev->output_mask,(1u << output->base.id));
++
++		return NULL;
++	}
++	/* We can only import GBM buffers. */
++	if (b->gbm == NULL)
++		return NULL;
++
++	if (ev->surface->buffer_ref.buffer == NULL){
++		weston_log_continue("ev->surface->buffer_ref.buffer == NULL\n");
++		return NULL;
++	}
++	buffer_resource = ev->surface->buffer_ref.buffer->resource;
++	if (wl_shm_buffer_get(buffer_resource)){
++		weston_log_continue("shm buffer type\n");
++		return NULL;
++	}
++	if (viewport->buffer.transform != output->base.transform){
++		weston_log_continue("viewport->buffer.transform != output->base.transform\n");
++		return NULL;
++	}
++	
++	if (viewport->buffer.scale != output->base.current_scale) {
++		weston_log_continue("viewport->buffer.scale != output->base.current_scale\n");
++		return NULL;
++	}
++	
++	if (!drm_view_transform_supported(ev)) {
++		weston_log_continue("!drm_view_transform_supported\n");
++		return NULL;
++	}
++#if 0		
++	if (ev->alpha != 1.0f)
++		return NULL;
++
++	// DE only support 16 & 8 layer to display, limit it
++	if (ec->plane_zorder <= 1)
++		return NULL;
++#endif
++	if ((dmabuf = linux_dmabuf_buffer_get(buffer_resource))) {
++#ifdef HAVE_GBM_FD_IMPORT
++		/* XXX: TODO:
++		 *
++		 * Use AddFB2 directly, do not go via GBM.
++		 * Add support for multiplanar formats.
++		 * Both require refactoring in the DRM-backend to
++		 * support a mix of gbm_bos and drmfbs.
++		 */
++		struct gbm_import_fd_data gbm_dmabuf = {
++			.fd 	= dmabuf->attributes.fd[0],
++			.width	= dmabuf->attributes.width,
++			.height = dmabuf->attributes.height,
++			.stride = dmabuf->attributes.stride[0],
++			.format = dmabuf->attributes.format
++		};
++
++/* If the video layer comes, the n_planes must > 1, so comment it */
++#if 0
++				/* XXX: TODO:
++				 *
++				 * Currently the buffer is rejected if any dmabuf attribute
++				 * flag is set.  This keeps us from passing an inverted /
++				 * interlaced / bottom-first buffer (or any other type that may
++				 * be added in the future) through to an overlay.  Ultimately,
++				 * these types of buffers should be handled through buffer
++				 * transforms and not as spot-checks requiring specific
++				 * knowledge. */
++		if (dmabuf->attributes.n_planes != 1 ||
++					dmabuf->attributes.offset[0] != 0 ||
++			dmabuf->attributes.flags)
++			return NULL;
++#endif
++		layer->pixel_alpha = 0xff;
++		bo = gbm_bo_import(b->gbm, GBM_BO_IMPORT_FD, &gbm_dmabuf,
++				   GBM_BO_USE_SCANOUT);
++#else
++		return NULL;
++#endif
++	} else {
++		void *map = NULL;
++		int ret;
++		uint32_t size;
++		struct drm_mode_map_dumb arg;	
++		
++		bo = gbm_bo_import(b->gbm, GBM_BO_IMPORT_WL_BUFFER,
++				   buffer_resource, GBM_BO_USE_SCANOUT);
++		memset(&arg, 0, sizeof(arg));
++		
++		size = gbm_bo_get_width(bo)*gbm_bo_get_height(bo);
++		arg.handle = gbm_bo_get_handle(bo).u32;;
++		
++		ret = drmIoctl(b->drm.fd, DRM_IOCTL_MODE_MAP_DUMB, &arg);
++		if (ret)
++			weston_log("DRM_IOCTL_MODE_MAP_DUMB fail\n");
++		
++		map = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, b->drm.fd, arg.offset);
++		if (map == MAP_FAILED)
++			weston_log("drm_mmap fail\n");
++		
++		if (map){
++			layer->pixel_alpha = *((uint8_t*)map+3);
++			weston_log_continue("view(%p) pixel_alpha=%d\n",ev,layer->pixel_alpha);
++		}
++		munmap(map, size);
++
++		
++	}
++	if (!bo){
++		weston_log("bo is null\n");
++		return NULL;
++		}
++	
++	layer->format = gbm_bo_get_format(bo);
++	switch (layer->format) {
++		case GBM_FORMAT_YUV410:
++		case GBM_FORMAT_YVU410:
++		case GBM_FORMAT_NV12:
++		case GBM_FORMAT_NV21:
++		case GBM_FORMAT_YUV411:
++		case GBM_FORMAT_YVU411:
++		case GBM_FORMAT_YUV420:
++		case GBM_FORMAT_YVU420:
++		case GBM_FORMAT_NV16:
++		case GBM_FORMAT_NV61:
++		case GBM_FORMAT_YUV422:
++		case GBM_FORMAT_YVU422:
++		case GBM_FORMAT_YUV444:
++		case GBM_FORMAT_YVU444:
++		case GBM_FORMAT_YUYV:
++		case GBM_FORMAT_YVYU:
++		case GBM_FORMAT_UYVY:
++		case GBM_FORMAT_VYUY:
++		case GBM_FORMAT_AYUV:
++			layer->video_layer = true;
++			weston_log_continue("view(%p) is video layer\n",ev);
++			break;
++		default :
++			layer->video_layer = false;
++			break;
++	}
++	
++	/*
++	* Why move choose right sprite code after gbm_bo_import():
++	* Because you need get bo->format imformation to choose right sprite;
++	*/
++	wl_list_for_each(s, &b->sprite_list, link) {
++		if (!drm_sprite_crtc_supported(output, s))
++			continue;
++
++		/* choose perfect format plane for this sprite */
++		format = drm_output_check_sprite_format(s, ev, bo);
++		if (!format)
++			continue;
++
++		if (!s->next) {
++			//found = 1;
++			layer->format = format;
++			gbm_bo_destroy(bo);
++			return &s->plane;;
++		}
++	}
++
++	gbm_bo_destroy(bo);
++		
++	return NULL;
++}
++
++
++
++
++#endif
++
+diff --git a/libweston/compositor-drm.h b/libweston/compositor-drm.h
+old mode 100644
+new mode 100755
+index 2e2995a..e442df6
+--- a/libweston/compositor-drm.h
++++ b/libweston/compositor-drm.h
+@@ -35,6 +35,8 @@
+ extern "C" {
+ #endif
+ 
++#define DRM_OVERLAY_SUPPORT
++
+ #define WESTON_DRM_BACKEND_CONFIG_VERSION 2
+ 
+ struct libinput_device;
+@@ -109,7 +111,11 @@ struct weston_drm_backend_config {
+ 
+ 	/** Whether to use the pixman renderer instead of the OpenGL ES renderer. */
+ 	bool use_pixman;
+-
++#ifdef DRM_OVERLAY_SUPPORT	
++	/** Whether to use the  hw overlay instead of the OpenGL ES renderer. */
++	int use_overlay;
++	int log_open;
++#endif
+ 	/** The seat to be used for input and output.
+ 	 *
+ 	 * If NULL the default "seat0" will be used.  The backend will
+diff --git a/libweston/compositor.c b/libweston/compositor.c
+old mode 100644
+new mode 100755
+index 4a84761..d5fedd1
+--- a/libweston/compositor.c
++++ b/libweston/compositor.c
+@@ -2219,6 +2219,7 @@ weston_compositor_build_view_list(struct weston_compositor *compositor)
+ 	wl_list_init(&compositor->view_list);
+ 	wl_list_for_each(layer, &compositor->layer_list, link) {
+ 		wl_list_for_each(view, &layer->view_list.link, layer_link.link) {
++			weston_log_continue("view_list_add view=%p,pos=0x%x\n",view,layer->position);
+ 			view_list_add(compositor, view);
+ 		}
+ 	}

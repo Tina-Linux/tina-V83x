@@ -1,0 +1,145 @@
+menuconfig TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_ENABLE
+    bool "rt_wifitester"
+    default y
+    select PACKAGE_wireless-tools
+    ---help---
+        Settings for /base/production/wifi/rt_wifitester
+        It safe to leave a blank for any settings.
+        If not setted, TinaTest will use global settings or default settings instead.
+
+if TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_ENABLE
+    config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_COMMAND
+        string "command"
+        default "rt_wifitester.sh"
+        ---help---
+            TinaTest will run this command to start testcase.
+            It is the same as shell command which followed by argumemts.
+            This setting is a mark of any testcase.
+
+    config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_STDIN
+        string "stdin"
+        default ""
+        ---help---
+            Redirect a string array, which is setted in this configure, to standard input.
+            For example,
+            "one two three four" is equivalent to enter 4 times to testcase every run_time.
+            The first time, enter "one" with new line,
+            the second time, enter "two" with new line, and so on.
+
+    config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_FSTDIN
+        string "fstdin"
+        default ""
+        ---help---
+            Redirect a file, which is setted in this configure, to standard input.
+
+    comment "<N> to Default && <Y> to customize"
+    config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_INFO
+        bool "INFO"
+        default y
+
+    if TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_INFO
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_DATE
+            bool "date"
+            default y if TINATEST_SYS_LOCAL_INFO_DATE
+            ---help---
+                Save running date and time.
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_RESOURCE
+            bool "resource"
+            default y if TINATEST_SYS_LOCAL_INFO_RESOURCE
+            ---help---
+                Save resources for each testcase.
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_REAL_TIME_LOG
+            bool "real_time_log"
+            default y if TINATEST_SYS_LOCAL_INFO_REAL_TIME_LOG
+            ---help---
+                Print log of testcase real time.
+                In default, tinatest just collect all log, and print them when testcase end.
+    endif
+
+    comment "<N> to Default && <Y> to customize"
+    config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_LIMIT
+        bool "LIMIT"
+        default y
+
+    if TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_LIMIT
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_RUN_TIMES
+            string "run_times"
+            default 1
+            ---help---
+                The times to run testcase.
+                For example:
+                To run this testcase for 3 times, we can set this value as 3.
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_RUN_ALONE
+            bool "run_alone"
+            default y if TINATEST_SYS_LOCAL_LIMIT_RUN_ALONE
+            ---help---
+                Wait for finishing all previous testcase and run alone before do next.
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_RUN_PARALLEL
+            bool "run_parallel"
+            default y if TINATEST_SYS_LOCAL_LIMIT_RUN_PARALLEN
+            ---help---
+                Run parallel for all run_times.
+                For example:
+                Testcae will run for 3 times one by one if run_times=3.
+                However, if run_parallel is setted, tinatest will creates 3 processers in one time.
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_MAY_REBOOT
+            bool "may_reboot"
+            default y if TINATEST_SYS_LOCAL_LIMIT_MAY_REBOOT
+            ---help---
+                It means that device will be rebooted while running testcase.
+                All states of testcase will be saved in flash, and loaded after rebooting.
+                Notices that, if may_reboot is setted, run_alone will be setted alway.
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_TESTCASE_RUN_ONCE_TIME
+            string "testcase_run_once_time"
+            default ""
+            ---help---
+                Time limit for testcase to run once.
+                It is in format:
+                    <sec> <min> <hour> <day>
+                For example,
+                100s : 100
+                1m20s : 20 1 (or 80)
+                1d3h : 0 0 3 1 (or 0 0 28 or other)
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_TESTCASE_RUN_TIME
+            string "testcase_run_time"
+            default ""
+            ---help---
+                Time limit for testcase to run.
+                It is in format:
+                    <sec> <min> <hour> <day>
+                For example,
+                100s : 100
+                1m20s : 20 1 (or 80)
+                1d3h : 0 0 3 1 (or 0 0 28 or other)
+
+        choice
+            prompt "timeout_with"
+            default TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_TIMEOUT_WITH_PASS
+            ---help---
+                The result when testcase exit for timeout.
+
+            config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_TIMEOUT_WITH_PASS
+                bool "pass"
+
+            config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_TIMEOUT_WITH_FAILED
+                bool "failed"
+        endchoice
+
+        config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_EXIT_ONCE_FAILED
+            bool "exit_once_failed"
+            default n
+            ---help---
+                Stop running testcase and exit once failed, even if runned times less than run_times.
+    endif
+
+    config TINATEST_BASE_PRODUCTION_WIFI_RT_WIFITESTER_MAX_TEST_TIMES
+        int "max_test_times"
+        default 3
+endif

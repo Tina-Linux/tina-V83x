@@ -1,0 +1,27 @@
+diff --git a/src/ex_ctrl/animation.c b/src/ex_ctrl/animation.c
+old mode 100644
+new mode 100755
+index 48a691f..8483d0e
+--- a/src/ex_ctrl/animation.c
++++ b/src/ex_ctrl/animation.c
+@@ -331,7 +331,9 @@ static LRESULT AnimationCtrlProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM
+                 delay_time = anim_info->current->delay_time;
+             }
+             anim_info->elapsed_10ms++;
+-            if (delay_time > 0 && anim_info->elapsed_10ms >= delay_time) {
++            /*if (delay_time > 0 && anim_info->elapsed_10ms >= delay_time) {*/
++            /* 10ms show next frame not 100ms */
++            {
+                 next_frame (hwnd, anim_info);
+                 anim_info->elapsed_10ms = 0;
+             }
+@@ -436,6 +438,9 @@ static LRESULT AnimationCtrlProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM
+         NotifyParent (hwnd, GetDlgCtrlID (hwnd), ANNC_CLICKED);
+         break;
+         
++    case MSG_ERASEBKGND:
++        return 0;
++        
+     default:
+         break;
+     }

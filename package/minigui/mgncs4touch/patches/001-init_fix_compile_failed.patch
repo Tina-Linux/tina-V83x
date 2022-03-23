@@ -1,0 +1,116 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -93,7 +93,7 @@
+ [  --enable-develmode       developer mode <default=no>],
+ devel_mode=$enableval)
+ 
+-detail_debug="no"
++detail_debug="yes"
+ AC_ARG_ENABLE(detail_debug,
+ [  --enable-detaildebug     detailed debug information <default=no>],
+ detail_debug=$enableval)
+@@ -140,8 +140,8 @@
+ PKG_CHECK_MODULES([MINIGUI], [minigui >= 3.2.0])
+ DEP_LIBS="$DEP_LIBS $MINIGUI_LIBS"
+ 
+-PKG_CHECK_MODULES([CHIPMUNK], [chipmunk >= 5.3.1])
+-DEP_LIBS="$DEP_LIBS $CHIPMUNK_LIBS"
++#PKG_CHECK_MODULES([CHIPMUNK], [chipmunk >= 5.3.1])
++#DEP_LIBS="$DEP_LIBS $CHIPMUNK_LIBS"
+ 
+ APP_LIBS="$DEP_LIBS"
+ PC_LIBS="-lmgncs4touch $DEP_LIBS"
+
+--- a/samples/Makefile.am
++++ b/samples/Makefile.am
+@@ -4,62 +4,62 @@
+ 
+ SUBDIRS = res
+ 
+-AM_CPPFLAGS = -I$(TOP_DIR) -I$(TOP_DIR)/include -I.
++AM_CPPFLAGS = -I$(TOP_DIR) -I$(TOP_DIR)/include -I$(TOP_DIR)/include/physics-animation -I.
+ 
+-COMMON_LADD = ../src/libmgncs4touch.la
++COMMON_LADD = ../src/libmgncs4touch.la -lchipmunk
+ 
+ noinst_PROGRAMS = switchbutton picker newtrackbar commdraw datepicker \
+     timepicker exlist btnnavbar imgnavbar name2value itembar balloontip \
+     hscrollview iconflow tableview settingtableview
+ 
+ switchbutton_SOURCES = switchbutton.c
+-switchbutton_LDADD = $(COMMON_LADD) @APP_LIBS@
++switchbutton_LDADD = $(COMMON_LADD)
+ 
+ picker_SOURCES = picker.c
+-picker_LDADD = $(COMMON_LADD) @APP_LIBS@
++picker_LDADD = $(COMMON_LADD)
+ 
+ newtrackbar_SOURCES = newtrackbar.c
+-newtrackbar_LDADD = $(COMMON_LADD) @APP_LIBS@
++newtrackbar_LDADD = $(COMMON_LADD)
+ 
+ commdraw_SOURCES = comm_draw.c
+-commdraw_LDADD = $(COMMON_LADD) @APP_LIBS@
++commdraw_LDADD = $(COMMON_LADD)
+ 
+ datepicker_SOURCES = datepicker.c
+-datepicker_LDADD = $(COMMON_LADD) @APP_LIBS@
++datepicker_LDADD = $(COMMON_LADD)
+ 
+ timepicker_SOURCES = timepicker.c
+-timepicker_LDADD = $(COMMON_LADD) @APP_LIBS@
++timepicker_LDADD = $(COMMON_LADD)
+ 
+ btnnavbar_SOURCES = btnnavbar.c
+-btnnavbar_LDADD = $(COMMON_LADD) @APP_LIBS@
++btnnavbar_LDADD = $(COMMON_LADD)
+ 
+ imgnavbar_SOURCES = imgnavbar.c
+-imgnavbar_LDADD = $(COMMON_LADD) @APP_LIBS@
++imgnavbar_LDADD = $(COMMON_LADD)
+ 
+ exlist_SOURCES = exlist.c
+-exlist_LDADD = $(COMMON_LADD) @APP_LIBS@
++exlist_LDADD = $(COMMON_LADD)
+ 
+ name2value_SOURCES = name2value.c
+-name2value_LDADD = $(COMMON_LADD) @APP_LIBS@
++name2value_LDADD = $(COMMON_LADD)
+ 
+ itembar_SOURCES = itembar.c
+-itembar_LDADD = $(COMMON_LADD) @APP_LIBS@
++itembar_LDADD = $(COMMON_LADD)
+ 
+ balloontip_SOURCES = balloontip.c
+-balloontip_LDADD = ${COMMON_LADD} @APP_LIBS@
++balloontip_LDADD = ${COMMON_LADD}
+ 
+ hscrollview_SOURCES = hscrollview.c
+-hscrollview_LDADD = ${COMMON_LADD} @APP_LIBS@
++hscrollview_LDADD = ${COMMON_LADD}
+ 
+ iconflow_SOURCES = iconflow.c
+-iconflow_LDADD = ${COMMON_LADD} @APP_LIBS@
++iconflow_LDADD = ${COMMON_LADD}
+ 
+ tableview_SOURCES = tableview.c msimpletableviewpiece.h
+-tableview_LDADD = ${COMMON_LADD} @APP_LIBS@
++tableview_LDADD = ${COMMON_LADD}
+ 
+ settingtableview_SOURCES = settingtableview.c settingtableview.h settingmainwinpiece.h \
+ 	settingsubwinpiece.h settingmainwinpiece.c settingsubwinpiece.c
+-settingtableview_LDADD = ${COMMON_LADD} @APP_LIBS@
++settingtableview_LDADD = ${COMMON_LADD}
+ 
+ EXTRA_DIST =
+
+--- a/etc/Makefile.am
++++ b/etc/Makefile.am
+@@ -1,6 +1,6 @@
+ install-data-local:
+-	if [ ! -d $(prefix)/etc ]; then $(INSTALL) -d $(prefix)/etc; fi
+-	$(INSTALL_DATA) mgncs4touch.cfg $(prefix)/etc/mgncs4touch.cfg
++#	if [ ! -d $(prefix)/etc ]; then $(INSTALL) -d $(prefix)/etc; fi
++#	$(INSTALL_DATA) mgncs4touch.cfg $(prefix)/etc/mgncs4touch.cfg
+ 
+ EXTRA_DIST = mgncs4touch.cfg

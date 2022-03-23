@@ -1,0 +1,173 @@
+{
+    "complete_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/tmp/src.wav",
+                "loop_frames" : 160,
+                "src_pads" : {
+                    "src" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "common_in"
+                    }
+                }
+            },
+            "converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : {
+                    "common_in" : {
+                        "format" : "S16_LE",
+                        "channels" : 2,
+                        "storage" : "interleaved",
+                        "peer_element" : "file_src",
+                        "peer_pad" : "src"
+                    }
+                },
+                "src_pads" : {
+                    "common_out" : {
+                        "format" : "S16_LE",
+                        "channels" : 2,
+                        "storage" : "interleaved",
+                        "peer_element" : "file_sink",
+                        "peer_pad" : "sink"
+                    }
+                },
+                "channel_map" : {
+                    "common_out_0" : "common_in_0",
+                    "common_out_1" : "common_in_1"
+                }
+            },
+            "file_sink" : {
+                "element_type" : "FileSink",
+                "type" : "wav",
+                "path" : "/tmp/complete_sink.wav",
+                "sink_pads" : {
+                    "sink" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "common_out"
+                    }
+                }
+            }
+        }
+    }
+    ,
+    "simplest_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/tmp/src.wav",
+                "loop_frames" : 160,
+                "src_pads" : {
+                    "src" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "common_in"
+                    }
+                }
+            },
+            "converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : {
+                    "common_in" : {
+                        "peer_element" : "file_src",
+                        "peer_pad" : "src"
+                    }
+                },
+                "src_pads" : {
+                    "common_out" : {
+                        "peer_element" : "file_sink",
+                        "peer_pad" : "sink"
+                    }
+                },
+                "channel_map" : {
+                    "common_out_0" : "common_in_0",
+                    "common_out_1" : "common_in_1"
+                }
+            },
+            "file_sink" : {
+                "element_type" : "FileSink",
+                "type" : "wav",
+                "path" : "/tmp/simplest_sink.wav",
+                "sink_pads" : {
+                    "sink" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "common_out"
+                    }
+                }
+            }
+        }
+    }
+    ,
+    "divide_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/tmp/src.wav",
+                "loop_frames" : 160,
+                "src_pads" : {
+                    "src" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "common_in"
+                    }
+                }
+            },
+            "converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : {
+                    "common_in" : {
+                        "peer_element" : "file_src",
+                        "peer_pad" : "src"
+                    }
+                },
+                "src_pads" : {
+                    // must define respective channels,
+                    // otherwise the "channels" would be equal to 2,
+                    // or we can define the "channels" in each "file_sink"
+                    "channel_0" : {
+                        "channels" : 1,
+                        "peer_element" : "file_sink_0",
+                        "peer_pad" : "0"
+                    },
+                    //"channel_1" : {
+                    //    "channels" : 1,
+                    //    "peer_element" : "file_sink_1",
+                    //    "peer_pad" : "1"
+                    //}
+                },
+                "channel_map" : {
+                    "channel_0_0" : "common_in_0",
+                    //"channel_1_0" : "common_in_1"
+                }
+            },
+            "file_sink_0" : {
+                "element_type" : "FileSink",
+                "type" : "wav",
+                "path" : "/tmp/divide_0.wav",
+                //"channels" : 1,
+                "sink_pads" : {
+                    "0" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "channel_0"
+                    }
+                }
+            },
+            //"file_sink_1" : {
+            //    "element_type" : "FileSink",
+            //    "type" : "wav",
+            //    "path" : "/tmp/divide_1.wav",
+            //    //"channels" : 1,
+            //    "sink_pads" : {
+            //        "1" : {
+            //            "peer_element" : "converter",
+            //            "peer_pad" : "channel_1"
+            //        }
+            //    }
+            //}
+        }
+    }
+}

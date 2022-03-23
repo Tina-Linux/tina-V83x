@@ -1,0 +1,26 @@
+config TINATEST_SYS_GLOBAL_LIMIT
+    bool "limit"
+    default y
+
+if TINATEST_SYS_GLOBAL_LIMIT
+    config TINATEST_SYS_GLOBAL_LIMIT_RUN_CNT_UP_TO
+        int "run_cnt_up_to"
+        range 1 100
+        default 3
+        ---help---
+            Value limit in 1-100.
+            The max running tasks in the same time.
+
+    config TINATEST_SYS_GLOBAL_LIMIT_TINATEST_RUN_TIME
+        string "tinatest_run_time"
+        default "0 0 0 356"
+        ---help---
+            Time limit for tinatest to run.
+            It is in format:
+                <sec> <min> <hour> <day>
+            For example,
+            100s : 100
+            1m20s : 20 1 (or 80)
+            1d3h : 0 0 3 1 (or 0 0 28 or other)
+
+endif

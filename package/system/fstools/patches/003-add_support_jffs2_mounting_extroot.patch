@@ -1,0 +1,12 @@
+Index: fstools-2016-01-10/block.c
+===================================================================
+--- fstools-2016-01-10.orig/block.c	2016-08-11 16:31:54.218333100 +0800
++++ fstools-2016-01-10/block.c	2016-08-11 16:37:33.287465900 +0800
+@@ -1086,6 +1086,7 @@
+ 	}
+ 	if (pr) {
+ 		if (strncmp(pr->id->name, "ext", 3) &&
++		    strncmp(pr->id->name, "jffs2", 5) &&
+ 		    strncmp(pr->id->name, "ubifs", 5)) {
+ 			ULOG_ERR("extroot: unsupported filesystem %s, try ext4\n", pr->id->name);
+ 			return -1;

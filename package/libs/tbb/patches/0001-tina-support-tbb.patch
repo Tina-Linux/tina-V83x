@@ -1,0 +1,289 @@
+From 6202d6f4b225c52b2492f0677dadab7b742f6233 Mon Sep 17 00:00:00 2001
+From: chengweipeng <chengweipeng@allwinnertech.com>
+Date: Sat, 21 Dec 2019 15:11:37 +0800
+Subject: [PATCH] tina-support-tbb
+
+Signed-off-by: chengweipeng <chengweipeng@allwinnertech.com>
+---
+ Makefile                    |  15 ++++--
+ build/Makefile.tbb          |   2 +-
+ build/Makefile.tbbmalloc    |   4 +-
+ build/linux.gcc.inc         |   2 -
+ build/tina.gcc.inc          | 113 ++++++++++++++++++++++++++++++++++++++++++++
+ build/tina.inc              |  55 +++++++++++++++++++++
+ src/Makefile                |   2 +-
+ 8 files changed, 296 insertions(+), 9 deletions(-)
+ create mode 100644 0001-tina-support-tbb.patch
+ create mode 100644 build/tina.gcc.inc
+ create mode 100644 build/tina.inc
+
+diff --git a/Makefile b/Makefile
+index 3603007..820f164 100644
+--- a/Makefile
++++ b/Makefile
+@@ -14,7 +14,7 @@
+ 
+ tbb_root?=.
+ include $(tbb_root)/build/common.inc
+-.PHONY: default all tbb tbbmalloc tbbproxy test examples
++.PHONY: default all tbb tbbmalloc tbbproxy test examples install
+ 
+ #workaround for non-depend targets tbb and tbbmalloc which both depend on version_string.ver
+ #According to documentation, recursively invoked make commands can process their targets in parallel
+@@ -22,7 +22,7 @@ include $(tbb_root)/build/common.inc
+ 
+ default: tbb tbbmalloc $(if $(use_proxy),tbbproxy)
+ 
+-all: tbb tbbmalloc tbbproxy test examples
++all: tbb tbbmalloc tbbproxy install
+ 
+ tbb: mkdir
+ 	$(MAKE) -C "$(work_dir)_debug"  -r -f $(tbb_root)/build/Makefile.tbb cfg=debug
+@@ -55,9 +55,18 @@ python: tbb
+ doxygen:
+ 	doxygen Doxyfile
+ 
++install:
++	mkdir -p $(DESTDIR)/usr/include
++	mkdir -p $(DESTDIR)/usr/lib
++	cp -fpR ./include/* $(DESTDIR)/usr/include
++	cp -fpR $(work_dir)_release/*.so* $(DESTDIR)/usr/lib
++	cmake -DINSTALL_DIR=$(DESTDIR)/usr/lib/cmake/TBB \
++		-DSYSTEM_NAME=Linux -DTBB_VERSION_FILE=$(DESTDIR)/usr/include/tbb/tbb_stddef.h \
++		-P cmake/tbb_config_installer.cmake
++
+ .PHONY: clean clean_examples mkdir info
+ 
+-clean: clean_examples
++clean: 
+ 	$(shell $(RM) $(work_dir)_release$(SLASH)*.* >$(NUL) 2>$(NUL))
+ 	$(shell $(RD) $(work_dir)_release >$(NUL) 2>$(NUL))
+ 	$(shell $(RM) $(work_dir)_debug$(SLASH)*.* >$(NUL) 2>$(NUL))
+diff --git a/build/Makefile.tbb b/build/Makefile.tbb
+index 63ee6eb..60072b1 100644
+--- a/build/Makefile.tbb
++++ b/build/Makefile.tbb
+@@ -104,7 +104,7 @@ $(TBB.DLL): $(TBB.OBJ) $(TBB.RES) tbbvars.sh $(TBB_NO_VERSION.DLL)
+ 
+ ifneq (,$(TBB_NO_VERSION.DLL))
+ $(TBB_NO_VERSION.DLL):
+-	echo "INPUT ($(TBB.DLL))" > $(TBB_NO_VERSION.DLL)
++	ln -s $(TBB.DLL) $(TBB_NO_VERSION.DLL)
+ endif
+ 
+ #clean:
+diff --git a/build/Makefile.tbbmalloc b/build/Makefile.tbbmalloc
+index 421e95c..53975d2 100644
+--- a/build/Makefile.tbbmalloc
++++ b/build/Makefile.tbbmalloc
+@@ -100,12 +100,12 @@ endif
+ 
+ ifneq (,$(MALLOC_NO_VERSION.DLL))
+ $(MALLOC_NO_VERSION.DLL):
+-	echo "INPUT ($(MALLOC.DLL))" > $(MALLOC_NO_VERSION.DLL)
++	ln -s $(MALLOC.DLL) $(MALLOC_NO_VERSION.DLL)
+ endif
+ 
+ ifneq (,$(MALLOCPROXY_NO_VERSION.DLL))
+ $(MALLOCPROXY_NO_VERSION.DLL):
+-	echo "INPUT ($(MALLOCPROXY.DLL))" > $(MALLOCPROXY_NO_VERSION.DLL)
++	ln -s $(MALLOCPROXY.DLL) $(MALLOCPROXY_NO_VERSION.DLL)
+ endif
+ 
+ malloc: $(MALLOC.DLL) $(MALLOCPROXY.DLL)
+diff --git a/build/tina.gcc.inc b/build/tina.gcc.inc
+new file mode 100644
+index 0000000..2e8d061
+--- /dev/null
++++ b/build/tina.gcc.inc
+@@ -0,0 +1,113 @@
++# Copyright (c) 2005-2019 Intel Corporation
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++
++COMPILE_ONLY = -c -MMD
++PREPROC_ONLY = -E -x c++
++INCLUDE_KEY = -I
++DEFINE_KEY = -D
++OUTPUT_KEY = -o #
++OUTPUTOBJ_KEY = -o #
++PIC_KEY = -fPIC
++WARNING_AS_ERROR_KEY = -Werror
++WARNING_KEY = -Wall
++TEST_WARNING_KEY = -Wshadow -Wcast-qual -Woverloaded-virtual -Wnon-virtual-dtor -Wextra
++
++WARNING_SUPPRESS = -Wno-parentheses -Wno-non-virtual-dtor
++DYLIB_KEY = -shared
++EXPORT_KEY = -Wl,--version-script,
++LIBDL = -lpthread -ldl -lrt -lstdc++
++
++CPLUS = $(tbb_tool_prefix)$(CC)
++CONLY = $(tbb_tool_prefix)$(CXX)
++
++# -soname is necessary for proper linkage to TBB prebuilt libraries when building application with Android SDK
++LIB_LINK_FLAGS = $(DYLIB_KEY) -Wl,-soname=$(BUILDING_LIBRARY)
++
++# pie is necessary for test executables to work and might be removed if newer NDK will add it implicitly
++PIE_FLAG = -pie
++ifeq ($(APP_PIE), false)
++    PIE_FLAG=
++endif
++
++LINK_FLAGS = -Wl,-rpath-link=. -rdynamic 
++C_FLAGS = $(CPLUS_FLAGS)
++
++ifeq ($(cfg), release)
++    CPLUS_FLAGS = -O2
++endif
++ifeq ($(cfg), debug)
++    CPLUS_FLAGS = -g -O0 $(DEFINE_KEY)TBB_USE_DEBUG
++endif
++
++CPLUS_FLAGS += $(DEFINE_KEY)USE_PTHREAD $(DEFINE_KEY)_GLIBCXX_HAVE_FENV_H
++
++ifneq (,$(findstring $(arch),ia32 intel64))
++    CPLUS_FLAGS += $(DEFINE_KEY)DO_ITT_NOTIFY
++endif
++
++ifeq (0, $(dynamic_load))
++     CPLUS_FLAGS += $(DEFINE_KEY)__TBB_DYNAMIC_LOAD_ENABLED=0
++endif
++
++
++# Paths to the NDK prebuilt tools and libraries
++CPLUS_FLAGS    += --sysroot=$(SYSROOT)
++LIB_LINK_FLAGS += --sysroot=$(SYSROOT)
++LIBS           = -L$(CPLUS_LIB_PATH) -lgnustl_shared
++
++ifeq (ia32,$(arch))
++    # TODO: Determine best setting of -march and add to CPLUS_FLAGS
++    CPLUS_FLAGS += -m32 
++    LIB_LINK_FLAGS += -m32
++else ifeq (intel64,$(arch))
++    CPLUS_FLAGS += -m64
++    LIB_LINK_FLAGS += -m64
++else ifeq (arm,$(arch))
++    CPLUS_FLAGS += -march=armv7-a $(DEFINE_KEY)TBB_USE_GCC_BUILTINS=1 $(DEFINE_KEY)__TBB_64BIT_ATOMICS=0
++else ifeq (arm64,$(arch))
++    CPLUS_FLAGS += -march=armv8-a
++endif
++
++#------------------------------------------------------------------------------
++# Setting assembler data.
++#------------------------------------------------------------------------------
++TBB_ASM.OBJ=
++MALLOC_ASM.OBJ=
++
++ASM = $(tbb_tool_prefix)as
++ifeq (intel64,$(arch))
++    ASM_FLAGS += --64
++endif
++ifeq (ia32,$(arch))
++    ASM_FLAGS += --32
++endif
++ifeq ($(cfg),debug)
++    ASM_FLAGS += -g
++endif
++
++ASSEMBLY_SOURCE=$(arch)-gas
++#------------------------------------------------------------------------------
++# End of setting assembler data.
++#------------------------------------------------------------------------------
++
++#------------------------------------------------------------------------------
++# Setting tbbmalloc data.
++#------------------------------------------------------------------------------
++
++M_CPLUS_FLAGS = $(CPLUS_FLAGS) -fno-rtti -fno-exceptions
++
++#------------------------------------------------------------------------------
++# End of setting tbbmalloc data.
++#------------------------------------------------------------------------------
+diff --git a/build/tina.inc b/build/tina.inc
+new file mode 100644
+index 0000000..b57a0ed
+--- /dev/null
++++ b/build/tina.inc
+@@ -0,0 +1,55 @@
++# Copyright (c) 2005-2019 Intel Corporation
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++#
++# Extra gmake command-line parameters for use with Android:
++#
++#    dlopen_workaround:  Some OS versions need workaround for dlopen to avoid recursive calls.
++#
++
++####### Detections and Commands ###############################################
++
++ifndef BUILDING_PHASE
++    ifneq ("command line","$(origin arch)")
++        ifeq (icc,$(compiler))
++            export COMPILER_VERSION := ICC: $(shell icc -V </dev/null 2>&1 | grep 'Version')
++            ifneq (,$(findstring running on IA-32, $(COMPILER_VERSION)))
++                export arch:=ia32
++            else ifneq (,$(findstring running on Intel(R) 64, $(COMPILER_VERSION)))
++                export arch:=intel64
++            else
++                $(error "No support for Android in $(COMPILER_VERSION)")
++            endif
++
++        else
++            ifdef ANDROID_SERIAL
++                uname_m:=$(shell adb shell uname -m)
++                ifeq (i686,$(uname_m))
++                    export arch:=ia32
++                else
++                    export arch:=$(uname_m)
++                endif
++            endif
++        endif
++    endif
++endif
++
++ifeq ("$(arch)","")
++    $(error "No target architecture specified and \'ANDROID_SERIAL\' environment variable specifying target device not set")
++endif
++
++# Tina platform only supported from TBB 4.1 forward
++NO_LEGACY_TESTS = 1
++
++
+diff --git a/src/Makefile b/src/Makefile
+index cd82fe3..a7a5166 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -22,7 +22,7 @@ include $(tbb_root)/build/common.inc
+ 
+ .PHONY: all tbb tbbmalloc tbbproxy test test_no_depends release debug examples clean
+ 
+-all: release debug examples
++all: release debug
+ 
+ tbb: tbb_release tbb_debug
+ 
+-- 
+1.9.1
+

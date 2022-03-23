@@ -1,0 +1,51 @@
+From ecd5d4c35ebd54c6e92d41a75b9026596a037d0a Mon Sep 17 00:00:00 2001
+From: Emil Renner Berthing <systemd@esmil.dk>
+Date: Thu, 18 Sep 2014 15:24:49 +0200
+Subject: [PATCH 18/31] shared/missing.h: check for missing strndupa
+
+---
+ configure.ac        |  3 ++-
+ src/basic/missing.h | 11 +++++++++++
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index 423dab1..777afe4 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -306,9 +306,10 @@ AC_SUBST(CAP_LIBS)
+ 
+ AC_CHECK_FUNCS([memfd_create])
+ AC_CHECK_FUNCS([__secure_getenv secure_getenv])
+-AC_CHECK_DECLS([gettid, pivot_root, canonicalize_file_name, name_to_handle_at, setns, getrandom, renameat2, kcmp, LO_FLAGS_PARTSCAN],
++AC_CHECK_DECLS([gettid, pivot_root, canonicalize_file_name, name_to_handle_at, strndupa, setns, getrandom, renameat2, kcmp, LO_FLAGS_PARTSCAN],
+                [], [], [[
+ #include <stdlib.h>
++#include <string.h>
+ #include <sys/types.h>
+ #include <unistd.h>
+ #include <sys/mount.h>
+diff --git a/src/basic/missing.h b/src/basic/missing.h
+index aaf017a..5ee3b7a5 100644
+--- a/src/basic/missing.h
++++ b/src/basic/missing.h
+@@ -138,6 +138,17 @@ static inline char *canonicalize_file_name(const char *path) {
+ }
+ #endif
+ 
++#if !HAVE_DECL_STRNDUPA
++#define strndupa(s, n) \
++  ({ \
++    const char *__old = (s); \
++    size_t __len = strnlen(__old, (n)); \
++    char *__new = (char *)alloca(__len + 1); \
++    __new[__len] = '\0'; \
++    (char *)memcpy(__new, __old, __len); \
++  })
++#endif
++
+ #ifndef __NR_memfd_create
+ #  if defined __x86_64__
+ #    define __NR_memfd_create 319
+-- 
+2.5.2
+

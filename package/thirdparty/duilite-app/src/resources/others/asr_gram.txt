@@ -1,0 +1,55 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "duilite.h"
+
+char *auth_cfg = "{\"productId\":\"278570028\",\"savedProfile\":\"third/res/auth/278570028.txt\"}";
+static int _callback(void *user_data, int type, char *msg, int len) {
+	if (type == DUILITE_MSG_TYPE_JSON) {
+		printf("%.*s\n", len, msg);
+	}
+	return 0;
+}
+
+int main(int argc, char **argv) {
+	char *asr_cfg = "{\"resBinPath\": \
+		\"./third/res/asr/ebnfr.aicar.1.2.0.bin\", \"netBinPath\": \
+		\"./local.net.bin\"}";
+	char *asr_param= "{}";
+	char *gram_cfg = "{\"resBinPath\": \
+		\"./third/res/gram/ebnfc.aicar.1.1.0.bin\"}";
+	char *gram_param = "{\"outputPath\": \"./local.net.bin\", \"ebnfFile\": \
+		\"./third/res/gram/gram.xbnf\"}";
+
+	duilite_library_load(auth_cfg);
+	struct duilite_gram *gram = duilite_gram_new(gram_cfg);
+	assert(gram != NULL);
+	remove("./local.net.bin");
+
+	int ret = duilite_gram_start(gram, gram_param);
+	printf("gram: %d\n", ret);
+	duilite_gram_delete(gram);
+	if (!ret) {
+		struct duilite_asr *asr = duilite_asr_new(asr_cfg, _callback, NULL);
+		assert(asr != NULL);
+		duilite_asr_start(asr, asr_param);
+		FILE *audio = fopen(argv[1], "r");
+		assert(audio != NULL);
+		fseek(audio, 44, SEEK_SET);
+		char buf[3200];
+		int len;
+		while (1) {
+			len = fread(buf, 1, sizeof(buf), audio);
+			if (0 == len) {
+				break;
+			}
+			duilite_asr_feed(asr, buf, len);
+		}
+		fclose(audio);
+		duilite_asr_stop(asr);
+		duilite_asr_delete(asr);
+	}
+	duilite_library_release();
+	return 0;
+}

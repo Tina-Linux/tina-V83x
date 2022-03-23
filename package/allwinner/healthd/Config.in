@@ -1,0 +1,26 @@
+if PACKAGE_healthd
+config HEALTHD_BROADCAST_INFO
+    bool
+    prompt "Broadcast battery information"
+    default y
+
+if HEALTHD_BROADCAST_INFO
+config HEALTHD_BROADCAST_DEMO
+    bool
+    prompt "Healthd Demo for test broadcast battery info function"
+    default n
+endif
+config HEALTHD_SHUTDOWN_CHARGER
+    bool
+    prompt "battery shutdown-charger"
+    default y
+
+if HEALTHD_SHUTDOWN_CHARGER
+config HEALTHD_CHARGE_ANIMATION
+    bool
+    prompt "battery shutdown-charger with animation"
+    default y
+endif
+
+endif
+

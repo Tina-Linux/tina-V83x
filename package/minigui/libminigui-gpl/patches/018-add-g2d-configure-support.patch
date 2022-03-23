@@ -1,0 +1,545 @@
+diff --git a/libminigui-gpl-3.2/configure.ac b/libminigui-gpl-3.2/configure.ac
+index 5f61e2c..7ec2721 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -210,6 +210,7 @@ build_save_bitmap="yes"
+ build_gif_support="yes"
+ build_jpg_support="yes"
+ build_png_support="yes"
++build_g2d_support="no"
+ build_pcx_support="no"
+ build_lbm_support="no"
+ build_tga_support="no"
+@@ -694,6 +695,10 @@ AC_ARG_ENABLE(pngsupport,
+ [  --enable-pngsupport      include PNG file support <default=yes>],
+ build_png_support=$enableval)
+ 
++AC_ARG_ENABLE(g2dsupport,
++[  --enable-g2dsupport      include G2D support <default=no>],
++build_g2d_support=$enableval)
++
+ AC_ARG_ENABLE(menu,
+ [  --enable-menu            include menu support <default=yes>],
+ build_menu=$enableval)
+@@ -2262,6 +2274,11 @@ if test "x$build_png_support" = "xyes"; then
+             [Define if support PNG bmp file format])
+ fi
+ 
++if test "x$build_g2d_support" = "xyes"; then
++    AC_DEFINE(_MGIMAGE_G2D, 1,
++            [Define if support G2D])
++fi
++
+ if test "x$build_menu" = "xyes"; then
+     AC_DEFINE(_MGHAVE_MENU, 1,
+             [Define if support menu])
+--- a/cmake_mgconfig.h.in	2019-04-22 14:54:58.000000000 +0800
++++ b/cmake_mgconfig.h.in	2019-04-12 14:40:37.000000000 +0800
+@@ -550,6 +550,9 @@
+ /* Define if build MiniGUI-Threads */
+ #cmakedefine _MGRM_THREADS      1
+ 
++/* Define if support G2D */
++#cmakedefine _MGRM_G2D          1
++
+ /* ******* */
+ /* USE_OWN */
+ /* ******* */
+diff --git a/libminigui-gpl-3.2/src/include/g2d_driver_enh.h b/libminigui-gpl-3.2/src/include/g2d_driver_enh.h
+index be56dc7..5096a37 100644
+--- a/src/include/g2d_driver_enh.h
++++ b/src/include/g2d_driver_enh.h
+@@ -324,6 +324,7 @@ typedef struct {
+ 	__u8		 alpha;
+ 	g2d_alpha_mode_enh mode;
+ 	int		 fd;
++	__u32 use_phy_addr;
+ } g2d_image_enh;
+ 
+ /*
+diff --git a/libminigui-gpl-3.2/src/include/newgal.h b/libminigui-gpl-3.2/src/include/newgal.h
+index b4fb3b9..e0cab87 100644
+--- a/src/include/newgal.h
++++ b/src/include/newgal.h
+@@ -66,8 +66,11 @@ extern "C" {
+ /* Transparency definitions: These define alpha as the opacity of a surface */
+ #define GAL_ALPHA_OPAQUE        255
+ #define GAL_ALPHA_TRANSPARENT   0
++
++#ifdef _MGIMAGE_G2D
+ int GAL_VieoIonFd;
+ char *GAL_ionbuffer;
++#endif
+ /*
+  * Allocate a pixel format structure and fill it according to the given info.
+  */
+@@ -111,7 +114,9 @@ typedef struct GAL_Surface {
+ 
+     /* Reference count -- used when freeing surface */
+     int refcount;                       /* Read-mostly */
++#ifdef _MGIMAGE_G2D
+     Uint32 ionflags;
++#endif
+ } GAL_Surface;
+ 
+ /* These are the currently supported flags for the GAL_surface */
+@@ -125,7 +130,9 @@ typedef struct GAL_Surface {
+ #define GAL_HWPALETTE        0x20000000             /* Surface has exclusive palette */
+ #define GAL_DOUBLEBUF        0x40000000             /* Set up double-buffered video mode */
+ #define GAL_OFFSETBUF        0x30000000             /* Set up offset-buffered video mode */
++#ifdef _MGIMAGE_G2D
+ #define GAL_IONBUF           0x50000000             /* Set up surface with ion mode */
++#endif
+ #define GAL_FULLSCREEN       0x80000000             /* Surface is a full screen display */
+ /* Used internally (read-only) */
+ #define GAL_HWACCEL          0x00000100                 /* Blit uses hardware acceleration */
+diff --git a/libminigui-gpl-3.2/src/newgal/blit.c b/libminigui-gpl-3.2/src/newgal/blit.c
+index ec8bb33..8596307 100644
+--- a/src/newgal/blit.c
++++ b/src/newgal/blit.c
+@@ -96,7 +96,7 @@ static int GAL_SoftBlit(GAL_Surface *src, GAL_Rect *srcrect,
+     /* Blit is done! */
+     return(okay ? 0 : -1);
+ }
+-
++#ifdef _MGIMAGE_G2D
+ static int GAL_HWBlit(GAL_Surface *src, GAL_Rect *srcrect,
+ 		            GAL_Surface *dst, GAL_Rect *dstrect)
+ {
+@@ -104,7 +104,7 @@ static int GAL_HWBlit(GAL_Surface *src, GAL_Rect *srcrect,
+ 	this->HWAccelBlit(this, src, srcrect, dst, dstrect);
+ 	return 0;
+ }
+-
++#endif
+  static void GAL_BlitCopy(GAL_BlitInfo *info)
+ {
+     Uint8 *src, *dst;
+@@ -298,7 +298,7 @@ int GAL_CalculateBlit(GAL_Surface *surface)
+     }
+     
+     if ( surface->map->sw_blit == NULL ) {
+-	if(surface->ionflags == GAL_IONBUF){
++#ifdef _MGIMAGE_G2D
+ 		GAL_VideoDevice *video = current_video;
+ 		GAL_VideoDevice *this  = current_video;
+ 		if(video && video->HWAccelBlit){
+@@ -306,9 +306,9 @@ int GAL_CalculateBlit(GAL_Surface *surface)
+ 			surface->map->hw_blit = GAL_HWBlit;
+ 		}else{
+ 		}
+-	}else{
+-		surface->map->sw_blit = GAL_SoftBlit;
+-	}
++#else
++	surface->map->sw_blit = GAL_SoftBlit;
++#endif
+     }
+     return(0);
+ }
+diff --git a/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.c b/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.c
+index be7bfdd..ada4d7a 100644
+--- a/src/newgal/fbcon/fbvideo.c
++++ b/src/newgal/fbcon/fbvideo.c
+@@ -86,8 +86,10 @@ static void FB_FreeHWSurfaces(_THIS);
+ static void FB_RequestHWSurface (_THIS, const REQ_HWSURFACE* request, REP_HWSURFACE* reply);
+ static int FB_AllocHWSurface(_THIS, GAL_Surface *surface);
+ static void FB_FreeHWSurface(_THIS, GAL_Surface *surface);
++#ifdef _MGIMAGE_G2D
+ static void *FB_AllocIONBUF(_THIS, GAL_Surface *surface);
+ static int FB_HWAccelBlit(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surface *dst, GAL_Rect *dstrect);
++#endif
+ static void FB_WaitVBL(_THIS);
+ static void FB_WaitIdle(_THIS);
+ 
+@@ -104,8 +106,9 @@ static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable);
+ static void FB_SavePalette(_THIS, struct fb_fix_screeninfo *finfo,
+                                   struct fb_var_screeninfo *vinfo);
+ static void FB_RestorePalette(_THIS);
++#ifdef _MGIMAGE_G2D
+ #define FBIO_GET_PHY_ADDR 0x4633
+-
++#endif
+ /* FB driver bootstrap functions */
+ static int FB_Available(void)
+ {
+@@ -120,8 +123,7 @@ static int FB_Available(void)
+     if ( console >= 0 ) {
+         close(console);
+     }
+-    GAL_ionbuffer = getenv("MG_IONBUFFER");
+-    if(GAL_ionbuffer != NULL && strcmp(GAL_ionbuffer, "1")== 0){
++#ifdef _MGIMAGE_G2D
+ 	if((GAL_VieoIonFd = open("/dev/g2d", O_RDWR)) == -1){
+ 		printf("open g2d device fail!\n");
+ 		close(GAL_VieoIonFd);
+@@ -131,7 +133,7 @@ static int FB_Available(void)
+ 		printf("open /dev/ion error\n");
+ 		sunxi_ion_alloc_close();
+ 	}
+-    }
++#endif
+     return(console >= 0);
+ }
+ 
+@@ -191,9 +193,10 @@ static GAL_VideoDevice *FB_CreateDevice(int devindex)
+     this->SetHWColorKey = NULL;
+     this->SetHWAlpha = NULL;
+     this->UpdateRects = NULL;
+-
++#ifdef _MGIMAGE_G2D
+     this->AllocIONBUF = FB_AllocIONBUF;
+     this->HWAccelBlit = FB_HWAccelBlit;
++#endif
+ #if 1
+     this->LockHWSurface = FB_LockHWSurface;
+     this->UnlockHWSurface = FB_UnlockHWSurface;
+@@ -785,12 +788,11 @@ static GAL_Surface *FB_SetVideoMode(_THIS, GAL_Surface *current,
+         default:
+         break;
+     }
+-	if(current->ionflags == GAL_IONBUF){
+-                flip_phy_page = 0;
+-                flip_addr_phy[0] = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
+-                flip_addr_phy[1] = flip_addr_phy[0]+current->h*current->pitch;
+-        }
+-
++#ifdef _MGIMAGE_G2D
++        flip_phy_page = 0;
++        flip_addr_phy[0] = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
++        flip_addr_phy[1] = flip_addr_phy[0]+current->h*current->pitch;
++#endif
+ 	if (flags & GAL_OFFSETBUF) {
+ 		current->flags |= GAL_OFFSETBUF;
+ 		this->yOffsetBufferStatus = TRUE;
+@@ -888,9 +890,9 @@ static int FB_InitHWSurfaces(_THIS, GAL_Surface *screen, char *base, int size)
+         bucket->base = base;
+         bucket->size = size;
+         bucket->next = NULL;
+-	if(screen->ionflags == GAL_IONBUF){
+-		bucket->addr_phy = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
+-	}
++#ifdef _MGIMAGE_G2D
++	bucket->addr_phy = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
++#endif
+     } else {
+         bucket = NULL;
+     }
+@@ -901,7 +903,9 @@ static int FB_InitHWSurfaces(_THIS, GAL_Surface *screen, char *base, int size)
+     surfaces.base = screen->pixels;
+     surfaces.size = (unsigned int)((long)base - (long)surfaces.base);
+     surfaces.next = bucket;
++#ifdef _MGIMAGE_G2D
+     surfaces.addr_phy = ioctl(console_fd, FBIO_GET_PHY_ADDR, NULL);
++#endif
+     screen->hwdata = (void*)&surfaces;
+     return(0);
+ }
+@@ -982,8 +986,10 @@ static void FB_RequestHWSurface (_THIS, const REQ_HWSURFACE* request, REP_HWSURF
+             newbucket->prev = bucket;
+             newbucket->used = 0;
+             newbucket->base = bucket->base + size;
++#ifdef _MGIMAGE_G2D
+ 	    newbucket->addr_phy = bucket->addr_phy+size;
+-            newbucket->size = extra;
++#endif
++	    newbucket->size = extra;
+             newbucket->next = bucket->next;
+             if ( bucket->next ) {
+                 bucket->next->prev = newbucket;
+@@ -995,7 +1001,9 @@ static void FB_RequestHWSurface (_THIS, const REQ_HWSURFACE* request, REP_HWSURF
+         bucket->used = 1;
+         bucket->size = size;
+         bucket->dirty = 0;
++#ifdef _MGIMAGE_G2D
+ 	bucket->addr_phy = bucket->addr_phy+size+extra;
++#endif
+ #ifdef FBCON_DEBUG
+         fprintf(stderr, "NEWGAL>FBCON: Allocated %d bytes at %p\n", bucket->size, bucket->base);
+ #endif
+@@ -1116,7 +1124,7 @@ static void FB_FreeHWSurface(_THIS, GAL_Surface *surface)
+     surface->pixels = NULL;
+     surface->hwdata = NULL;
+ }
+-
++#ifdef _MGIMAGE_G2D
+ static void *FB_AllocIONBUF (_THIS, GAL_Surface *surface)
+ {
+ 	surface->hwdata = (struct private_hwdata *)surface;
+@@ -1124,7 +1132,8 @@ static void *FB_AllocIONBUF (_THIS, GAL_Surface *surface)
+ 	((vidmem_bucket *)surface->hwdata)->addr_phy = sunxi_ion_alloc_vir2phy_cpu(surface->pixels);
+ 	return surface->pixels;
+ }
+-
++#endif
++#ifdef _MGIMAGE_G2D
+ static int FB_HWAccelBlit(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surface *dst, GAL_Rect *dstrect)
+ {
+ 	fb_g2d_params param;
+@@ -1143,6 +1152,7 @@ static int FB_HWAccelBlit(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surfac
+ 	param.info.flag_h = 1024;
+ 	param.info.src_image_h.mode = 2;
+ 	param.info.src_image_h.alpha = 255;
++	param.info.src_image_h.use_phy_addr = 1;
+ 	param.info.src_image_h.format = G2D_FORMAT_ARGB8888;
+ 	param.info.src_image_h.laddr[0] = ((vidmem_bucket *)src->hwdata)->addr_phy;
+ 	param.info.src_image_h.laddr[1] = (unsigned int)0;
+@@ -1165,6 +1175,7 @@ static int FB_HWAccelBlit(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surfac
+ 	param.info.flag_h = 1024;
+ 	param.info.dst_image_h.mode = 2;
+ 	param.info.dst_image_h.alpha = 255;
++	param.info.dst_image_h.use_phy_addr = 1;
+ 	param.info.dst_image_h.format = G2D_FORMAT_ARGB8888;
+ 	param.info.dst_image_h.laddr[0] = ((vidmem_bucket *)dst->hwdata)->addr_phy;
+ 	param.info.dst_image_h.laddr[1] = (unsigned int)0;
+@@ -1182,7 +1193,7 @@ static int FB_HWAccelBlit(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surfac
+ 	}
+ 	return 0;
+ }
+-
++#endif
+ static void FB_WaitVBL(_THIS)
+ {
+ #ifdef FBIOWAITRETRACE /* Heheh, this didn't make it into the main kernel */
+@@ -1305,7 +1316,7 @@ static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable)
+ 	}
+ 	return 0;
+ }
+-
++#ifdef _MGIMAGE_G2D
+ int fb_g2dcopy(_THIS, GAL_Surface *src, GAL_Rect *rects)
+ {
+ 	fb_g2d_params param;
+@@ -1321,7 +1332,7 @@ int fb_g2dcopy(_THIS, GAL_Surface *src, GAL_Rect *rects)
+ 	param.info.flag_h = 1024;
+         param.info.src_image_h.mode = 2;
+         param.info.src_image_h.alpha = 255;
+-
++	param.info.src_image_h.use_phy_addr = 1;
+ 	param.info.src_image_h.format = G2D_FORMAT_ARGB8888;
+         param.info.src_image_h.laddr[0] = flip_addr_phy[flip_phy_page];
+         param.info.src_image_h.laddr[1] = (unsigned int)0;
+@@ -1344,6 +1355,7 @@ int fb_g2dcopy(_THIS, GAL_Surface *src, GAL_Rect *rects)
+ 	param.info.flag_h = 1024;
+         param.info.dst_image_h.mode = 2;
+         param.info.dst_image_h.alpha = 255;
++	param.info.dst_image_h.use_phy_addr = 1;
+         param.info.dst_image_h.format = G2D_FORMAT_ARGB8888;
+         param.info.dst_image_h.laddr[0] = flip_addr_phy[!flip_phy_page];
+         param.info.dst_image_h.laddr[1] = (unsigned int)0;
+@@ -1362,7 +1374,7 @@ int fb_g2dcopy(_THIS, GAL_Surface *src, GAL_Rect *rects)
+         }
+ 	return 0;
+ }
+-
++#endif
+ static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
+ 		BOOL enable)
+ {
+@@ -1443,12 +1455,12 @@ static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
+ 
+ 	if (rects->x == 0 && rects->y == 0, rects->w == surface->w
+ 			&& rects->h == surface->h) {
+-		if(surface->ionflags == GAL_IONBUF){
+-			fb_g2dcopy(this, surface, rects);
+-		}else{
+-			GAL_memcpy(flip_address[!flip_page], flip_address[flip_page],
++#ifdef _MGIMAGE_G2D
++		fb_g2dcopy(this, surface, rects);
++#else
++		GAL_memcpy(flip_address[!flip_page], flip_address[flip_page],
+ 				mapped_memlen / 2);
+-		}
++#endif
+ 	} else {
+ 		GAL_BlitInfo info;
+ 
+@@ -1474,11 +1486,10 @@ static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
+ 
+ 		FB_BlitCopy(&info);
+ 	}
+-
+-	if(surface->ionflags == GAL_IONBUF){
++#ifdef _MGIMAGE_G2D
+ 		flip_phy_page = !flip_phy_page;
+ 		((vidmem_bucket *)this->screen->hwdata)->addr_phy = flip_addr_phy[flip_phy_page];
+-	}
++#endif
+ 		flip_page = !flip_page;
+ 		this->screen->pixels = flip_address[flip_page];
+ 
+@@ -1648,11 +1659,11 @@ static void FB_VideoQuit(_THIS)
+             memset(this->screen->pixels,0,this->screen->h*this->screen->pitch);
+ #endif
+         }
+-	if(this->screen->ionflags == GAL_IONBUF){
+-		close(GAL_VieoIonFd);
+-		sunxi_ion_alloc_close();
+-		GAL_VieoIonFd = 0;
+-	}
++#ifdef _MGIMAGE_G2D
++	close(GAL_VieoIonFd);
++	sunxi_ion_alloc_close();
++	GAL_VieoIonFd = 0;
++#endif
+         /* This test fails when using the VGA16 shadow memory */
+         if ( ((char *)this->screen->pixels >= mapped_mem) &&
+              ((char *)this->screen->pixels < (mapped_mem+mapped_memlen)) ) {
+diff --git a/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.h b/libminigui-gpl-3.2/src/newgal/fbcon/fbvideo.h
+index 7c5eb13..3d06884 100644
+--- a/src/newgal/fbcon/fbvideo.h
++++ b/src/newgal/fbcon/fbvideo.h
+@@ -41,9 +41,10 @@
+ #include <pthread.h>
+ 
+ #include "sysvideo.h"
++#ifdef _MGIMAGE_G2D
+ #include "../../include/g2d_driver_enh.h"
+ #include "../../include/g2d_driver.h"
+-
++#endif
+ /* Hidden "this" pointer for the video functions */
+ #define _THIS    GAL_VideoDevice *this
+ 
+@@ -59,9 +60,11 @@ typedef struct vidmem_bucket {
+     char *base;
+     unsigned int size;
+     struct vidmem_bucket *next;
++#ifdef _MGIMAGE_G2D
+     int g2d_fd;
+     void *addr_phy;
+     int ion_fd;
++#endif
+ } vidmem_bucket;
+ 
+ /* Private display data */
+@@ -92,10 +95,13 @@ struct GAL_PrivateVideoData {
+     char *mapped_io;
+     long mapped_iolen;
+     int flip_page;
++#ifdef _MGIMAGE_G2D
+     int flip_phy_page;
++#endif
+     char *flip_address[3];
++#ifdef _MGIMAGE_G2D
+     char *flip_addr_phy[2];
+-
++#endif
+     vidmem_bucket surfaces;
+     int surfaces_memtotal;
+     int surfaces_memleft;
+@@ -105,12 +111,12 @@ struct GAL_PrivateVideoData {
+     int need_sync;
+     FB_mutex *hw_lock;
+ };
+-
++#ifdef _MGIMAGE_G2D
+ struct private_hwdata{
+     int g2d_fd;
+     void *addr_phy;
+ };
+-
++#endif
+ /* Old variable names */
+ #define console_fd          (this->hidden->console_fd)
+ #define current_vt          (this->hidden->current_vt)
+@@ -130,8 +136,10 @@ struct private_hwdata{
+ #define mapped_iolen        (this->hidden->mapped_iolen)
+ #define flip_page           (this->hidden->flip_page)
+ #define flip_address        (this->hidden->flip_address)
++#ifdef _MGIMAGE_G2D
+ #define flip_phy_page       (this->hidden->flip_phy_page)
+ #define flip_addr_phy       (this->hidden->flip_addr_phy)
++#endif
+ #define surfaces            (this->hidden->surfaces)
+ #define surfaces_memtotal   (this->hidden->surfaces_memtotal)
+ #define surfaces_memleft    (this->hidden->surfaces_memleft)
+diff --git a/libminigui-gpl-3.2/src/newgal/surface.c b/libminigui-gpl-3.2/src/newgal/surface.c
+index 5ba55c3..a7a372b 100644
+--- a/src/newgal/surface.c
++++ b/src/newgal/surface.c
+@@ -125,24 +125,16 @@ GAL_Surface * GAL_CreateRGBSurface (Uint32 flags,
+     surface->map = NULL;
+     surface->format_version = 0;
+     GAL_SetClipRect(surface, NULL);
+-
+-    char *GAL_ionbuffer = getenv("MG_IONBUFFER");
+-    if(GAL_ionbuffer != NULL && strcmp(GAL_ionbuffer, "1") == 0){
+-        surface->ionflags =  GAL_IONBUF;
+-    }else{
+-        surface->ionflags = 0;
+-    }
+-
+     /* Get the pixels */
+     if ( surface->w && surface->h ) {
+         if ( ((flags&GAL_HWSURFACE) == GAL_SWSURFACE) || 
+                 (video->AllocHWSurface(this, surface) < 0) ) {
+-		if(surface->ionflags == GAL_IONBUF){
+-			surface->pixels = video->AllocIONBUF(this, surface);
+-		}else{
+-			surface->pixels = malloc(surface->h*surface->pitch);
+-		}
+-            if ( surface->pixels == NULL ) {
++#ifdef _MGIMAGE_G2D
++		surface->pixels = video->AllocIONBUF(this, surface);
++#else
++		surface->pixels = malloc(surface->h*surface->pitch);
++#endif
++		if ( surface->pixels == NULL ) {
+                 GAL_FreeSurface(surface);
+                 GAL_OutOfMemory();
+                 return(NULL);
+@@ -1771,11 +1763,11 @@ void GAL_FreeSurface (GAL_Surface *surface)
+     }
+     if ( surface->pixels &&
+          ((surface->flags & GAL_PREALLOC) != GAL_PREALLOC) ) {
+-	if(surface->ionflags == GAL_IONBUF){
+-		sunxi_ion_alloc_pfree(surface->pixels);
+-	}else{
+-		free(surface->pixels);
+-	}
++#ifdef _MGIMAGE_G2D
++	sunxi_ion_alloc_pfree(surface->pixels);
++#else
++	free(surface->pixels);
++#endif
+     }
+     free(surface);
+ #ifdef CHECK_LEAKS
+diff --git a/libminigui-gpl-3.2/src/newgal/sysvideo.h b/libminigui-gpl-3.2/src/newgal/sysvideo.h
+index ee043a2..92f9a50 100644
+--- a/src/newgal/sysvideo.h
++++ b/src/newgal/sysvideo.h
+@@ -138,13 +138,16 @@ struct GAL_VideoDevice {
+ 
+ 	/* Allocates a surface in video memory */
+ 	int (*AllocHWSurface)(_THIS, GAL_Surface *surface);
+-
++#ifdef _MGIMAGE_G2D
+ 	void * (*AllocIONBUF)(_THIS, GAL_Surface *surface);
++#endif
+ 	/* Sets the hardware accelerated blit function, if any, based
+ 	   on the current flags of the surface (colorkey, alpha, etc.)
+ 	 */
+ 	int (*CheckHWBlit)(_THIS, GAL_Surface *src, GAL_Surface *dst);
++#ifdef _MGIMAGE_G2D
+ 	int (*HWAccelBlit)(_THIS, GAL_Surface *src, GAL_Rect *srcrect, GAL_Surface *dst, GAL_Rect *dstrect);
++#endif
+ 	/* Fills a surface rectangle with the given color */
+ 	int (*FillHWRect)(_THIS, GAL_Surface *dst, GAL_Rect *rect, Uint32 color);
+ 
+diff --git a/libminigui-gpl-3.2/src/newgal/video.c b/libminigui-gpl-3.2/src/newgal/video.c
+index 60ccbbd..4d80dab 100644
+--- a/src/newgal/video.c
++++ b/src/newgal/video.c
+@@ -55,8 +55,10 @@
+ #include "blit.h"
+ #include "pixels_c.h"
+ #include "license.h"
++#ifdef _MGIMAGE_G2D
+ #include "../include/g2d_driver_enh.h"
+ #include "../include/g2d_driver.h"
++#endif
+ /* Available video drivers */
+ static VideoBootStrap *bootstrap[] = {
+ #ifdef _MGGAL_DUMMY

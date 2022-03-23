@@ -1,0 +1,30 @@
+From 3b0498059f8b5c024d96489ec0c743472c252897 Mon Sep 17 00:00:00 2001
+From: Emil Renner Berthing <systemd@esmil.dk>
+Date: Sat, 12 Sep 2015 19:56:52 +0000
+Subject: [PATCH 25/31] socket-util: don't fail if libc doesn't support IDN
+
+Signed-off-by: Emil Renner Berthing <systemd@esmil.dk>
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+---
+ src/basic/socket-util.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+--- a/src/basic/socket-util.c
++++ b/src/basic/socket-util.c
+@@ -37,6 +37,16 @@
+ #include "fileio.h"
+ #include "formats-util.h"
+ 
++/* Don't fail if the standard library
++ * doesn't support IDN */
++#ifndef NI_IDN
++#define NI_IDN 0
++#endif
++
++#ifndef NI_IDN_USE_STD3_ASCII_RULES
++#define NI_IDN_USE_STD3_ASCII_RULES 0
++#endif
++
+ int socket_address_parse(SocketAddress *a, const char *s) {
+         char *e, *n;
+         unsigned u;

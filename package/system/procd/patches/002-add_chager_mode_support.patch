@@ -1,0 +1,52 @@
+--- a/state.c
++++ b/state.c
+@@ -53,6 +53,17 @@ static void set_stdio(const char* tty)
+ 		fcntl(STDERR_FILENO, F_SETFL, fcntl(STDERR_FILENO, F_GETFL) | O_NONBLOCK);
+ }
+ 
++static int get_charger_mode(void)
++{
++	const char* charger;
++	char line[20];
++	charger = get_cmdline_val("boot.mode",line,sizeof(line));
++	if (charger != NULL)
++		return !strcmp(charger, "charger");
++    else
++        return 0;
++}
++
+ static void set_console(void)
+ {
+ 	const char* tty;
+@@ -96,6 +107,7 @@ static void set_console(void)
+ static void state_enter(void)
+ {
+ 	char ubus_cmd[] = "/sbin/ubusd";
++	char charger_cmd[] = "/bin/healthd";
+ 
+ 	switch (state) {
+ 	case STATE_EARLY:
+@@ -116,12 +128,17 @@ static void state_enter(void)
+ 		break;
+ 
+ 	case STATE_INIT:
+-		LOG("- init -\n");
+-		procd_inittab();
+-		procd_inittab_run("respawn");
+-		procd_inittab_run("askconsole");
+-		procd_inittab_run("askfirst");
+-		procd_inittab_run("sysinit");
++        if (get_charger_mode()) {
++		    LOG("- charger -\n");
++		    service_start_early("healthd", charger_cmd);
++        } else {
++		    LOG("- init -\n");
++		    procd_inittab();
++		    procd_inittab_run("respawn");
++		    procd_inittab_run("askconsole");
++		    procd_inittab_run("askfirst");
++		    procd_inittab_run("sysinit");
++        }
+ 
+ 		// switch to syslog log channel
+ 		ulog_open(ULOG_SYSLOG, LOG_DAEMON, "procd");

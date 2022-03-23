@@ -1,0 +1,87 @@
+#!/bin/sh /etc/rc.common
+
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+START=58
+
+RADIO_24G=
+find_2_4_radio() {
+    local cfg=$1
+
+    #list of known wireless protocols
+    local validModes="11b 11g 11a 11ng 11na"
+
+    # get the current hwmode
+    local hwmode
+    config_get hwmode "$cfg" hwmode
+
+    # verify that the hwmode is one of the valid modes
+    local hasMode=`echo "$validModes" | grep $hwmode`
+    if [ -n "$hasMode" ]; then
+        RADIO_24G=$cfg
+    fi
+}
+
+APVAP_24G=
+find_2_4_apvap() {
+	local cfg=$1
+	local radio=$2
+
+	local mode
+	config_get mode "$cfg" mode
+	local device
+	config_get device "$cfg" device
+
+	[ "$mode" = "ap" -a "$device" = "$radio" ] && \
+		APVAP_24G="$cfg"
+}
+
+start() {
+	config_load alljoyn-onboarding
+	local state
+	state=$(uci_get alljoyn-onboarding @onboarding[0] state)
+	[ "${state}" = "3" ] && return 0
+
+	local iface=$(cat /proc/net/wireless | grep -m 1 : | sed -e 's/:.*//' | sed -e 's/ //g')
+	local macaddr=$(cat /sys/class/net/$iface/address)
+
+	# save the ssid in case it gets overwritten and we need it again
+	uci_set alljoyn-onboarding @onboarding[0] apssid "AJ_OpenWRT ${macaddr}"
+	uci_commit alljoyn-onboarding
+	
+	config_load wireless
+
+	config_foreach find_2_4_radio wifi-device
+	[ -z "${RADIO_24G}" ] && {
+		echo "Error: No 2.4GHz radio found"
+		return 1
+	}
+
+	config_foreach find_2_4_apvap wifi-iface ${RADIO_24G}
+	[ -z "${APVAP_24G}" ] && {
+		echo "Error: No 2.4GHz AP VAP found"
+		return 1
+	}
+
+	# Ok, now we start setting the configuration parameters
+	uci_set wireless ${RADIO_24G} disabled 0
+	uci_set wireless ${RADIO_24G} channel 6
+	uci_set wireless ${APVAP_24G} ssid "AJ_OpenWRT ${macaddr}"
+	uci_commit wireless
+	wifi
+
+	# Add other appropriate tasks when device is not fully configured
+}

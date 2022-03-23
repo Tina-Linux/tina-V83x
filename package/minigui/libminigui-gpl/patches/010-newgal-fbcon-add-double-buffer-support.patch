@@ -1,0 +1,1086 @@
+From b99054f0c427bd54206c46d4c9adc2be4ed9501a Mon Sep 17 00:00:00 2001
+From: anruliu <anruliu@allwinnertech.com>
+Date: Thu, 1 Nov 2018 10:26:30 +0800
+Subject: [PATCH] newgal-fbcon-add-double-buffer-support
+
+Signed-off-by: anruliu <anruliu@allwinnertech.com>
+
+control needsync 0 or 1
+
+Signed-off-by: anruliu <anruliu@allwinnertech.com>
+
+optimize the brush cache mechanism
+
+Signed-off-by: anruliu <anruliu@allwinnertech.com>
+
+SetGlobaYOffset function determines GAL_YOffgetBufferEnable
+
+Signed-off-by: anruliu <anruliu@allwinnertech.com>
+
+Change the way to cache the cache, increase FBIO_ENABLE_CACHE
+
+Signed-off-by: anruliu <anruliu@allwinnertech.com>
+---
+ src/gui/window.c           |  40 ++--
+ src/ial/tslibial.c         |   5 +-
+ src/include/newgal.h       |   1 +
+ src/kernel/message.c       |   7 +
+ src/newgal/fbcon/fbvideo.c | 443 +++++++++++++++++++++++++++++++++++++--------
+ src/newgal/fbcon/fbvideo.h | 125 ++++++++++++-
+ src/newgal/newgal.c        |  13 +-
+ src/newgal/sysvideo.h      |  13 +-
+ src/newgal/video.c         |  92 +++++++++-
+ src/newgdi/bitmap.c        |   4 +
+ 10 files changed, 642 insertions(+), 101 deletions(-)
+
+diff --git a/src/gui/window.c b/src/gui/window.c
+index efa36f4..d0b97fd 100644
+--- a/src/gui/window.c
++++ b/src/gui/window.c
+@@ -3913,6 +3913,34 @@ BOOL GUIAPI DestroyMainWindow (HWND hWnd)
+ }
+ 
+ /*************************** Main window creation ****************************/
++void GUIAPI DoubleBufferEnable(BOOL enable)
++{
++	GAL_DoubleBufferEnable(enable);
++}
++
++void GUIAPI YOffsetBufferEnable(BOOL enable)
++{
++	GAL_YOffsetBufferEnable(enable);
++}
++
++void GUIAPI YOffsetSwitch(int yoffset)
++{
++	GAL_YOffset(yoffset);
++}
++
++unsigned int fbGlobalYOffset = 0;
++
++int GUIAPI GetGlobaYOffset()
++{
++	return fbGlobalYOffset;
++}
++
++void GUIAPI SetGlobaYOffset(int yoffset)
++{
++	if (GAL_YOffgetBufferEnable())
++		fbGlobalYOffset = yoffset;
++}
++
+ void GUIAPI UpdateWindow (HWND hWnd, BOOL fErase)
+ {
+     MG_CHECK (MG_IS_NORMAL_WINDOW(hWnd));
+@@ -5090,12 +5118,6 @@ void GUIAPI EndPaint (HWND hWnd, HDC hdc)
+     MG_CHECK (MG_IS_NORMAL_WINDOW(hWnd));
+     pWin = MG_GET_WINDOW_PTR (hWnd);
+ 
+-	RECT rc_update;
+-	GetWindowRect(hWnd, &rc_update);
+-	POINT pt;
+-	pt.x = 0;
+-	pt.y = 0;
+-	WindowToScreen(hWnd, &pt.x, &pt.y);
+     if (pWin->pMainWin->secondaryDC) {
+         if (!IsRectEmpty(&pWin->pMainWin->update_rc)) {
+             HDC real_dc = HDC_INVALID;
+@@ -5133,11 +5155,6 @@ void GUIAPI EndPaint (HWND hWnd, HDC hdc)
+         ShowCaretEx (hWnd, FALSE);
+     }
+ #endif
+-	rc_update.right = rc_update.right - rc_update.left;
+-	rc_update.bottom = rc_update.bottom - rc_update.top;
+-	rc_update.left  = pt.x;
+-	rc_update.top = pt.y;
+-	GAL_VideoSync((void*)&rc_update);
+ }
+ 
+ BOOL RegisterWindowClass (PWNDCLASS pWndClass)
+@@ -6316,3 +6333,4 @@ int GUIAPI SetWindowZOrder(HWND hWnd, int zorder)
+ 
+ #endif
+ 
++
+diff --git a/src/ial/tslibial.c b/src/ial/tslibial.c
+index eb49808..54b0239 100644
+--- a/src/ial/tslibial.c
++++ b/src/ial/tslibial.c
+@@ -62,6 +62,7 @@ static int button = 0;
+ static int reversed = 0;
+ static int screen_width  = 0;
+ static int screen_height = 0;
++extern unsigned int fbGlobalYOffset;
+ /************************  Low Level Input Operations **********************/
+ /*
+  * Mouse operations -- Event
+@@ -74,10 +75,10 @@ static int mouse_update(void)
+         if (samp.pressure > 0) {
+            if (reversed) {
+                 mousex = screen_width  - samp.x;
+-                mousey = screen_height - samp.y;
++                mousey = fbGlobalYOffset + screen_height - samp.y;
+            } else {
+             mousex = samp.x;
+-            mousey = samp.y;
++            mousey = fbGlobalYOffset + samp.y;
+            }
+         }
+ 
+diff --git a/src/include/newgal.h b/src/include/newgal.h
+index 51bb44b..debe5be 100644
+--- a/src/include/newgal.h
++++ b/src/include/newgal.h
+@@ -122,6 +122,7 @@ typedef struct GAL_Surface {
+ #define GAL_ANYFORMAT        0x10000000             /* Allow any video depth/pixel-format */
+ #define GAL_HWPALETTE        0x20000000             /* Surface has exclusive palette */
+ #define GAL_DOUBLEBUF        0x40000000             /* Set up double-buffered video mode */
++#define GAL_OFFSETBUF        0x30000000             /* Set up offset-buffered video mode */
+ #define GAL_FULLSCREEN       0x80000000             /* Surface is a full screen display */
+ /* Used internally (read-only) */
+ #define GAL_HWACCEL          0x00000100                 /* Blit uses hardware acceleration */
+diff --git a/src/kernel/message.c b/src/kernel/message.c
+index 36042fc..377315e 100644
+--- a/src/kernel/message.c
++++ b/src/kernel/message.c
+@@ -627,6 +627,13 @@ checkagain:
+         }
+  
+         /* no paint message */
++        GAL_Rect rects;
++        rects.x = pHostingRoot->left;
++        rects.y = pHostingRoot->top;
++        rects.w = pHostingRoot->right;
++        rects.h = pHostingRoot->bottom;
++        GAL_VideoFlip(&rects);
++        GAL_YOffset(GetGlobaYOffset());
+         pMsgQueue->dwState &= ~QS_PAINT;
+     }
+ 
+diff --git a/src/newgal/fbcon/fbvideo.c b/src/newgal/fbcon/fbvideo.c
+index 7586ca2..5a625c5 100644
+--- a/src/newgal/fbcon/fbvideo.c
++++ b/src/newgal/fbcon/fbvideo.c
+@@ -61,6 +61,7 @@
+ #include "fb3dfx.h"
+ #include "fbmatrox.h"
+ #include "fbneomagic.h"
++#include "memops.h"
+ 
+ #ifdef _MGGAL_SIGMA8654 
+ extern int sigma8654_hdmi_init();
+@@ -88,10 +89,13 @@ static void FB_FreeHWSurface(_THIS, GAL_Surface *surface);
+ static void FB_WaitVBL(_THIS);
+ static void FB_WaitIdle(_THIS);
+ 
+-#if 0
++#if 1
+ static int FB_LockHWSurface(_THIS, GAL_Surface *surface);
+ static void FB_UnlockHWSurface(_THIS, GAL_Surface *surface);
+-static int FB_FlipHWSurface(_THIS, GAL_Surface *surface);
++static int FB_YOffsetHWSurface(_THIS, GAL_Surface *surface, int yoffset);
++static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
++		BOOL enable);
++static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable);
+ #endif
+ 
+ /* Internal palette functions */
+@@ -122,50 +126,17 @@ static void FB_DeleteDevice(GAL_VideoDevice *device)
+     free(device);
+ }
+ 
+-typedef struct Rect
+-{
+-    int x;
+-    int y;
+-    int w;
+-    int h;
+-}Rect;
+ #define FBIO_CACHE_SYNC         0x4630
+-static void SyncCache(_THIS, Rect *rc)
+-{
+-	unsigned char *mem_start = (unsigned char *)(mapped_mem+mapped_offset);
+-	unsigned int bytes_per_pixel = saved_vinfo.bits_per_pixel >> 3;
+-	unsigned int pitch = bytes_per_pixel * saved_vinfo.xres;
+-	int x = 0;
+-	int y = 0;
+-	int w = saved_vinfo.xres;
+-	int h = saved_vinfo.yres;
+-	unsigned int args[2];
+-	unsigned int dirty_rect_vir_addr_begin = (unsigned int)
+-	(mem_start +  pitch*y + bytes_per_pixel*x);
+-	unsigned int dirty_rect_vir_addr_end  = (unsigned int)
+-	(mem_start + pitch * (y+ h));
+-	args[0] = dirty_rect_vir_addr_begin;
+-	args[1] = dirty_rect_vir_addr_end;
+-	ioctl(console_fd, FBIO_CACHE_SYNC, args);
+-}
+-static void FB_VideoSync(_THIS, void *arg)
++#define FBIO_ENABLE_CACHE       0x4631
++static void FB_VideoSync(_THIS)
+ {
+-	Rect *rc = (Rect*)arg;
+ 	if (need_sync) {
+-		struct fb_var_screeninfo var;
+-		ioctl(console_fd, FBIOGET_VSCREENINFO, &var);
+-#ifdef CACHE_SYNC
+-		if ((rc->x + rc->w <= var.xres) &&
+-			(rc->y + rc->h <= var.yres)) {
+-			SyncCache(this, rc);
++		unsigned int args[2];
++		args[0] = mapped_mem + mapped_offset;
++		args[1] = mapped_memlen;
++		if (ioctl(console_fd, FBIO_CACHE_SYNC, args) < 0) {
++			GAL_SetError("FBIO_CACHE_SYNC failed\n");
+ 		}
+-#endif
+-		var.yoffset = 0;
+-		var.reserved[0] = rc->x;
+-		var.reserved[1] = rc->y;
+-		var.reserved[2] = rc->w;
+-		var.reserved[3] = rc->h;
+-		ioctl(console_fd, FBIOPAN_DISPLAY, &var);
+ 	}
+ 	return;
+ }
+@@ -205,16 +176,21 @@ static GAL_VideoDevice *FB_CreateDevice(int devindex)
+     this->SetHWColorKey = NULL;
+     this->SetHWAlpha = NULL;
+     this->UpdateRects = NULL;
+-#if 0
++#if 1
+     this->LockHWSurface = FB_LockHWSurface;
+     this->UnlockHWSurface = FB_UnlockHWSurface;
+     this->FlipHWSurface = FB_FlipHWSurface;
++    this->YOffsetHWSurface = FB_YOffsetHWSurface;
++    this->DoubleBufferEnable = FB_DoubleBufferEnable;
+ #endif
+     this->FreeHWSurface = FB_FreeHWSurface;
+     this->GetFBInfo = FB_GetFBInfo;
+     this->free = FB_DeleteDevice;
+     this->VideoSync = FB_VideoSync;
+ 
++    this->doubleBufferStatus = FALSE;
++    this->YOffsetHWSurface = FALSE;
++
+     return this;
+ }
+ 
+@@ -355,6 +331,19 @@ static int FB_VideoInit(_THIS, GAL_PixelFormat *vformat)
+         return(-1);
+     }
+ 
++#ifdef _MGRM_PROCESSES
++	if (mgIsServer)
++#endif
++	{
++		/* Create the hardware surface lock mutex */
++		hw_lock = FB_CreateMutex();
++		if (hw_lock == NULL) {
++			GAL_SetError("Unable to create lock mutex\n");
++			FB_VideoQuit(this);
++			return (-1);
++		}
++	}
++
+     /* Get the type of video hardware */
+     if ( ioctl(console_fd, FBIOGET_FSCREENINFO, &finfo) < 0 ) {
+         GAL_SetError("NEWGAL>FBCON: Couldn't get console hardware info\n");
+@@ -402,6 +391,16 @@ static int FB_VideoInit(_THIS, GAL_PixelFormat *vformat)
+                             PROT_READ|PROT_WRITE, 0, console_fd, 0);
+ #  endif
+ #else
++	/* If you use kernel double buffering, need to make the framebuffer with a cache.*/
++    const char *GAL_doublebuffer;
++	GAL_doublebuffer = getenv("MG_DOUBLEBUFFER");
++	if (GAL_doublebuffer != NULL && strcmp(GAL_doublebuffer, "1") == 0) {
++		unsigned int args[2];
++		args[0] = 1;
++		if (ioctl(console_fd, FBIO_ENABLE_CACHE, args) < 0) {
++			GAL_SetError("FBIO_ENABLE_CACHE failed\n");
++		}
++	}
+     mapped_mem = mmap(NULL, mapped_memlen,
+                             PROT_READ|PROT_WRITE, MAP_SHARED, console_fd, 0);
+ #endif
+@@ -509,9 +508,9 @@ static int FB_VideoInit(_THIS, GAL_PixelFormat *vformat)
+ #endif
+     need_sync = 0;
+ 	const char *GAL_needsync = getenv("FB_SYNC");
+-    if ( GAL_needsync != NULL ) {
+-        need_sync = 1;
+-    }
++	if (GAL_needsync != NULL && strcmp(GAL_needsync, "1") == 0) {
++		need_sync = 1;
++	}
+     /* We're done! */
+     return(0);
+ }
+@@ -622,41 +621,64 @@ static GAL_Surface *FB_SetVideoMode(_THIS, GAL_Surface *current,
+          (vinfo.bits_per_pixel != bpp) /* || (flags & GAL_DOUBLEBUF) */) ) {
+ #else
+     if ( ((vinfo.xres != width) || (vinfo.yres != height) ||
+-         (vinfo.bits_per_pixel != bpp) /* || (flags & GAL_DOUBLEBUF) */) ) {
++         //(vinfo.bits_per_pixel != bpp) /* || (flags & GAL_DOUBLEBUF) */) ) {
++    		(vinfo.bits_per_pixel != bpp) || (flags & GAL_DOUBLEBUF)) ) {
+ #endif
+-        vinfo.activate = FB_ACTIVATE_NOW;
+-        vinfo.accel_flags = 0;
+-        vinfo.bits_per_pixel = bpp;
+-        vinfo.xres = width;
+-        vinfo.xres_virtual = width;
+-        vinfo.yres = height;
+-        vinfo.yres_virtual = height;
+-        vinfo.xoffset = 0;
+-        vinfo.yoffset = 0;
+-        vinfo.red.length = vinfo.red.offset = 0;
+-        vinfo.green.length = vinfo.green.offset = 0;
+-        vinfo.blue.length = vinfo.blue.offset = 0;
+-        vinfo.transp.length = vinfo.transp.offset = 0;
++		if (flags & GAL_OFFSETBUF) {
++			vinfo.yoffset = 0;
++			if (ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0) {
++				GAL_SetError("NEWGAL>FBCON: Couldn't set console screen info\n");
++				return (NULL);
++			}
++			vinfo.yres = height;
++		} else {
++			vinfo.activate = FB_ACTIVATE_NOW;
++			vinfo.accel_flags = 0;
++			vinfo.bits_per_pixel = bpp;
++			vinfo.xres = width;
++			vinfo.xres_virtual = width;
++			vinfo.yres = height;
++			//vinfo.yres_virtual = height;
++			if (flags & GAL_DOUBLEBUF) {
++				vinfo.yres_virtual = height * 2;
++			} else {
++				vinfo.yres_virtual = height;
++			}
++			vinfo.xoffset = 0;
++			vinfo.yoffset = 0;
++			if (!(flags & GAL_DOUBLEBUF)) {
++				vinfo.red.length = vinfo.red.offset = 0;
++				vinfo.green.length = vinfo.green.offset = 0;
++				vinfo.blue.length = vinfo.blue.offset = 0;
++				vinfo.transp.length = vinfo.transp.offset = 0;
++			}
+ #ifdef FBCON_DEBUG
+         fprintf(stderr, "NEWGAL>FBCON: Printing wanted vinfo:\n");
+         print_vinfo(&vinfo);
+ #endif
+-        if ( ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0 ) {
+-            vinfo.yres_virtual = height;
+-            if ( ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0 ) {
+-                GAL_SetError("NEWGAL>FBCON: Couldn't set console screen info");
+-                return(NULL);
+-            }
+-        }
+-    } else {
+-        int maxheight;
+-
+-        /* Figure out how much video memory is available */
+-        maxheight = height;
+-        if ( vinfo.yres_virtual > maxheight ) {
+-            vinfo.yres_virtual = maxheight;
+-        }
+-    }
++			if (ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0) {
++				vinfo.yres_virtual = height;
++				if (ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0) {
++					GAL_SetError(
++							"NEWGAL>FBCON: Couldn't set console screen info\n");
++					return (NULL);
++				}
++			}
++		}
++	} else {
++		int maxheight;
++
++		/* Figure out how much video memory is available */
++		//maxheight = height;
++		if (flags & GAL_DOUBLEBUF) {
++			maxheight = height * 2;
++		} else {
++			maxheight = height;
++		}
++		if (vinfo.yres_virtual > maxheight) {
++			vinfo.yres_virtual = maxheight;
++		}
++	}
+     cache_vinfo = vinfo;
+ #ifdef FBCON_DEBUG
+     fprintf (stderr, "NEWGAL>FBCON: Printing actual vinfo:\n");
+@@ -746,6 +768,39 @@ static GAL_Surface *FB_SetVideoMode(_THIS, GAL_Surface *current,
+         break;
+     }
+ 
++	if (flags & GAL_OFFSETBUF) {
++		current->flags |= GAL_OFFSETBUF;
++		this->yOffsetBufferStatus = TRUE;
++		flip_page = 0;
++		flip_address[0] = (char *) current->pixels;
++		flip_address[1] = (char *) current->pixels
++				+ vinfo.yres * current->pitch;
++		flip_address[2] = (char *) current->pixels + vinfo.yres * current->pitch
++				+ vinfo.yres * current->pitch;
++	}
++
++	/* Update for double-buffering, if we can */
++	if ( flags & GAL_DOUBLEBUF ) {
++		if ( vinfo.yres_virtual == (height*2) ) {
++			current->flags |= GAL_DOUBLEBUF;
++			this->doubleBufferStatus = TRUE;
++			flip_page = 0;
++			flip_address[0] = (char *)current->pixels;
++			flip_address[1] = (char *)current->pixels+
++				current->h*current->pitch;
++			this->screen = current;
++
++			GAL_Rect rects;
++			rects.x = 0;
++			rects.y = 0;
++			rects.w = current->w;
++			rects.h = current->h;
++
++			FB_FlipHWSurface(this, current, &rects, TRUE);
++			this->screen = NULL;
++		}
++	}
++
+ #ifdef _MGHAVE_PCIACCESS
+     if (pci_accel_driver) /* Init accelerated hardware via pciaccess */
+         FB_InitPCIAccelDriver (this, current);
+@@ -1046,6 +1101,224 @@ static void FB_WaitIdle(_THIS)
+     return;
+ }
+ 
++static int FB_LockHWSurface(_THIS, GAL_Surface *surface)
++{
++	//if ( switched_away ) {
++	//	return -2; /* no hardware access */
++	//}
++	if (surface == this->screen) {
++		FB_mutexP(hw_lock);
++		if (FB_IsSurfaceBusy(surface)) {
++			FB_WaitBusySurfaces(this);
++		}
++	} else {
++		if (FB_IsSurfaceBusy(surface)) {
++			FB_WaitBusySurfaces(this);
++		}
++	}
++	return (0);
++}
++
++static void FB_UnlockHWSurface(_THIS, GAL_Surface *surface)
++{
++	if (surface == this->screen) {
++		FB_mutexV(hw_lock);
++	}
++}
++
++static void FB_BlitCopy(GAL_BlitInfo *info)
++{
++	Uint8 *src, *dst;
++	int w, h;
++	int srcskip, dstskip;
++
++	w = info->d_width * info->dst->BytesPerPixel;
++	h = info->d_height;
++	src = info->s_pixels;
++	dst = info->d_pixels;
++	srcskip = w + info->s_skip;
++	dstskip = w + info->d_skip;
++
++	while (h--) {
++		if (((DWORD) dst & 0x03) == 0 && ((DWORD) src & 0x03) == 0
++				&& (w & 0x03) == 0)
++			GAL_memcpy4(dst, src, w >> 2);
++		else
++			GAL_memcpy(dst, src, w);
++		src += srcskip;
++		dst += dstskip;
++	}
++
++}
++
++static int FB_YOffsetHWSurface(_THIS, GAL_Surface *surface, int yoffset)
++{
++	FB_LockHWSurface(this, surface);
++
++	/* Wait for vertical retrace and then flip display */
++	cache_vinfo.yoffset = yoffset;
++	if (FB_IsSurfaceBusy(this->screen)) {
++		FB_WaitBusySurfaces(this);
++	}
++	wait_vbl(this);
++	if (ioctl(console_fd, FBIOPAN_DISPLAY, &cache_vinfo) < 0) {
++		GAL_SetError("ioctl(FBIOPAN_DISPLAY) failed\n");
++		FB_UnlockHWSurface(this, surface);
++		return (-1);
++	}
++
++	FB_UnlockHWSurface(this, surface);
++	return 0;
++}
++
++static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable)
++{
++	unsigned int args[2];
++	args[0] = enable;
++	if (ioctl(console_fd, FBIO_ENABLE_CACHE, args) < 0) {
++		GAL_SetError("FBIO_ENABLE_CACHE disable failed\n");
++	}
++	if (mapped_mem) {
++		munmap(mapped_mem, mapped_memlen);
++		mapped_mem = NULL;
++	}
++
++	mapped_mem = mmap(NULL, mapped_memlen, PROT_READ | PROT_WRITE, MAP_SHARED,
++			console_fd, 0);
++	current->pixels = mapped_mem + mapped_offset;
++	flip_address[0] = (char *) current->pixels;
++	flip_address[1] = (char *) current->pixels + current->h * current->pitch;
++
++	if (!enable) {
++		flip_page = !flip_page;
++		this->screen->pixels = flip_address[flip_page];
++	} else {
++		GAL_Rect rc;
++		rc.x = 0;
++		rc.y = 0;
++		rc.w = current->w;
++		rc.h = current->h;
++		FB_FlipHWSurface(this, current, &rc, TRUE);
++	}
++	return 0;
++}
++
++static int FB_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects,
++		BOOL enable)
++{
++	//if ( switched_away ) {
++	//	return -2; /* no hardware access */
++	//}
++
++	if (rects->x < 0) {
++		if (rects->x + rects->w > 0) {
++			if (rects->x + rects->w < surface->w) {
++				rects->w = rects->x + rects->w;
++				rects->x = 0;
++			} else {
++				rects->w = surface->w;
++				rects->x = 0;
++			}
++		} else {
++			rects->x = 0;
++			rects->w = 0;
++		}
++	} else {
++		if (rects->x < surface->w) {
++			if (rects->x + rects->w > surface->w) {
++				rects->w = surface->w - rects->x;
++			}
++		} else {
++			rects->x = 0;
++			rects->w = 0;
++		}
++	}
++
++	if (rects->y < 0) {
++		if (rects->y + rects->h > 0) {
++			if (rects->y + rects->h < surface->h) {
++				rects->h = rects->y + rects->h;
++				rects->y = 0;
++			} else {
++				rects->h = surface->h;
++				rects->y = 0;
++			}
++		} else {
++			rects->y = 0;
++			rects->h = 0;
++		}
++	} else {
++		if (rects->y < surface->h) {
++			if (rects->y + rects->h > surface->h) {
++				rects->h = surface->h - rects->y;
++			}
++		} else {
++			rects->y = 0;
++			rects->h = 0;
++		}
++	}
++
++	if (rects->w <= 0 || rects->h <= 0)
++		return (0);
++
++	FB_LockHWSurface(this, surface);
++
++	unsigned int args[2];
++	args[0] = flip_address[flip_page];
++	args[1] = mapped_memlen / 2;
++	if (ioctl(console_fd, FBIO_CACHE_SYNC, args) < 0) {
++		GAL_SetError("FBIO_CACHE_SYNC failed\n");
++	}
++
++	/* Wait for vertical retrace and then flip display */
++	cache_vinfo.yoffset = flip_page * surface->h;
++	if (FB_IsSurfaceBusy(this->screen)) {
++		FB_WaitBusySurfaces(this);
++	}
++	wait_vbl(this);
++	if (ioctl(console_fd, FBIOPAN_DISPLAY, &cache_vinfo) < 0) {
++		GAL_SetError("ioctl(FBIOPAN_DISPLAY) failed\n");
++		return (-1);
++	}
++
++	if (rects->x == 0 && rects->y == 0, rects->w == surface->w
++			&& rects->h == surface->h) {
++		GAL_memcpy(flip_address[!flip_page], flip_address[flip_page],
++				mapped_memlen / 2);
++	} else {
++		GAL_BlitInfo info;
++
++		//Set up the blit information
++		info.s_pixels = (Uint8 *) flip_address[flip_page] + surface->offset
++				+ (Uint16) rects->y * surface->pitch
++				+ (Uint16) rects->x * surface->format->BytesPerPixel;
++		info.s_width = rects->w;
++		info.s_height = rects->h;
++		info.s_skip = surface->pitch
++				- info.s_width * surface->format->BytesPerPixel;
++		info.d_pixels = (Uint8 *) flip_address[!flip_page] + surface->offset
++				+ (Uint16) rects->y * surface->pitch
++				+ (Uint16) rects->x * surface->format->BytesPerPixel;
++		info.d_width = rects->w;
++		info.d_height = rects->h;
++		info.d_skip = surface->pitch
++				- info.d_width * surface->format->BytesPerPixel;
++		info.aux_data = surface->map->sw_data->aux_data;
++		info.src = surface->format;
++		info.table = surface->map->table;
++		info.dst = surface->format;
++
++		FB_BlitCopy(&info);
++	}
++
++	flip_page = !flip_page;
++
++	this->screen->pixels = flip_address[flip_page];
++
++	FB_UnlockHWSurface(this, surface);
++	return (0);
++}
++
+ void FB_SavePaletteTo(_THIS, int palette_len, __u16 *area)
+ {
+     struct fb_cmap cmap;
+@@ -1220,12 +1493,28 @@ static void FB_VideoQuit(_THIS)
+     if (mgIsServer)
+ #endif
+     {
++		/* Clear the lock mutex */
++		if (hw_lock) {
++			FB_DestroyMutex(hw_lock);
++			hw_lock = NULL;
++		}
++
+         FB_FreeHWSurfaces(this);
+     }
+ 
+     /* Close console and input file descriptors */
+     if ( console_fd > 0 ) {
+-        /* Unmap the video framebuffer and I/O registers */
++    	/* Init when the framebuffer use cache, close requires programming without a cache */
++    	const char *GAL_doublebuffer;
++    	GAL_doublebuffer = getenv("MG_DOUBLEBUFFER");
++    	if (GAL_doublebuffer != NULL && strcmp(GAL_doublebuffer, "1") == 0) {
++    		unsigned int args[2];
++    		args[0] = 0;
++    		if (ioctl(console_fd, FBIO_ENABLE_CACHE, args) < 0) {
++    			GAL_SetError("FBIO_ENABLE_CACHE disable failed\n");
++    		}
++    	}
++    	/* Unmap the video framebuffer and I/O registers */
+         if ( mapped_mem ) {
+             munmap(mapped_mem, mapped_memlen);
+             mapped_mem = NULL;
+diff --git a/src/newgal/fbcon/fbvideo.h b/src/newgal/fbcon/fbvideo.h
+index b8d9b4a..5fc4614 100644
+--- a/src/newgal/fbcon/fbvideo.h
++++ b/src/newgal/fbcon/fbvideo.h
+@@ -38,12 +38,17 @@
+ #include <sys/types.h>
+ #include <termios.h>
+ #include <linux/fb.h>
++#include <pthread.h>
+ 
+ #include "sysvideo.h"
+ 
+ /* Hidden "this" pointer for the video functions */
+ #define _THIS    GAL_VideoDevice *this
+ 
++typedef struct FB_mutex {
++	pthread_mutex_t id;
++} FB_mutex;
++
+ /* This is the structure we use to keep track of video memory */
+ typedef struct vidmem_bucket {
+     struct vidmem_bucket *prev;
+@@ -82,7 +87,7 @@ struct GAL_PrivateVideoData {
+     char *mapped_io;
+     long mapped_iolen;
+     int flip_page;
+-    char *flip_address[2];
++    char *flip_address[3];
+ 
+     vidmem_bucket surfaces;
+     int surfaces_memtotal;
+@@ -91,6 +96,7 @@ struct GAL_PrivateVideoData {
+     void (*wait_vbl)(_THIS);
+     void (*wait_idle)(_THIS);
+     int need_sync;
++    FB_mutex *hw_lock;
+ };
+ 
+ /* Old variable names */
+@@ -118,6 +124,7 @@ struct GAL_PrivateVideoData {
+ #define wait_vbl            (this->hidden->wait_vbl)
+ #define wait_idle           (this->hidden->wait_idle)
+ #define need_sync           (this->hidden->need_sync)
++#define hw_lock				 (this->hidden->hw_lock)
+ 
+ #ifdef _MGHAVE_PCIACCESS
+ 
+@@ -179,5 +186,121 @@ static __inline__ void FB_dst_to_xy(_THIS, GAL_Surface *dst, int *x, int *y)
+     }
+ }
+ 
++/* Lock the mutex */
++static int FB_mutexP(FB_mutex *mutex)
++{
++	int retval;
++#if FAKE_RECURSIVE_MUTEX
++	pthread_t this_thread;
++#endif
++
++	if (mutex == NULL) {
++		GAL_SetError("Passed a NULL mutex\n");
++		return -1;
++	}
++
++	retval = 0;
++#if FAKE_RECURSIVE_MUTEX
++	this_thread = pthread_self();
++	if ( mutex->owner == this_thread ) {
++		++mutex->recursive;
++	} else {
++		/* The order of operations is important.
++		 We set the locking thread id after we obtain the lock
++		 so unlocks from other threads will fail.
++		 */
++		if ( pthread_mutex_lock(&mutex->id) == 0 ) {
++			mutex->owner = this_thread;
++			mutex->recursive = 0;
++		} else {
++			SDL_SetError("pthread_mutex_lock() failed");
++			retval = -1;
++		}
++	}
++#else
++	if (pthread_mutex_lock(&mutex->id) < 0) {
++		GAL_SetError("pthread_mutex_lock() failed\n");
++		retval = -1;
++	}
++#endif
++	return retval;
++}
++
++static int FB_mutexV(FB_mutex *mutex)
++{
++	int retval;
++
++	if (mutex == NULL) {
++		GAL_SetError("Passed a NULL mutex\n");
++		return -1;
++	}
++
++	retval = 0;
++#if FAKE_RECURSIVE_MUTEX
++	/* We can only unlock the mutex if we own it */
++	if ( pthread_self() == mutex->owner ) {
++		if ( mutex->recursive ) {
++			--mutex->recursive;
++		} else {
++			/* The order of operations is important.
++			 First reset the owner so another thread doesn't lock
++			 the mutex and set the ownership before we reset it,
++			 then release the lock semaphore.
++			 */
++			mutex->owner = 0;
++			pthread_mutex_unlock(&mutex->id);
++		}
++	} else {
++		GAL_SetError("mutex not owned by this thread\n");
++		retval = -1;
++	}
++
++#else
++	if (pthread_mutex_unlock(&mutex->id) < 0) {
++		GAL_SetError("pthread_mutex_unlock() failed\n");
++		retval = -1;
++	}
++#endif /* FAKE_RECURSIVE_MUTEX */
++
++	return retval;
++}
++
++static FB_mutex *FB_CreateMutex(void)
++{
++	FB_mutex *mutex;
++	pthread_mutexattr_t attr;
++
++	/* Allocate the structure */
++	mutex = (FB_mutex*) malloc(sizeof(FB_mutex));
++	if (mutex) {
++		pthread_mutexattr_init(&attr);
++#if SDL_THREAD_PTHREAD_RECURSIVE_MUTEX
++		pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
++#elif SDL_THREAD_PTHREAD_RECURSIVE_MUTEX_NP
++		pthread_mutexattr_setkind_np(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
++#else
++		/* No extra attributes necessary */
++#endif
++		if (pthread_mutex_init(&mutex->id, &attr) != 0) {
++			GAL_SetError("pthread_mutex_init() failed\n");
++			if (mutex)
++				free(mutex);
++			mutex = NULL;
++		}
++	} else {
++		GAL_SetError("Out of memory\n");
++	}
++	return (mutex);
++}
++
++static void FB_DestroyMutex(FB_mutex *mutex)
++{
++	if (mutex) {
++		pthread_mutex_destroy(&mutex->id);
++		if (mutex)
++			free(mutex);
++	}
++}
++
+ #endif /* _GAL_fbvideo_h */
+ 
+diff --git a/src/newgal/newgal.c b/src/newgal/newgal.c
+index 07314cf..e84411b 100644
+--- a/src/newgal/newgal.c
++++ b/src/newgal/newgal.c
+@@ -134,7 +134,18 @@ int mg_InitGAL (void)
+         return ERR_CONFIG_FILE;
+     }
+ 
+-    if (!(__gal_screen = GAL_SetVideoMode (w, h, depth, GAL_HWPALETTE|GAL_NOTCLEAR))) {
++	char *GAL_doublebuffer = getenv("MG_DOUBLEBUFFER");
++	Uint32 flags = GAL_HWPALETTE | GAL_NOTCLEAR;
++	if (GAL_doublebuffer != NULL && strcmp(GAL_doublebuffer, "1") == 0) {
++		flags = GAL_HWPALETTE | GAL_DOUBLEBUF;
++	}
++
++	char *GAL_yoffsetbuffer = getenv("MG_YOFFSETBUFFER");
++	if (GAL_yoffsetbuffer != NULL && strcmp(GAL_yoffsetbuffer, "1") == 0) {
++		flags = flags | GAL_OFFSETBUF;
++	}
++
++    if (!(__gal_screen = GAL_SetVideoMode (w, h, depth, flags))) {
+         GAL_VideoQuit ();
+         fprintf (stderr, "NEWGAL: Set video mode failure.\n");
+         return ERR_GFX_ENGINE;
+diff --git a/src/newgal/sysvideo.h b/src/newgal/sysvideo.h
+index 7d64877..4d81ebf 100644
+--- a/src/newgal/sysvideo.h
++++ b/src/newgal/sysvideo.h
+@@ -64,6 +64,10 @@ struct GAL_VideoDevice {
+ 	/* * * */
+ 	/* The name of this video driver */
+ 	const char *name;
++	/* The double buffer Status */
++	BOOL doubleBufferStatus;
++	/* The three Buffer Status */
++	BOOL yOffsetBufferStatus;
+ 
+ 	/* * * */
+ 	/* Initialization/Query functions */
+@@ -151,13 +155,14 @@ struct GAL_VideoDevice {
+ 
+     
+ 
+-#if 0
++#if 1
+ 	/* Returns a readable/writable surface */
+ 	int (*LockHWSurface)(_THIS, GAL_Surface *surface);
+ 	void (*UnlockHWSurface)(_THIS, GAL_Surface *surface);
+-
++	int (*YOffsetHWSurface)(_THIS, GAL_Surface *surface, int yoffset);
++	int (*DoubleBufferEnable)(_THIS, GAL_Surface *current, BOOL enable);
+ 	/* Performs hardware flipping */
+-	int (*FlipHWSurface)(_THIS, GAL_Surface *surface);
++	int (*FlipHWSurface)(_THIS, GAL_Surface *surface, GAL_Rect *rects, BOOL enable);
+ #endif
+ 
+ 	/* Frees a previously allocated video surface */
+@@ -201,7 +206,7 @@ struct GAL_VideoDevice {
+     /* Set surface UpdateRects*/                
+     void (*UpdateSurfaceRects) (_THIS, GAL_Surface* surface, int numrects, GAL_Rect *rects);
+ 
+-	void (*VideoSync)(_THIS, void*);
++	void (*VideoSync)(_THIS);
+ };
+ #undef _THIS
+ 
+diff --git a/src/newgal/video.c b/src/newgal/video.c
+index ea2c660..1a58877 100644
+--- a/src/newgal/video.c
++++ b/src/newgal/video.c
+@@ -148,6 +148,7 @@ static VideoBootStrap *bootstrap[] = {
+ };
+ 
+ GAL_VideoDevice *current_video = NULL;
++static unsigned int yOffset = 0;
+ 
+ /* Various local functions */
+ int GAL_VideoInit(const char *driver_name, Uint32 flags);
+@@ -470,6 +471,21 @@ static void GAL_ClearSurface(GAL_Surface *surface)
+ 
+     black = GAL_MapRGB(surface->format, 0, 0, 0);
+     GAL_FillRect(surface, NULL, black);
++
++    GAL_Rect rects;
++    rects.x = 0;
++    rects.y = 0;
++    rects.w = surface->w;
++    rects.h = surface->h;
++
++	if ((surface->flags & GAL_HWSURFACE) && (surface->flags & GAL_DOUBLEBUF)) {
++		GAL_Flip(surface, &rects, TRUE);
++		GAL_FillRect(surface, NULL, black);
++	}
++	if (surface->flags & GAL_FULLSCREEN) {
++		GAL_Flip(surface, &rects, TRUE);
++		GAL_FillRect(surface, NULL, black);
++	}
+ }
+ 
+ /*
+@@ -717,6 +733,22 @@ void GAL_UpdateRects (GAL_Surface *screen, int numrects, GAL_Rect *rects)
+     }
+ }
+ 
++/*
++ * Performs hardware double buffering, if possible, or a full update if not.
++ */
++int GAL_Flip(GAL_Surface *screen, GAL_Rect *rects, BOOL enable)
++{
++	GAL_VideoDevice *video = current_video;
++
++	if (((screen->flags & GAL_DOUBLEBUF) == GAL_DOUBLEBUF) && video->FlipHWSurface) {
++		GAL_VideoDevice *this = current_video;
++		return (video->FlipHWSurface(this, GAL_VideoSurface, rects, enable));
++	} else {
++		GAL_UpdateRect(screen, 0, 0, 0, 0);
++	}
++	return (0);
++}
++
+ static void SetPalette_logical(GAL_Surface *screen, GAL_Color *colors,
+         int firstcolor, int ncolors)
+ {
+@@ -1221,12 +1253,62 @@ GAL_Surface *gal_SlaveVideoInit(const char* driver_name, const char* mode)
+     }
+     return surface;
+ }
+-void GAL_VideoSync(void *rc)
++
++void GAL_DoubleBufferEnable(BOOL enable)
+ {
+ 	GAL_VideoDevice *video = current_video;
+-	if (video) {
+-#ifndef _MGGAL_SHADOW || _MGGAL_DFB || _MGGAL_MLSHADOW
+-		video->VideoSync(video, rc);
+-#endif
++	if (video && video->doubleBufferStatus == enable)
++		return;
++	video->doubleBufferStatus = enable;
++	if (video->DoubleBufferEnable) {
++		video->DoubleBufferEnable(video, GAL_VideoSurface, enable);
++	}
++}
++
++void GAL_YOffsetBufferEnable(BOOL enable)
++{
++	GAL_VideoDevice *video = current_video;
++	if (video && video->yOffsetBufferStatus == enable)
++		return;
++	video->yOffsetBufferStatus = enable;
++}
++
++BOOL GAL_YOffgetBufferEnable()
++{
++	GAL_VideoDevice *video = current_video;
++	if (video)
++		return video->yOffsetBufferStatus;
++	else
++		return FALSE;
++}
++
++void GAL_YOffset(int yoffset)
++{
++	if (yOffset == yoffset)
++		return;
++	yOffset = yoffset;
++
++	GAL_VideoDevice *video = current_video;
++	if (video && (video->screen->flags & GAL_OFFSETBUF) == GAL_OFFSETBUF
++			&& video->yOffsetBufferStatus && video->YOffsetHWSurface) {
++		video->YOffsetHWSurface(video, GAL_VideoSurface, yoffset);
++ 	}
++}
++
++void GAL_VideoSync()
++{
++	GAL_VideoDevice *video = current_video;
++	if (video && video->VideoSync && !video->doubleBufferStatus
++			&& !video->YOffsetHWSurface) {
++		video->VideoSync(video);
+ 	}
+ }
++
++void GAL_VideoFlip(GAL_Rect *rc)
++{
++	GAL_VideoDevice *video = current_video;
++	if (video && video->doubleBufferStatus) {
++		GAL_Flip(video->screen, rc, TRUE);
++	}
++}
++
+diff --git a/src/newgdi/bitmap.c b/src/newgdi/bitmap.c
+index 1db517c..63cd843 100644
+--- a/src/newgdi/bitmap.c
++++ b/src/newgdi/bitmap.c
+@@ -1273,6 +1273,10 @@ void GUIAPI BitBlt (HDC hsdc, int sx, int sy, int sw, int sh,
+                 __gal_screen))
+         kernel_ShowCursorForGDI (TRUE, psdc);
+ 
++	if (hddc == HDC_SCREEN) {
++		GAL_VideoFlip(&dst);
++	}
++
+     LEAVE_DRAWING (pddc);
+ 
+ empty_ret:
+-- 
+1.9.1
+

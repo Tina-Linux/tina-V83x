@@ -1,0 +1,25 @@
+From 1bafbb03876a1269faf2481aa2555dcdbe7a1b87 Mon Sep 17 00:00:00 2001
+From: huangwei <wimhwang@gmail.com>
+Date: Mon, 8 May 2017 10:25:20 +0800
+Subject: [PATCH] tests: add sunxi modules support
+
+Signed-off-by: huangwei <wimhwang@gmail.com>
+---
+ tests/util/kms.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tests/util/kms.c b/tests/util/kms.c
+index 959b688..66aeaba 100644
+--- a/tests/util/kms.c
++++ b/tests/util/kms.c
+@@ -126,6 +126,7 @@ const char *util_lookup_connector_type_name(unsigned int type)
+ }
+ 
+ static const char * const modules[] = {
++	"sunxi",
+ 	"i915",
+ 	"amdgpu",
+ 	"radeon",
+-- 
+1.9.1
+

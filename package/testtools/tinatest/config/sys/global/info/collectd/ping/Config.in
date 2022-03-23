@@ -1,0 +1,22 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_PING_ENABLE
+    bool "collectd_ping"
+    select PACKAGE_collectd-mod-ping
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_PING_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_PING_HOST
+        string "host"
+        default "192.168.1.1"
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_PING_SEND_INTERVAL_SEC
+        string "send_interval_sec"
+        default "1.0"
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_PING_TIMEOUT_SEC
+        string "timeout_sec"
+        default "1.0"
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_PING_MAX_TTL
+        int "max_ttl"
+        default 255
+endif

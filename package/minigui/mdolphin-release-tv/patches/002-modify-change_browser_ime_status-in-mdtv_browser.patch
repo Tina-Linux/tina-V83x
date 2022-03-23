@@ -1,0 +1,12 @@
+--- a/src/mdtv_browser.cpp
++++ b/src/mdtv_browser.cpp
+@@ -624,7 +624,8 @@
+     InvalidateRect(hBrowserTitleWnd, &(block->rc), TRUE);
+     return 0;
+ }
+-static BOOL change_browser_ime_status(HWND hWnd, BOOL bstate, EditorElementInfo editor_info)
++/*static BOOL change_browser_ime_status(HWND hWnd, BOOL bstate, EditorElementInfo editor_info)*/
++static BOOL change_browser_ime_status(HWND hWnd, BOOL bstate)
+ {
+     g_md_status.m_is_editable =  bstate;
+     if( !bstate ){

@@ -1,0 +1,58 @@
+Mail:liumingyuan@allwinnertech.com
+
+Version changes(V3.0.0):
+
+	1.add R18 soundwave support.
+	2.Redesign softap,call allwinner/softap
+	3.Move dhd_priv, raw to ./src/source/broadcom/
+	4.Remove useless ./tina/wpa.sh,wpa_supplicant.conf
+	5.Move app source to ./files/usrapp/
+	6.add soudwave Android source (SoundWaveAndroid.zip)
+	7.Add AirKissDebugger.apk,CooeeDemo.apk,softAP.apk,soundwave.apk
+	8.Add all demo help information
+	9.Add soundwave parameter settings.
+	10.smartlinkd_demo support softap
+	11.Modified compilation method
+	12.smartlinkd_setup, smartlinkd_softap, smartlinkd_soundwave can be run separately
+	13.soudwave add as follows:
+		(1)Delete ./soundwaves,merged to ./src/source/soundwave
+		(2)APP and device Frequency_type,sampling rate can be set
+		(3)libADT.a updated to version 1.2
+		(4)add mic settings for all platforms
+
+--------------------------------------------------------------------------------------------
+
+Mail:liumingyuan@allwinnertech.com
+
+Version changes(V3.0.1):
+
+	1.add XR819 smartconfig and airkiss
+	2.add smartconfig Android source (XConfig.zip) and test app (smatconfig.apk)
+
+--------------------------------------------------------------------------------------------
+Mail:linzhihang@allwinnertech.com
+
+Version changes(V3.0.2):
+
+	1.add the automatic startup mechanism of smartlinkd server
+	2.exit smartlinkd server after configuring the wifi network successfully;
+	3.remove redundant code such as platform class definition
+	4.redesign the directory structure
+	4.add softap support for all wifi module
+
+--------------------------------------------------------------------------------------------
+
+Version changes(V4.0.0):
+
+    1. 移除smartlinkd server，重新设计app与protocol的交互
+    2. 增加在启动protocol时可设置参数（如协议超时，声波配网录音声卡设备等等）
+    3. 增加可同时启动多个协议。
+       如同时启动softap和soundwave，当其中一个最先收到联网信息后，另一个也将
+	   会被马上终止，并开始进行联网。
+       注意在同时启动多个配网协议时，需要看模组是否支持，如不能同时启动airkiss
+	   和softap配网，以及smartconfig和softap配网，因为模组不支持同一时刻多种
+	   模式共存。
+
+    4. 由于版本新增可设置protocol参数启动，支持混合协议启动，去除掉smartlinkd等，
+	   因此该版本api接口较以往版本有大改动，如依旧想使用原先的接口，可直接将
+	   smartlinkd整个文件替换为以往版本即可。（即tina 系统升级，但smartlink不需要升级）

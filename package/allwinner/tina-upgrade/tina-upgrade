@@ -1,0 +1,65 @@
+#!/bin/sh
+
+. aw_ota_utils.sh
+. aw_ota_verify_img.sh
+. aw_ota_prepare_img.sh
+
+need_update=0
+need_apply_image=0
+
+rm -f "$UPGRADE_SETTING_PATH"/.image_url
+rm -f "$UPGRADE_SETTING_PATH"/.ota_source_local_path
+
+while getopts "u:l:" opt; do
+    case $opt in
+    u)
+        mkdir -p "$UPGRADE_SETTING_PATH"
+        echo "$OPTARG" > "$UPGRADE_SETTING_PATH"/.image_url
+        echo "using setting URL: $OPTARG"
+        ;;
+    l)
+        mkdir -p "$UPGRADE_SETTING_PATH"
+        echo "$OPTARG" > "$UPGRADE_SETTING_PATH"/.ota_source_local_path
+        echo "using setting local path: $OPTARG"
+        ;;
+    \?)
+        echo "Invalid option: -$OPTARG"
+        exit "$ERR_ILLEGAL_ARGS"
+        ;;
+    esac
+done
+
+get_args
+
+need_update=$(check_update)
+
+[ x"$need_update" = x"1" ] && {
+	echo "need update"
+
+	aw_clean boot
+	aw_clean rootfs
+	aw_clean recovery
+	aw_clean uboot
+	aw_clean boot0
+
+	rm -rf /mnt/UDISK/ota
+	mkdir -p /mnt/UDISK/ota/imgs
+
+	aw_pre_img boot
+	[ $? = 0 ] && need_apply_image=1
+	aw_pre_img rootfs
+	[ $? = 0 ] && need_apply_image=1
+	aw_pre_img recovery
+	[ $? = 0 ] && need_apply_image=1
+	aw_pre_img uboot
+	[ $? = 0 ] && need_apply_image=1
+	aw_pre_img boot0
+	[ $? = 0 ] && need_apply_image=1
+
+}
+
+[ x"$need_apply_image" = x"1" ] && {
+	echo "need reboot to apply ota imgs"
+	set_ota_flag 1
+	do_reboot
+}

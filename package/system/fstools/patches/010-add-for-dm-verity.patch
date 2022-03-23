@@ -1,0 +1,49 @@
+diff -Naur fstools-2016-01-10/block.c fstools-2016-01-10-new/block.c
+--- fstools-2016-01-10/block.c	2019-08-06 14:51:40.960451787 +0800
++++ fstools-2016-01-10-new/block.c	2019-08-06 14:52:50.912454768 +0800
+@@ -924,6 +924,31 @@
+	struct stat s;
+	struct dirent *e;
+
++#if DM_VERITY_ENABLED
++	if (stat("/", &s))
++		return -1;
++
++	/* for dm_verity, the root dev is in /dev/mapper
++	 *   so find root dev in /dev/mapper first.
++	 */
++	if (!(d = opendir("/dev/mapper")))
++		return -1;
++
++	root = s.st_dev;
++
++	while ((e = readdir(d)) != NULL) {
++		snprintf(buf, len, "/dev/mapper/%s", e->d_name);
++
++		if (stat(buf, &s) || s.st_rdev != root)
++			continue;
++
++		closedir(d);
++		return 0;
++	}
++
++	closedir(d);
++#endif
++
+	if (stat("/", &s))
+		return -1;
+
+diff -Naur fstools-2016-01-10/CMakeLists.txt fstools-2016-01-10-new/CMakeLists.txt
+--- fstools-2016-01-10/CMakeLists.txt	2016-01-25 16:41:39.000000000 +0800
++++ fstools-2016-01-10-new/CMakeLists.txt	2019-08-06 14:51:18.644450836 +0800
+@@ -46,6 +46,10 @@
+	DESTINATION include
+ )
+
++IF(DM_VERITY_ENABLED)
++  ADD_DEFINITIONS(-DDM_VERITY_ENABLED)
++ENDIF()
++
+ ADD_EXECUTABLE(mount_root mount_root.c)
+ TARGET_LINK_LIBRARIES(mount_root fstools)
+ INSTALL(TARGETS mount_root RUNTIME DESTINATION sbin)

@@ -1,0 +1,74 @@
+From 2b8cbdc9a768c0a14f74d493cbaa67b5503d9025 Mon Sep 17 00:00:00 2001
+From: anruliu@allwinnertech.com
+Date: Sun, 22 Sep 2019 10:05:28 +0800
+Subject: [PATCH] newgal-init-noclear-buffer
+
+Signed-off-by: anruliu@allwinnertech.com
+---
+ src/newgal/fbcon/fbvideo.c | 21 +++++++++++++++------
+ src/newgal/newgal.c        |  2 +-
+ 2 files changed, 16 insertions(+), 7 deletions(-)
+
+diff --git a/src/newgal/fbcon/fbvideo.c b/src/newgal/fbcon/fbvideo.c
+index 7df651d..44149b0 100644
+--- a/src/newgal/fbcon/fbvideo.c
++++ b/src/newgal/fbcon/fbvideo.c
+@@ -666,7 +666,7 @@ static GAL_Surface *FB_SetVideoMode(_THIS, GAL_Surface *current,
+ 				vinfo.yres_virtual = height;
+ 			}
+ 			vinfo.xoffset = 0;
+-			vinfo.yoffset = 0;
++			//vinfo.yoffset = 0;
+ 			if (!(flags & GAL_DOUBLEBUF)) {
+ 				vinfo.red.length = vinfo.red.offset = 0;
+ 				vinfo.green.length = vinfo.green.offset = 0;
+@@ -677,14 +677,15 @@ static GAL_Surface *FB_SetVideoMode(_THIS, GAL_Surface *current,
+         fprintf(stderr, "NEWGAL>FBCON: Printing wanted vinfo:\n");
+         print_vinfo(&vinfo);
+ #endif
+-			if (ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0) {
++            /* Call will be black screen */
++/*			if (ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0) {
+ 				vinfo.yres_virtual = height;
+ 				if (ioctl(console_fd, FBIOPUT_VSCREENINFO, &vinfo) < 0) {
+ 					GAL_SetError(
+ 							"NEWGAL>FBCON: Couldn't set console screen info\n");
+ 					return (NULL);
+ 				}
+-			}
++			}*/
+ 		}
+ 	} else {
+ 		int maxheight;
+@@ -821,7 +822,14 @@ static GAL_Surface *FB_SetVideoMode(_THIS, GAL_Surface *current,
+ 			rects.w = current->w;
+ 			rects.h = current->h;
+ 
+-			FB_FlipHWSurface(this, current, &rects, TRUE);
++
++			if (vinfo.yoffset == 0) {
++			    flip_page = !flip_page;
++			    this->screen->pixels = flip_address[flip_page];
++			}
++
++			//FB_FlipHWSurface(this, current, &rects, TRUE);
++
+ 			//this->screen = NULL;
+ 		}
+ 	}
+diff --git a/src/newgal/newgal.c b/src/newgal/newgal.c
+index e84411b..c8e828a 100644
+--- a/src/newgal/newgal.c
++++ b/src/newgal/newgal.c
+@@ -137,7 +137,7 @@ int mg_InitGAL (void)
+ 	char *GAL_doublebuffer = getenv("MG_DOUBLEBUFFER");
+ 	Uint32 flags = GAL_HWPALETTE | GAL_NOTCLEAR;
+ 	if (GAL_doublebuffer != NULL && strcmp(GAL_doublebuffer, "1") == 0) {
+-		flags = GAL_HWPALETTE | GAL_DOUBLEBUF;
++		flags = GAL_HWPALETTE | GAL_DOUBLEBUF | GAL_NOTCLEAR;
+ 	}
+ 
+ 	char *GAL_yoffsetbuffer = getenv("MG_YOFFSETBUFFER");
+-- 
+1.9.1
+

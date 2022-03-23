@@ -1,0 +1,74 @@
+config TINATEST_SYS_LOCAL_LIMIT
+    bool 'limit'
+    default y
+
+if TINATEST_SYS_LOCAL_LIMIT
+    config TINATEST_SYS_LOCAL_LIMIT_RUN_TIMES
+        int "run_times"
+        default 1
+        ---help---
+            The times to run testcase.
+            For example:
+            To run this testcase for 3 times, we can set this value as 3.
+
+    config TINATEST_SYS_LOCAL_LIMIT_RUN_ALONE
+        bool "run_alone"
+        default n
+        ---help---
+            Wait for finishing all previous testcase and run alone before do next.
+
+    config TINATEST_SYS_LOCAL_LIMIT_MAY_REBOOT
+        bool "may_reboot"
+        default n
+        ---help---
+            It means that device will be rebooted while running testcase.
+            All states of testcase will be saved in flash, and loaded after rebooting.
+            Notices that, if may_reboot is setted, run_alone will be setted alway.
+
+    config TINATEST_SYS_LOCAL_LIMIT_RUN_PARALLEL
+        bool "run_parallel"
+        default n
+        ---help---
+            Run parallel for all run_times.
+            For example:
+            Testcae will run for 3 times one by one if run_times=3.
+            However, if run_parallel is setted, tinatest will creates 3 processers in one time.
+
+    config TINATEST_SYS_LOCAL_LIMIT_TESTCASE_RUN_ONCE_TIME
+        string "testcase_run_once_time"
+        default "0 0 0 356"
+        ---help---
+            Time limit for testcase to run once.
+            It is in format:
+                <sec> <min> <hour> <day>
+            For example,
+            100s : 100
+            1m20s : 20 1 (or 80)
+            1d3h : 0 0 3 1 (or 0 0 28 or other)
+
+    config TINATEST_SYS_LOCAL_LIMIT_TESTCASE_RUN_TIME
+        string "testcase_run_time"
+        default "0 0 0 356"
+        ---help---
+            Time limit for testcase to run.
+            It is in format:
+                <sec> <min> <hour> <day>
+            For example,
+            100s : 100
+            1m20s : 20 1 (or 80)
+            1d3h : 0 0 3 1 (or 0 0 28 or other)
+
+    config TINATEST_BASE_BLUETOOTH_TIMEOUT_AS_FAILED
+        bool "timeout_as_failed"
+        default n
+        ---help---
+            Seem to failed when testcase exit for timeout.
+            If not set, default to pass.
+
+    config TINATEST_SYS_LOCAL_LIMIT_EXIT_ONCE_FAILED
+        bool "exit_once_failed"
+        default n
+        ---help---
+            Stop running testcase and exit once failed, even if runned times less than run_times.
+
+endif

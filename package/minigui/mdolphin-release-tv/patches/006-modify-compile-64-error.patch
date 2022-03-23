@@ -1,0 +1,22 @@
+--- a/src/Makefile.am	2018-05-16 11:28:47.000000000 +0800
++++ b/src/Makefile.am	2018-05-16 11:12:06.000000000 +0800
+@@ -25,7 +25,7 @@
+ 			mdtv_tooltipwin.cpp mdtv_tooltipwin.h
+ 
+ if MINIGUI_V3
+-MGLIBS= -lmgutils -lmgplus -lmgi -lxml2
++MGLIBS= -lmgutils -lmgplus -lmgi -lxml2 -lstdc++
+ else
+ MGLIBS= -lmgext
+ endif
+--- a/svgui/Makefile.am	2018-05-16 11:29:59.000000000 +0800
++++ b/svgui/Makefile.am	2018-05-16 11:12:28.000000000 +0800
+@@ -6,7 +6,7 @@
+ svgui_test_SOURCES = svgui_test.c svgui.c
+ 
+ if MINIGUI_V3
+-MGLIBS=-lmgutils -lmgplus
++MGLIBS=-lmgutils -lmgplus -lstdc++
+ else
+ MGLIBS=-lmgext
+ endif

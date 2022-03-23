@@ -1,0 +1,3 @@
+config TINATEST_SYS_GLOBAL_INFO_OUTLOG_SERIAL
+    bool "Serial"
+    default y

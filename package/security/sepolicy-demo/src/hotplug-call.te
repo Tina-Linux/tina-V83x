@@ -1,0 +1,34 @@
+type hotplug-call, domain;
+type hotplug-call_exec, exec_type, file_type;
+# permissive hotplug-call;
+# init_daemon_domain(hotplug-call)
+domain_auto_trans(init,hotplug-call_exec,hotplug-call)
+domain_auto_trans(hotplug-call,busybox_exec,busybox)
+# allow hotplug-call init:fifo_file read;
+
+# allow hotplug-call { netifd ntpd }:fd use;
+# allow hotplug-call netifd:netlink_route_socket *;
+# allow hotplug-call netifd:netlink_kobject_uevent_socket *;
+
+# allow hotplug-call system_file:file { execute execute_no_trans open execmod };
+# allow hotplug-call { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow hotplug-call { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+# allow hotplug-call device:dir r_dir_perms;
+# allow hotplug-call device:file r_file_perms;
+# allow hotplug-call serial_device:chr_file { read write };
+# allow hotplug-call hdmi_device:chr_file r_file_perms;
+# allow hotplug-call etc_selinux:dir { search open read getattr };
+
+# allow hotplug-call dm_device:dir r_dir_perms;
+# allow hotplug-call dm_device:{ chr_file blk_file } r_file_perms;
+# allow hotplug-call {mmc_device nand_device}:blk_file r_file_perms;
+
+allow hotplug-call console_device:chr_file { read write };
+# # allow hotplug-call sysfs:file rw_file_perms;
+
+# allow hotplug-call tmpfs:dir rw_dir_perms;
+# allow hotplug-call tmpfs:file create_file_perms;
+
+# allow hotplug-call etc_passwd:file r_file_perms;
+

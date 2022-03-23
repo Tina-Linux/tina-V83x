@@ -1,0 +1,43 @@
+diff --git a/tools/hciattach.c b/tools/hciattach.c
+index 2d7a8e7..7b2eb8b 100644
+--- a/tools/hciattach.c
++++ b/tools/hciattach.c
+@@ -48,6 +48,10 @@
+ 
+ #include "hciattach.h"
+ 
++#ifndef XRADIO_VENDOR_VERSION
++#define XRADIO_VENDOR_VERSION "1.0.0"
++#endif
++
+ struct uart_t {
+ 	char *type;
+ 	int  m_id;
+@@ -1308,6 +1312,7 @@ static void usage(void)
+ 			" <tty> <type | id> [speed] [flow|noflow]"
+ 			" [sleep|nosleep] [bdaddr]\n");
+ 	printf("\thciattach -l\n");
++	printf("\thciattach -v\n");
+ }
+ 
+ int main(int argc, char *argv[])
+@@ -1327,7 +1332,7 @@ int main(int argc, char *argv[])
+ 	printpid = 0;
+ 	raw = 0;
+ 
+-	while ((opt=getopt(argc, argv, "bnpt:s:lr")) != EOF) {
++	while ((opt=getopt(argc, argv, "bnpt:s:lrv")) != EOF) {
+ 		switch(opt) {
+ 		case 'b':
+ 			send_break = 1;
+@@ -1360,6 +1365,10 @@ int main(int argc, char *argv[])
+ 			raw = 1;
+ 			break;
+ 
++		case 'v':
++			printf("%s\n", XRADIO_VENDOR_VERSION);
++			exit(0);
++
+ 		default:
+ 			usage();
+ 			exit(1);

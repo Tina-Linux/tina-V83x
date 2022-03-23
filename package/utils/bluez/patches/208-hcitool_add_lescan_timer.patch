@@ -1,0 +1,95 @@
+diff --git a/tools/hcitool.c b/tools/hcitool.c
+index 02c4ebe..cc3d774 100644
+--- a/tools/hcitool.c
++++ b/tools/hcitool.c
+@@ -39,6 +39,9 @@
+ #include <sys/ioctl.h>
+ #include <sys/socket.h>
+ #include <signal.h>
++#include <time.h>
++#include <sys/time.h>
++
+ 
+ #include "lib/bluetooth.h"
+ #include "lib/hci.h"
+@@ -2405,7 +2408,12 @@ failed:
+ 	snprintf(buf, buf_len, "(unknown)");
+ }
+ 
+-static int print_advertising_devices(int dd, uint8_t filter_type)
++void sig_alarms(int signo){
++	printf("sig_alarms and send SIGINT \n ");
++	raise(SIGINT);
++}
++
++static int print_advertising_devices(int dd, uint8_t filter_type, int timer)
+ {
+ 	unsigned char buf[HCI_MAX_EVENT_SIZE], *ptr;
+ 	struct hci_filter nf, of;
+@@ -2433,11 +2441,21 @@ static int print_advertising_devices(int dd, uint8_t filter_type)
+ 	sa.sa_handler = sigint_handler;
+ 	sigaction(SIGINT, &sa, NULL);
+ 
++	if(timer>0){
++		signal(SIGALRM,sig_alarms);
++		alarm(timer);
++	}
++
+ 	while (1) {
+ 		evt_le_meta_event *meta;
+ 		le_advertising_info *info;
+ 		char addr[18];
+ 
++		if(signal_received == SIGINT){
++			printf("signal_received is sigint\n");
++			goto done;
++		}
++
+ 		while ((len = read(dd, buf, sizeof(buf))) < 0) {
+ 			if (errno == EINTR && signal_received == SIGINT) {
+ 				len = 0;
+@@ -2501,6 +2519,7 @@ static const char *lescan_help =
+ 		"procedure\n"
+ 	"\tlescan [--duplicates] don't filter duplicates\n";
+ 
++
+ static void cmd_lescan(int dev_id, int argc, char **argv)
+ {
+ 	int err, opt, dd;
+@@ -2511,6 +2530,7 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
+ 	uint16_t interval = htobs(0x0010);
+ 	uint16_t window = htobs(0x0010);
+ 	uint8_t filter_dup = 0x01;
++	int times=0;
+ 
+ 	for_each_opt(opt, lescan_options, NULL) {
+ 		switch (opt) {
+@@ -2539,6 +2559,7 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
+ 		case 'D':
+ 			filter_dup = 0x00;
+ 			break;
++
+ 		default:
+ 			printf("%s", lescan_help);
+ 			return;
+@@ -2546,6 +2567,10 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
+ 	}
+ 	helper_arg(0, 1, &argc, &argv, lescan_help);
+ 
++	if(argc==1) {
++		times=atoi(argv[0]);
++		printf("times is %d\n",times);
++	}
+ 	if (dev_id < 0)
+ 		dev_id = hci_get_route(NULL);
+ 
+@@ -2569,8 +2594,7 @@ static void cmd_lescan(int dev_id, int argc, char **argv)
+ 	}
+ 
+ 	printf("LE Scan ...\n");
+-
+-	err = print_advertising_devices(dd, filter_type);
++	err = print_advertising_devices(dd, filter_type, times);
+ 	if (err < 0) {
+ 		perror("Could not receive advertising events");
+ 		exit(1);

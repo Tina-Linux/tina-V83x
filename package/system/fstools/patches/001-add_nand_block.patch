@@ -1,0 +1,10 @@
+--- a/block.c
++++ b/block.c
+@@ -520,6 +520,7 @@ static void cache_load(int mtd)
+ 	_cache_load("/dev/md*");
+ 	_cache_load("/dev/vd*");
+ 	_cache_load("/dev/mapper/*");
++	_cache_load("/dev/nand*");
+ }
+ 
+ static int print_block_info(struct blkid_struct_probe *pr)

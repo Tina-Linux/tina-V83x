@@ -1,0 +1,42 @@
+** 此文件为tinatest规范 **
+
+1. testcases统一分为"base\spec\stress\demo"４类,添加测试用例需要按分类添加
+   例如:
+       新用例功能: sdcard的挂载功能
+       新用例归类：base
+       新用例路径：/base/sdcard
+
+2. 一个测试用例只有一个源码目录,且源码目录路径需要与测试用例节点路径对应
+   例如：
+       新用例节点路径：/base/rw/rw-auto
+       新用例源码路径：tinatest/testcase/base/rw/rw-auto/*
+
+3. 用4个空格替代tab, 保证代码的整齐
+   vim如下配置可自动替换：
+       set tabstop=4 " Tab键的宽度
+       " 统一缩进为4
+       set softtabstop=4
+       set shiftwidth=4
+       " 用空格代替制表符
+       autocmd BufNewFile,BufRead *.sh,*.c,*.cpp set expandtab
+
+4. private.conf字符串中的特殊字符需要双重转义,例如:
+      command = "echo \\\"test\\\"" 表示 echo "test"
+   需要转义的字符包括:  \&"'
+
+5. 测试用例命令允许(建议)使用破折号(-)或者下划线(_),不建议使用其他特殊字符,例如(\|.=)
+
+6. 新的测试用例尽量做到所有平台都可用,否则后期新平台维护成本高
+
+7. 添加测试用例后,需要 验证能正常使用后 才提交,且提交的说明中建议包含版本号(主要修改测试用例个数)
+       v1.23.5.12
+        | |  |  |
+        | |  |  测试用例个数
+        | |  tinatest核心代码修复bug小版本
+        | tinatest核心代码添加功能中版本
+        tinatest核心代码大版本更迭
+
+8. 需要修改用例属性(修改private.conf,不包括源码/脚本)
+   在修改private.conf前先执行tinatest/tools/del_testcase.sh注销,在修改后再重新注册,避免残留
+
+============================分割线===========================

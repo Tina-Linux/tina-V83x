@@ -1,0 +1,10 @@
+# udevtrigger -
+type udevtrigger, domain;
+type udevtrigger_exec, exec_type, file_type;
+# permissive udevtrigger;
+init_daemon_domain(udevtrigger)
+
+allow udevtrigger console_device:chr_file { read write };
+allow udevtrigger sysfs:file rw_file_perms;
+
+allow udevtrigger etc_selinux:dir { search open read getattr };

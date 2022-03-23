@@ -1,0 +1,35 @@
+Index: memtester-4.3.0/memtester.c
+===================================================================
+--- memtester-4.3.0.orig/memtester.c
++++ memtester-4.3.0/memtester.c
+@@ -410,6 +410,7 @@ int main(int argc, char **argv) {
+              printf("ok\n");
+         } else {
+             exit_code |= EXIT_FAIL_ADDRESSLINES;
++            goto out;
+         }
+         printf("  %-20s: ", "Random Value");
+         fflush(stdout);
+@@ -418,6 +419,7 @@ int main(int argc, char **argv) {
+ 	    printf("<============Start test============>\n");
+ 	} else {
+ 	    exit_code |= EXIT_FAIL_OTHERTEST;
++	    goto out;
+ 	}
+         for (i=0;;i++) {
+             if (!tests[i].name) break;
+@@ -432,12 +434,14 @@ int main(int argc, char **argv) {
+                 printf("ok\n");
+             } else {
+                 exit_code |= EXIT_FAIL_OTHERTEST;
++                goto out;
+             }
+             fflush(stdout);
+         }
+         printf("\n");
+         fflush(stdout);
+     }
++out:
+     if (do_mlock) munlock((void *) aligned, bufsize);
+     printf("Done.\n");
+     fflush(stdout);

@@ -1,0 +1,30 @@
+--- a/c/cortana-core/CMakeLists.txt
++++ b/c/cortana-core/CMakeLists.txt
+@@ -524,16 +524,24 @@ elseif (NOT CMAKE_SYSTEM_NAME STREQUAL "Android")
+     target_link_libraries(iot-cortana-sdk
+         ${SILK_LIBRARIES}
+         ${KWS_LIBRARIES}
+-        ${IOT_CORTANA_CDP_LIBS}
+     )
+ 
+     install (FILES 
+         ${SILK_LIBRARIES}
+         ${KWS_LIBRARIES}
+-        ${IOT_CORTANA_CDP_LIBS}
+         DESTINATION lib)
+ 
+-    if (NOT SKYPE_BINARIES STREQUAL "SKYPE_BINARIES-NOTFOUND")
++    if (NOT IOT_CORTANA_CDP_LIBS STREQUAL "IOT_CORTANA_CDP_LIBS-NOTFOUND"
++            AND IOT_CORTANA_NO_CDP STREQUAL "")
++        target_link_libraries(iot-cortana-sdk
++            ${IOT_CORTANA_CDP_LIBS}
++        )
++        install (FILES
++            ${IOT_CORTANA_CDP_LIBS}
++            DESTINATION lib)
++    endif()
++
++    if (NOT SKYPE_BINARIES STREQUAL "SKYPE_BINARIES-NOTFOUND" AND ENABLE_SKYPE)
+         target_link_libraries(iot-cortana-sdk
+             ${SKYPE_BINARIES}
+         )

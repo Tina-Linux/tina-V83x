@@ -1,0 +1,25 @@
+From f772574a9a2d9553a23333bdef022bdc882ad1f8 Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 19:42:08 +0800
+Subject: [PATCH 10/10] weston: Use DE as compositor
+
+---
+ libweston/compositor-drm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 1ed66ea..4c9b223 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -3318,7 +3318,7 @@ drm_backend_create(struct weston_compositor *compositor,
+ 	 *
+ 	 * These can be enabled again when nuclear/atomic support lands.
+ 	 */
+-	b->sprites_are_broken = 1;
++	b->sprites_are_broken = 0;
+ 	b->compositor = compositor;
+ 	b->use_pixman = config->use_pixman;
+ 
+-- 
+1.9.1
+

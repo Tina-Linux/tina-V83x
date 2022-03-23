@@ -1,0 +1,82 @@
+{
+	"sdk": {
+		"gitversion":"710039c",
+		"compiledate":"2019年 05月 17日 星期五 09:20:20 CST",
+		"configPath":"/mnt/app/res/config.json"
+	},
+	"auth": {
+		"productId": "278575093",
+		"deviceProfile": "eim/WNYMRzYQi3qB465A6W/1LRWoimT6cE6blut0bzHYoJsXyH5RfITdm5qJlpyarJqcjZqL3cXdxsjNmZ7KyM2ZnJ7Ny5mZncbHysqaz8aZy5zMyMebnZrd092ek5OQiN3FztPdj42Qm4qci7ab3cXdzcjHysjKz8bM3dPdm5qJlpyasZ6Smt3F3ZnNzJmdns6em8bMyMuby8jGmZzHnprPz5qbm87Oxsqe3dPdjJyQj5rdxaTdnpOT3aKC"
+    },
+	"front": {
+		"aecBinPath": "/mnt/app/res/AEC_ch3-2-ch2_1ref_common_20180806_v0.9.4.bin",
+		"wakeupBinPath": "/mnt/app/res/wakeup_aihome_midea_20190515.bin",
+		"beamformingBinPath": "/mnt/app/res/UDA_asr_ch2_2_ch2_30mm_20181129_v1.1.0.8.bin",
+		"env":"words=xiao mei xiao mei;thresh=0.35;major=0;",
+		"rollBack": 600
+	},
+	"vad": {
+		"resBinPath": "/mnt/app/res/vad_aihome_v0.9b_tts.bin",
+		"pauseTime": 600, "slienceTimeout": 6
+	},
+	"cloud": {
+		"productId": "278575093",
+		"aliasKey": "test"
+	},
+	"aicloud": {
+		"url": "sit"
+	},
+	"localasr": {
+	   "asr_cfg": {
+			"resBinPath": "/mnt/app/res/grammar_fsmnfix_res_kongtiao_opt_v8.bin",
+			"netBinPath": "/mnt/app/res/local.net.bin"
+	   },
+	   "gram_cfg": {
+			"resBinPath": "/mnt/app/res/ebnfc.aicar.1.2.0.bin"
+	   },
+	   "gram_param": {
+			"outputPath": "/mnt/app/res/local.net.bin",
+			"ebnfFile": "/mnt/app/res/gram_kaoxiang.xbnf"
+	   },
+	   "asr_param": {
+	   }
+	},
+	"player": {
+		"device": "default",
+		"def_volume": 26,
+		"vol_curve":[{
+				"level":17
+			},{
+				"level":20
+			},{
+				"level":23
+			},{
+				"level":26
+			},{
+				"level":29
+			}],
+		"tts_amp":1.0,
+		"src_amp":1.0,
+		"greetting_amp":1.0
+	},
+	"greetingAudio":[{
+		"path":"/mnt/app/tts/greeting1.mp3"
+	},{
+		"path":"/mnt/app/tts/greeting2.mp3"
+	},{
+		"path":"/mnt/app/tts/greeting4.mp3"
+	},{
+		"path":"/mnt/app/tts/greeting5.mp3"
+	},{
+		"path":"/mnt/app/tts/greeting6.mp3"
+	},{
+		"path":"/mnt/app/tts/greeting7.mp3"
+	}],
+
+	"netAudio": {
+		"connect":"/mnt/app/tts/connect_ok.mp3",
+		"timeout":"/mnt/app/tts/timeout.mp3",
+		"disconnect":"/mnt/app/tts/need_connect.mp3",
+		"plz_wait":"/mnt/app/tts/please_wait.mp3"
+    }
+}

@@ -1,0 +1,67 @@
+# log daemon
+type logd, domain, mlstrustedsubject;
+type logd_exec, exec_type, file_type;
+
+# permissive logd;
+domain_auto_trans(init,logd_exec,logd)
+# domain_auto_trans(logd,busybox_exec,busybox)
+# domain_auto_trans(logd,ubusd_exec,ubusd)
+
+allow logd self:capability { setuid setgid sys_nice audit_control };
+allow logd self:capability2 { syslog block_suspend };
+# allow logd self:shm { create unix_read unix_write read write };
+# allow logd self:sem create;
+# # allow logd self:netlink_audit_socket { create_socket_perms nlmsg_write };
+# allow logd kmsg_device:chr_file w_file_perms;
+# allow logd system_data_file:file r_file_perms;
+# allow logd misc_logd_file:file create_file_perms;
+# allow logd misc_logd_file:dir rw_dir_perms;
+# allow logd console_device:chr_file rw_file_perms;
+# allow logd serial_device:chr_file r_file_perms;
+# allow logd init:fifo_file { read write };
+# r_dir_file(logd, domain)
+
+allow logd kernel:system { syslog_read syslog_mod };
+
+# control_logd(logd)
+
+# allow logd system_file:file { execute execute_no_trans open execmod };
+
+allow logd tmpfs:sock_file { read write };
+
+allow logd ubusd:unix_stream_socket connectto;
+allow logd device:dir { write add_name remove_name };
+allow logd device:sock_file { create getattr open read write setattr };
+
+allow logd tmpfs:dir create_dir_perms;
+allow logd tmpfs:file { read write create open ioctl append };
+# #allow logd logd_tmpfs:dir create_dir_perms;
+# #allow logd logd_tmpfs:{ file lnk_file} create_file_perms;
+
+# allow logd start_stop:fd use;
+
+# allow logd { etc_selinux etc_initd }:dir { search open read getattr };
+# allow logd etc_selinux:{ file lnk_file } { open read getattr };
+
+# allow logd { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow logd { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+# allow logd ubusd:unix_stream_socket connectto;
+
+###
+### Neverallow rules
+###
+### logd should NEVER do any of this
+
+# Block device access.
+neverallow logd dev_type:blk_file { read write };
+
+# ptrace any other app
+neverallow logd domain:process ptrace;
+
+# Write to /system.
+neverallow logd system_file:dir_file_class_set write;
+
+# Write to files in /data/data or system files on /data
+neverallow logd { app_data_file system_data_file }:dir_file_class_set write;
+

@@ -1,0 +1,4 @@
+
+package/allwinner/tina-upgrade/ota_key_demo/* is only demo key, will not install to rootfs
+
+package/allwinner/tina-upgrade/OTA_Key_pub.pem will install to rootfs

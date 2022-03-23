@@ -1,0 +1,26 @@
+diff --git a/profiles/audio/avrcp.c b/profiles/audio/avrcp.c
+index e16a16c..0269a4a 100644
+--- a/profiles/audio/avrcp.c
++++ b/profiles/audio/avrcp.c
+@@ -3244,6 +3244,13 @@ static struct avrcp_player *find_ct_player(struct avrcp *session, uint16_t id)
+ 			return player;
+ 		}
+ 
++                //add by zhujianjian for avrcp_addressed_player_changed not to create_ct_player of id is 0
++		if(id == 0){	
++	            DBG("id is 0");
++                    return player;
++		}
++                //add end
++
+ 		if (player->id == id)
+ 			return player;
+ 	}
+@@ -3268,6 +3275,7 @@ avrcp_parse_media_player_item(struct avrcp *session, uint8_t *operands,
+ 	id = get_be16(&operands[0]);
+ 
+ 	player = find_ct_player(session, id);
++
+ 	if (player == NULL) {
+ 		player = create_ct_player(session, id);
+ 		if (player == NULL)

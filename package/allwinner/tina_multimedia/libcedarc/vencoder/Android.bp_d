@@ -1,0 +1,28 @@
+cc_library_shared {
+    name: "libvencoder",
+    vendor_available: true,
+    // ANDROIDMK TRANSLATION ERROR: unsupported include
+    // include $(SCLIB_TOP)/config.mk
+    defaults: ["libcdc_config_defaults"],
+    srcs: ["vencoder.c"],
+
+    local_include_dirs: ["base/include"],
+
+    include_dirs: [
+        "frameworks/av/media/libcedarc/include",
+        "frameworks/av/media/libcedarc/base/include",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libutils",
+    ] + [
+        "libVE",
+        "libcdc_base",
+        "libMemAdapter",
+        "libvenc_base",
+        "libvenc_codec",
+        "liblog",
+    ],
+
+}

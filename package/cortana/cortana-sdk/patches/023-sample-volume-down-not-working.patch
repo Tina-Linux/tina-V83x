@@ -1,0 +1,11 @@
+--- a/c/samples/basic-first-sample/basic-first-sample.c
++++ b/c/samples/basic-first-sample/basic-first-sample.c
+@@ -94,7 +94,7 @@ static int OnIdle(CORTANA_HANDLE handle, void* pContext)
+             break;
+ 
+         case '-':
+-            cortana_onaction(handle, CORTANA_ACTION_VOLUME_UP, NULL);
++            cortana_onaction(handle, CORTANA_ACTION_VOLUME_DOWN, NULL);
+             break;
+ 
+         case 'q':

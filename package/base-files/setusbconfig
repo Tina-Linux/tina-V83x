@@ -1,0 +1,62 @@
+#!/bin/sh
+
+name=`basename $0`
+
+usage() {
+  echo "$name Usage:"
+  echo ""
+  echo "$name [function]"
+  echo "function: mtp,    support MTP function"
+  echo "          adb,    support adb function"
+  echo "          adb,mtp support adb and mtp function"
+  echo "example:"
+  echo "$name adb,mtp"
+  echo ""
+}
+
+set_usb_function() {
+# 1:function
+# 2:idVendor
+# 3:idProduct
+#
+
+  echo "$1 function"
+  echo 0 > /sys/class/android_usb/android0/enable
+  echo $1 > /sys/class/android_usb/android0/functions
+  echo $2 > /sys/class/android_usb/android0/idVendor
+  echo $3 > /sys/class/android_usb/android0/idProduct
+  echo 1 > /sys/class/android_usb/android0/enable
+}
+
+
+if [ $# == 1 ]; then
+  if [ $1 == "none" ]; then
+    set_usb_function none 1f3a 1001
+    return
+  fi
+  if [ $1 == "adb" ]; then
+    set_usb_function adb 18d1 D002
+    return
+  fi
+  if [ $1 == "mtp" ]; then
+    set_usb_function mtp 1f3a 1006
+    return
+  fi
+  if [ $1 == "mass_storage" ]; then
+    set_usb_function mass_storage 1f3a 1000
+    return
+  fi
+  if [ $1 == "adb,mtp" -o $1 == "mtp,adb" ]; then
+    set_usb_function mtp,adb 1f3a 1007
+    return
+  fi
+  if [ $1 == "adb,mass_storage" -o $1 == "mass_storage,adb" ]; then
+    set_usb_function mass_storage,adb 1f3a 1002
+    return
+  fi
+  echo "Invalid arg:$1"
+  usage
+else
+  echo "Lack of arg!"
+  usage
+fi

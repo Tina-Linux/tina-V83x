@@ -1,0 +1,355 @@
+{
+    "audio_elments" : {
+        "file_src" : {
+            "element_type" : "FileSrc",
+            "type" : "pcm",
+            "path" : "/tmp/src.pcm",
+            "format" : "S16_LE",
+            "channels" : 2,
+            "rate" : 16000,
+            "loop_frames" : 160,
+            "repeated" : true,
+            "src_pads" : {
+                "src_pad" : {
+                    "peer_element" : "file_sink",
+                    "peer_pad" : "sink_pad"
+                }
+            }
+        },
+        "file_sink" : {
+            "element_type" : "FileSink",
+            "type" : "pcm",
+            "path" : "/tmp/sink.pcm",
+            "sink_pads" : {
+                "sink_pad" : {
+                    "peer_element" : "file_src",
+                    "peer_pad" : "src_pad"
+                }
+            }
+        }
+    ,
+        "file_src" : {
+            "element_type" : "FileSrc",
+            "type" : "wav",
+            "path" : "/tmp/src.wav",
+            "loop_frames" : 160,
+            "repeated" : true,
+            "src_pads" : {
+                "src_pad" : {
+                    "peer_element" : "file_sink",
+                    "peer_pad" : "sink_pad"
+                }
+            }
+        },
+        "file_sink" : {
+            "element_type" : "FileSink",
+            "type" : "pcm",
+            "path" : "/tmp/sink.wav",
+            "sink_pads" : {
+                "sink_pad" : {
+                    "peer_element" : "file_src",
+                    "peer_pad" : "src_pad"
+                }
+            }
+        }
+    ,
+        "alsa_src" : {
+            "element_type" : "AlsaSrc",
+            "devices" : {
+                "audiocodec" : {
+                    "device" : "hw:audiocodec",
+                    "loop_frames" : 160,
+                    "access" : "RW_INTERLEAVED",
+                    "format" : "S16_LE",
+                    "rate" : 16000,
+                    "channels" : 2,
+                    "period_frames" : 1024,
+                    "periods" : 4
+                },
+                "loopback" : {
+                    "device" : "hw:Loopback",
+                    "loop_frames" : 160,
+                    "access" : "RW_INTERLEAVED",
+                    "format" : "S16_LE",
+                    "rate" : 16000,
+                    "channels" : 2,
+                    "period_frames" : 1024,
+                    "periods" : 4
+                }
+            },
+            "src_pads" : {
+                "audiocodec" : {
+                    "peer_element" : "audiocodec_sink",
+                    "peer_pad" : "sink_pad"
+                },
+                "loopback" : {
+                    "peer_element" : "loopback_sink",
+                    "peer_pad" : "sink_pad"
+                }
+            }
+        }
+        ,
+        "converter" : {
+            "element_type" : "Converter",
+            "sink_pads" : {
+                "common_in" : {
+                    "format" : "S24_LE",
+                    "channels" : 2,
+                    "storage" : "interleaved",
+                    "peer_element" : "file_src_0",
+                    "peer_pad" : "src_pad"
+                },
+                "reference_in" : {
+                    "format" : "S24_LE",
+                    "channels" : 2,
+                    "storage" : "interleaved",
+                    "peer_element" : "file_sink_0",
+                    "peer_pad" : "sink_pad"
+                }
+            },
+            "src_pads" : {
+                "common_out" : {
+                    "format" : "S16_LE",
+                    "channels" : 2,
+                    "storage" : "noninterleaved",
+                    "peer_element" : "file_src_0",
+                    "peer_pad" : "src_pad"
+                },
+                "reference_out" : {
+                    "format" : "S16_LE",
+                    "channels" : 1,
+                    "storage" : "noninterleaved",
+                    "peer_element" : "file_sink_0",
+                    "peer_pad" : "sink_pad"
+                }
+            },
+            "channel_map" : {
+                "common_out_0" : "common_in_0",
+                "common_out_1" : "common_in_1",
+                "reference_out_0" : "reference_in_0",
+                "reference_out_1" : "reference_in_1"
+            }
+        }
+        ,
+        "tee" : {
+            "element_type" : "Tee",
+            "sink_pads" : {
+                "input" : {}
+            },
+            "src_pads" : {
+                "output0" : {
+                    "peer_element" : "",
+                    "peer_pad" : ""
+                },
+                "output1" : {
+                    "peer_element" : "",
+                    "peer_pad" : ""
+                }
+            }
+        }
+        ,
+        "data_queue" : {
+            "element_type" : "DataQueue",
+            "max_buffers" : 10,
+            "sink_pads" : {
+                "input" : {}
+            },
+            "src_pads" : {
+                "output" : {
+                    "peer_element" : "",
+                    "peer_pad" : ""
+                }
+            }
+        }
+        ,
+        "tutuclear" : {
+            "element_type" : "TutuClearElement",
+            "prm_file" : "/etc/gmems/tutuClearA1_ns4wakeup.prm",
+            "keyword_file" : "/etc/gmems/tutuKeyword.raw",
+            "format" : "S16_LE",
+            "rate" : 16000,
+            "loop_frames" : 160,
+            "storage" : "noninterleaved",
+            "sink_pads" : {
+                "common" : {
+                    "channels" : 2,
+                    "peer_element" : "converter",
+                    "peer_pad" : "common_out"
+                },
+                "reference" : {
+                    "channels" : 1,
+                    "peer_element" : "converter",
+                    "peer_pad" : "reference_out"
+                }
+            },
+            "src_pads" : {
+                "output" : {
+                    "channels" : 3,
+                    "peer_element" : "cloud",
+                    "peer_pad" : "signals"
+                }
+            },
+
+            //"signal" : {
+            //    "wakeup" : {
+            //        "element" : "dueros_foobar",
+            //        "handler" : "wakeup_handler"
+            //    }
+            //}
+            "signals" : [ "wakeup" ]
+        },
+        "dueros_foobar" : {
+            "element_type" : "DuerosFoobar",
+            "slots" : {
+                "wakeup_handler" : {
+                    "element" : "tutu_clear",
+                    "signal" : "wakeup"
+                }
+            }
+        }
+    }
+,
+    "audio_pipeline" : {
+        "engine" : "foobar",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/tmp/src.wav",
+                "loop_frames" : 160,
+                "src_pads" : {
+                    "src_pad" : {
+                        "peer_element" : "file_sink",
+                        "peer_pad" : "sink_pad"
+                    }
+                }
+            },
+            "file_sink" : {
+                "element_type" : "FileSink",
+                "type" : "pcm",
+                "path" : "/tmp/sink.wav",
+                "sink_pads" : {
+                    "sink_pad" : {
+                        "peer_element" : "file_src",
+                        "peer_pad" : "src_pad"
+                    }
+                }
+            }
+        }
+    }
+    ,
+    "test_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/tmp/src.wav",
+                "loop_frames" : 160,
+                "src_pads" : {
+                    "src_pad" : {
+                        "peer_element" : "alsa_sink",
+                        "peer_pad" : "default"
+                    }
+                }
+            },
+            "alsa_sink" : {
+                "element_type" : "AlsaSink",
+                "devices" : {
+                    "default" : {
+                        "device" : "default",
+                        "loop_frames" : 160,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 48000,
+                        "channels" : 2,
+                        "period_frames" : 1024,
+                        "periods" : 4
+                    }
+                },
+                "sink_pads" : {
+                    "default" : {
+                        "peer_element" : "file_src",
+                        "peer_pad" : "src_pad"
+                    }
+                }
+            }
+        }
+    }
+    ,
+    "test_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/tmp/src.wav",
+                "loop_frames" : 160,
+                "src_pads" : {
+                    "src" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "common"
+                    }
+                }
+            },
+            "converter" : {
+                "element_type" : "Converter",
+                "loop_frames" : 160,
+                "rate" : 48000,
+                "sink_pads" : {
+                    "common" : {
+                        "format" : ""
+                    }
+                }
+            }
+        }
+    },
+    "key_manager" : {
+        "built_in_executor_threads" : 2,     // optional
+        "behaviors" : {
+            "behavior_1" : {
+                "key1" : {
+                    "input_device" : "sunxi-keyboard",
+                    "code" : 114,
+                    "motion" : "LongPressPreRelease",
+                    "duration_sec" : 5.5
+                },
+                "key2" : {
+                    "input_device" : "sunxi-keyboard",
+                    "code" : 114,
+                    "motion" : "LongPressPreRelease",
+                    "duration_sec" : 5.5
+                }
+            },
+            "behavior_2" : {
+                "key1" : {
+                    "input_device" : "sunxi-keyboard",
+                    "code" : 115,
+                    "motion" : "Press"
+                }
+            }
+        }
+    },
+    "volume_manager" : {
+        "mute_switch" : {
+            "type" : "MuteSwitch",
+            "device" : "hw:audiocodec",
+            "numid" : 1,
+            // OR
+            "iface" : "MIXER",
+            "name" : "Mute Switch",
+            "mute_value" : 0,
+            "unmute_value" : 1,
+            //"default" : "unmute"
+        },
+        "foobar_volume" : {
+            "type" : "VolumeControl",
+            "device" : "hw:audiocodec",
+            "iface" : "MIXER",
+            "name" : "Foobar Volume",
+            "valid_min" : 0,
+            "valid_max" : 100,
+            //"default" : 75
+        }
+    }
+}

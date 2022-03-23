@@ -1,0 +1,54 @@
+** 此文件对可能出现的疑惑进行解答 **
+
+目录:
+1. 修改private.conf后,进入menuconfig并不生效
+2. 添加测试用例后编译并没生成对应tinatest.json配置文件
+3. 添加测试用例后编译并没有编译测试用例源码
+4. 设置了run_time_min/run_time_hour没效果
+5. 配置项中的局部和全局含义是什么?
+
+============================分割线===========================
+
+1. 修改private.conf后,进入menuconfig并不生效
+----------------------------------------------
+   修改private.conf后需要先后用del_testcase.sh && add_testcase.sh重新生成config文件
+   若要重新加载默认值(修改private.conf的配置项值),根据menuconfig的机制,需要:
+       取消测试用例的选择 -> 保存配置 -> 退出menuconfig -> 重新进入menuconfig
+
+2. 添加测试用例后编译并没生成对应tinatest.json配置文件
+----------------------------------------------
+   用add_testcase.sh添加测试用例后需要进入menuconfig选中对应的测试用例,保存配置后再编译.
+   另外,在menuconfig中使能tinatest的 "Customize TinaTest Options" 定制配置项的情况下才会根据
+   配置生成新的tinatest.json,否则只会使用 tinatest/src/config/tinatest.json 的配置文件.
+   此默认的配置文件作为客户量产的功能测试的配置文件,只使能了客户量产用到的基本的功能测试用例.
+
+3. 添加测试用例后编译并没有编译测试用例源码
+----------------------------------------------
+   为了剔除tinatest不需要的测试用例,缩减安装包大小,tinatest修改为只有在menuconfig选择测试用
+   例后才编译对应的测试用例,因此只需要在menuconfig中选择对应的测试用例即可.
+
+4. 设置了run_time_min/run_time_hour没效果
+----------------------------------------------
+   默认设置run_time_sec为10000,在不更改run_time_sec的前提下直接设置run_time_min/run_time_hour
+   相当于在默认10000秒的前提下加上设置的min/hour.
+   设置 run_time_sec 是直接修改系统的变量,而设置run_time_min/run_time_hour是在原先变量上增加.
+   因此假设需要设置1min的时间限制,需要先把 run_time_sec 复0,再设置 run_time_min,即:
+       "run_time_sec" : 0,
+       "run_time_min" : 1
+
+5. 配置项中的局部和全局含义是什么?
+----------------------------------------------
+   系统配置(/sys)分为4类:
+       节点-配置 : 测试用例节点配置项
+       全局-限制 : /sys/global/limit - 控制tinatest的行为
+       全局-信息 : /sys/global/info - 配置collectd采集的系统环境信息
+       局部-限制 : /sys/local/limit - 测试用例可个性定制的用例限制
+       局部-信息 : /sys/local/info - 测试用例可个性定制的用例信息采集
+   ---------------------
+   全局 指 只能在/sys/global中修改,测试用例配置节点中配置无效,作用范围为所有测试用例
+   局部 指 既能在/sys/global中修改,也能在测试用例配置节点中配置,且测试用例节点中的配置
+           会覆盖/sys/global中的配置,作用范围为配置项所在的测试用例
+   ---------------------
+   需要注意的是,局部配置项有优先级:
+      [ 默认值 < /sys/local配置节点 < 测试用例节点个性配置 ]
+   因此,在/sys/local中修改后,如果节点没定制配置,则会使用/sys/local的配置值

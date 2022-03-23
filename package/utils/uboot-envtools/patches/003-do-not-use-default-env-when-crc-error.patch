@@ -1,0 +1,14 @@
+diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
+index eeb8545..12fc692 100644
+--- a/tools/env/fw_env.c
++++ b/tools/env/fw_env.c
+@@ -1325,6 +1325,9 @@ int fw_env_open(void)
+ 		if (!crc0_ok) {
+ 			fprintf (stderr,
+ 				"Warning: Bad CRC, using default environment\n");
++			fprintf (stderr,
++				"Error: Please reboot, uboot will fix the environment\n");
++			return -1;
+ 			memcpy(environment.data, default_environment, sizeof default_environment);
+ 		}
+ 	} else {

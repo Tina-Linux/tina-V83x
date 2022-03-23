@@ -1,0 +1,35 @@
+package config
+
+config nativepoower properties
+	option awake_timeout -1
+	option current_scene unknown
+
+config scene boot_complete
+	option cpu_hot 1
+	option cpu_gov interactive
+
+config scene performance
+	option cpu_hot 0
+	option cpu_gov performance
+	option cpu_online all
+
+config scene only_music
+	option cpu_hot 1
+	option cpu_gov interactive
+	option dram_adaptive 0
+	option dram_freq_max 168000
+
+config scene other
+	option bootlock 0
+	option roomage 0,0,0,0,1152000,4,0,0
+	option cpu_freq 115200
+	option cpu_freq_max 115200
+	option cpu_freq_min 480000
+	option cpu_gov performance
+	option cpu_hot 1
+	option cpu_online 0
+	option gpu_freq max
+	option dram_freq_adaptive 1
+	option dram_freq 552000
+	option dram_freq_max 552000
+	option dram_freq_min 168000

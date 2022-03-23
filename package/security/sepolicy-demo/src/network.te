@@ -1,0 +1,28 @@
+# netif daemon
+type network, domain;
+# permissive network;
+type network_exec, exec_type, file_type;
+
+init_daemon_domain(network)
+# domain_auto_trans(network,busybox_exec,busybox)
+# domain_auto_trans(network,shell_exec,shell)
+# domain_auto_trans(network,ubusd_exec,ubusd)
+
+# allow network system_file:file { execute execute_no_trans open execmod };
+
+# allow network init:fifo_file { read write };
+# allow network console_device:chr_file r_file_perms;
+# allow network serial_device:chr_file r_file_perms;
+
+# allow network { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow network { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+#  allow network etc_initd:dir { search open read getattr };
+
+# allow network usermodehelper:file r_file_perms;
+
+# allow network tmpfs:sock_file rw_file_perms;
+
+# allow network ubusd:unix_stream_socket connectto;
+
+

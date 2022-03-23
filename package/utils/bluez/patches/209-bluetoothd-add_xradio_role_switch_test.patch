@@ -1,0 +1,103 @@
+diff --git a/profiles/audio/a2dp.c b/profiles/audio/a2dp.c
+index b391fc2..045f038 100644
+--- a/profiles/audio/a2dp.c
++++ b/profiles/audio/a2dp.c
+@@ -1557,6 +1557,39 @@ drop:
+ 	g_io_channel_shutdown(io, TRUE, NULL);
+ }
+ 
++#ifndef XRADIO_ROLE_TEST_PATH_NAME
++#define XRADIO_ROLE_TEST_PATH_NAME "/etc/bluetooth/role_test.conf"
++#endif
++/*
++ * for Xradio master/slave role switch test
++ *
++ * return TRUE if master (default), or FALSE if slave
++ */
++static gboolean role_switch_test(void)
++{
++	FILE *fd = NULL;
++	char role[10];
++	gboolean ret = TRUE;
++
++	fd = fopen(XRADIO_ROLE_TEST_PATH_NAME, "r");
++	if (!fd) {
++		printf("Opening %s failed\n", XRADIO_ROLE_TEST_PATH_NAME);
++		return ret;
++	}
++
++	fscanf(fd, "%s", role);
++	if (!strncasecmp(role, "master", strlen("master")))
++		ret = TRUE;
++	else if (!strncasecmp(role, "slave", strlen("slave")))
++		ret = FALSE;
++	else
++		printf("Reading %s: unspecified role\n", XRADIO_ROLE_TEST_PATH_NAME);
++
++	fclose(fd);
++
++	return ret;
++}
++
+ static bool a2dp_server_listen(struct a2dp_server *server)
+ {
+ 	GError *err = NULL;
+@@ -1569,7 +1602,7 @@ static bool a2dp_server_listen(struct a2dp_server *server)
+ 				btd_adapter_get_address(server->adapter),
+ 				BT_IO_OPT_PSM, AVDTP_PSM,
+ 				BT_IO_OPT_SEC_LEVEL, BT_IO_SEC_MEDIUM,
+-				BT_IO_OPT_MASTER, true,
++				BT_IO_OPT_MASTER, role_switch_test(),
+ 				BT_IO_OPT_INVALID);
+ 	if (server->io)
+ 		return true;
+diff --git a/profiles/audio/avrcp.c b/profiles/audio/avrcp.c
+index 37bc291..5fd6582 100644
+--- a/profiles/audio/avrcp.c
++++ b/profiles/audio/avrcp.c
+@@ -4019,11 +4019,44 @@ static void state_changed(struct btd_device *device, avctp_state_t old_state,
+ 	}
+ }
+ 
++#ifndef XRADIO_ROLE_TEST_PATH_NAME
++#define XRADIO_ROLE_TEST_PATH_NAME "/etc/bluetooth/role_test.conf"
++#endif
++/*
++ * for Xradio master/slave role switch test
++ *
++ * return TRUE if master (default), or FALSE if slave
++ */
++static gboolean role_switch_test(void)
++{
++	FILE *fd = NULL;
++	char role[10];
++	gboolean ret = TRUE;
++
++	fd = fopen(XRADIO_ROLE_TEST_PATH_NAME, "r");
++	if (!fd) {
++		printf("Opening %s failed\n", XRADIO_ROLE_TEST_PATH_NAME);
++		return ret;
++	}
++
++	fscanf(fd, "%s", role);
++	if (!strncasecmp(role, "master", strlen("master")))
++		ret = TRUE;
++	else if (!strncasecmp(role, "slave", strlen("slave")))
++		ret = FALSE;
++	else
++		printf("Reading %s: unspecified role\n", XRADIO_ROLE_TEST_PATH_NAME);
++
++	fclose(fd);
++
++	return ret;
++}
++
+ static struct avrcp_server *avrcp_server_register(struct btd_adapter *adapter)
+ {
+ 	struct avrcp_server *server;
+ 
+-	if (avctp_register(adapter, TRUE) < 0)
++	if (avctp_register(adapter, role_switch_test()) < 0)
+ 		return NULL;
+ 
+ 	server = g_new0(struct avrcp_server, 1);

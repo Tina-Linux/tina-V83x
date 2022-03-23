@@ -1,0 +1,8 @@
+menuconfig TINATEST_BASE_DISPLAY
+    bool "display"
+
+if TINATEST_BASE_DISPLAY
+    source displyiftester/Config.in
+    source capturetester/Config.in
+    source fbshottester/Config.in
+endif

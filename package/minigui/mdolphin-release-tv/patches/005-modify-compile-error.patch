@@ -1,0 +1,324 @@
+diff -uNrp mdolphin-release-tv/src/mdtv_app.cpp mdolphin-release-tv/src/mdtv_app.cpp
+--- a/src/mdtv_app.cpp	2017-05-29 15:19:43.000000000 +0800
++++ b/src/mdtv_app.cpp	2018-05-14 16:46:46.478273762 +0800
+@@ -44,7 +44,7 @@ static PLOGFONT cap_font = NULL;
+ static PLOGFONT ctrl_font = NULL;
+ static PLOGFONT utf8_font = NULL;
+ 
+-static int MDTVMainWndProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam);
++static LRESULT MDTVMainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+ 
+ // font
+ typedef struct _DEVFONTINFO DEVFONTINFO;
+@@ -335,7 +335,7 @@ static HWND CreateMDTVMainWndWithAnimati
+      mdtv_this_desktop_menucmd_handler,
+  };
+ 
+-int main_hook (void* p_hWnd, HWND dst_wnd, int msg, WPARAM wParam, LPARAM lParam)
++int main_hook (void* p_hWnd, HWND dst_wnd, UINT msg, WPARAM wParam, LPARAM lParam)
+ {
+ #if 0
+     if( msg == MSG_KEYUP && wParam == SCANCODE_SLASH){
+@@ -349,7 +349,7 @@ int main_hook (void* p_hWnd, HWND dst_wn
+     return HOOK_GOON;
+ }
+ 
+-static int MDTVMainWndProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT MDTVMainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     switch(message)
+     {
+diff -uNrp mdolphin-release-tv/src/mdtv_browser.cpp mdolphin-release-tv/src/mdtv_browser.cpp
+--- a/src/mdtv_browser.cpp	2017-05-29 15:19:43.000000000 +0800
++++ b/src/mdtv_browser.cpp	2018-05-14 17:28:35.474201379 +0800
+@@ -607,7 +607,7 @@ int mdtv_set_browser_title_ime_status( H
+     SVGUI_BLOCK_I   *block;
+     HWND hBrowserTitleWnd;
+ 
+-    hBrowserTitleWnd = GetWindowAdditionalData2(hBrowserMainWnd);
++    hBrowserTitleWnd = (HWND)GetWindowAdditionalData2(hBrowserMainWnd);
+     if( !hBrowserTitleWnd ){
+         return -1;
+     }
+@@ -801,7 +801,7 @@ static void OnLButtonDown (HWND hWnd, in
+     if (block == NULL)
+         return ;
+ 
+-    hBrowserWnd = GetWindowAdditionalData2(hWnd);
++    hBrowserWnd = (HWND)GetWindowAdditionalData2(hWnd);
+     if( !hBrowserWnd )
+         return ;
+     switch(block->id){
+@@ -822,7 +822,7 @@ static void OnLButtonDown (HWND hWnd, in
+     }
+     return ;
+ }
+-static int BrowserTitleWndProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT BrowserTitleWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     HWND hBrowserWnd;
+     BrowserTitleWndInfo *p_info;
+@@ -836,7 +836,7 @@ static int BrowserTitleWndProc(HWND hWnd
+             switch(wParam)
+             {
+                 case SCANCODE_ESCAPE:
+-                    hBrowserWnd = GetWindowAdditionalData2(hWnd);
++                    hBrowserWnd = (HWND)GetWindowAdditionalData2(hWnd);
+                     if( hBrowserWnd ){
+                         SendMessage(hBrowserWnd,MSG_CLOSE,0,0);
+                     }
+@@ -905,8 +905,8 @@ HWND create_browser_title_wnd(HWND mdolp
+         fprintf(stderr, "[Error]Create browser title window!\n");
+         return HWND_INVALID;
+     }
+-    SetWindowAdditionalData2(hMDolphinTitleWnd, mdolphin_main_hwnd);
+-    SetWindowAdditionalData2(mdolphin_main_hwnd, hMDolphinTitleWnd);
++    SetWindowAdditionalData2(hMDolphinTitleWnd, (DWORD)mdolphin_main_hwnd);
++    SetWindowAdditionalData2(mdolphin_main_hwnd, (DWORD)hMDolphinTitleWnd);
+ 
+     BrowserTitleWndInfo *pBrowserTitleWndInfo = (BrowserTitleWndInfo *)malloc(sizeof(BrowserTitleWndInfo));
+     if( !pBrowserTitleWndInfo ){
+@@ -994,7 +994,7 @@ static int move_mouse_browser(HWND hWnd,
+     RECT    rc;
+ 
+     GetCursorPos( &point );
+-    hBrowserTitleWnd = GetWindowAdditionalData2(hWnd);
++    hBrowserTitleWnd = (HWND)GetWindowAdditionalData2(hWnd);
+     if( GetWindowRect( hBrowserTitleWnd, &rc) ){
+         title_height = RECTH(rc);
+     }
+@@ -1047,7 +1047,7 @@ static int move_mouse_browser(HWND hWnd,
+ }
+ 
+ static int alwaysKeyPressCnt = 0;
+-static int MDolphinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT MDolphinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     char *url = NULL;
+     HWND hBrowserWnd = HWND_NULL;
+@@ -1167,7 +1167,7 @@ static int MDolphinProc (HWND hWnd, int
+ #endif
+                 case SCANCODE_F2:
+                     {
+-                        hBrowserTitleWnd = GetWindowAdditionalData2(hWnd);
++                        hBrowserTitleWnd = (HWND)GetWindowAdditionalData2(hWnd);
+                         if( hBrowserTitleWnd == HWND_INVALID ){
+                             return -1;
+                         }
+@@ -1198,7 +1198,7 @@ static int MDolphinProc (HWND hWnd, int
+                     if( g_md_status.m_md_status == MDStatusMouse ){
+                         x_pos = (wParam-SCANCODE_1)%3;
+                         y_pos = (wParam-SCANCODE_1)/3;
+-                        hBrowserTitleWnd = GetWindowAdditionalData2(hWnd);
++                        hBrowserTitleWnd = (HWND)GetWindowAdditionalData2(hWnd);
+                         if( GetWindowRect( hBrowserTitleWnd, &rc) ){
+                             title_height = RECTH(rc);
+                         }
+@@ -1374,7 +1374,7 @@ static int MDolphinProc (HWND hWnd, int
+                 case esc:
+                     {
+ #if HAVE_BROWSER_TITLE
+-                        hBrowserTitleWnd = GetWindowAdditionalData2(hWnd);
++                        hBrowserTitleWnd = (HWND)GetWindowAdditionalData2(hWnd);
+                         if( hBrowserTitleWnd ){
+                             SendMessage(hBrowserTitleWnd,MSG_CLOSE,0,0);
+                         }
+@@ -1426,7 +1426,7 @@ HWND  mdtv_CreateWebSiteNavigate_1(const
+         mdtv_CreateImePinying ();
+ #endif
+     if (hMainWnd == HWND_INVALID)
+-        return -1;
++        return (HWND)-1;
+     return hMainWnd;
+ }
+ 
+diff -uNrp mdolphin-release-tv/src/mdtv_finance.cpp mdolphin-release-tv/src/mdtv_finance.cpp
+--- a/src/mdtv_finance.cpp	2017-05-29 15:19:43.000000000 +0800
++++ b/src/mdtv_finance.cpp	2018-05-14 17:16:39.654222030 +0800
+@@ -11,12 +11,12 @@
+ #ifndef NDEBUG
+ #define DEBUG_TRACE(P) {fprintf (stderr, "FIXME: %s,%d,%s: %s\n", __FILE__, __LINE__, __FUNCTION__ ,(P));}
+ 
+-#define error(fmt...) fprintf (stderr, "mdtv_finance[ERROR]:"fmt)
+-#define debug(fmt...) fprintf (stderr, "mdtv_finance[DEBUG]:"fmt)
++#define error(fmt...) fprintf (stderr, "mdtv_finance[ERROR]:" fmt )
++#define debug(fmt...) fprintf (stderr, "mdtv_finance[DEBUG]:" fmt )
+ 
+ #else
+ #define DEBUG_TRACE(P) 
+-#define error(fmt...) fprintf (stderr, "mdtv_finance[ERROR]:"fmt)
++#define error(fmt...) fprintf (stderr, "mdtv_finance[ERROR]:" fmt )
+ #define debug(fmt...)
+ #endif
+ 
+@@ -1062,7 +1062,7 @@ static void FinanceOnLButtonDown(HWND hW
+     }// end switch(block->id)
+ }
+ 
+-static int FinanceWndProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT FinanceWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     HDC subdc_finance;
+     HDC hdc;
+@@ -1150,7 +1150,7 @@ static int FinanceWndProc(HWND hWnd, int
+ 
+ 
+ 
+-static int FinanceBigWndProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT FinanceBigWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     HDC subdc_finance;
+     HDC hdc;
+diff -uNrp mdolphin-release-tv/src/mdtv_ime.cpp mdolphin-release-tv/src/mdtv_ime.cpp
+--- a/src/mdtv_ime.cpp	2017-05-29 15:19:42.000000000 +0800
++++ b/src/mdtv_ime.cpp	2018-05-14 17:29:54.566199097 +0800
+@@ -509,7 +509,7 @@ void  mdtv_ImeFunKeyMessageTranslate (HW
+         }
+ }
+ 
+-static int ImeWinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT ImeWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     switch (message) {
+         case MSG_CREATE:
+diff -uNrp mdolphin-release-tv/src/mdtv_mgphone.cpp mdolphin-release-tv/src/mdtv_mgphone.cpp
+--- a/src/mdtv_mgphone.cpp	2017-05-29 15:19:42.000000000 +0800
++++ b/src/mdtv_mgphone.cpp	2018-05-14 16:36:19.630291846 +0800
+@@ -2234,7 +2234,7 @@ static void show_ime_window(HWND hwnd, W
+     pthread_mutex_unlock (&mgphone_lock);
+ }
+ 
+-int phone_ime_win_proc(HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
++LRESULT phone_ime_win_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     MGI_PHONE_IME_DATA pdata;
+     HDC   hdc;
+diff -uNrp mdolphin-release-tv/src/mdtv_toolbar.cpp mdolphin-release-tv/src/mdtv_toolbar.cpp
+--- a/src/mdtv_toolbar.cpp	2017-05-29 15:19:43.000000000 +0800
++++ b/src/mdtv_toolbar.cpp	2018-05-14 16:57:20.894255459 +0800
+@@ -32,7 +32,7 @@ static MSGHOOK old_hook;
+ 
+ #else
+ #define DEBUG_TRACE(P) 
+-#define error(fmt...) fprintf (stderr, "mdtv_toolbar[ERROR]:"fmt)
++#define error(fmt...) fprintf (stderr, "mdtv_toolbar[ERROR]:" fmt )
+ #define debug(fmt...)
+ #endif
+ 
+@@ -971,7 +971,7 @@ void OnMsgClose(HWND hWnd)
+     RegisterKeyMsgHook ((&g_hMainWnd), old_hook);
+ }
+ 
+-static int ToolbarProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT ToolbarProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     MSG msg;
+     switch (message)
+@@ -1006,7 +1006,7 @@ static int ToolbarProc(HWND hWnd, int me
+     return DefaultSVGUIMainWinProc(hWnd, message, wParam, lParam);
+ }
+ 
+-int my_hook (void* p_hWnd, HWND dst_wnd, int msg, WPARAM wParam, LPARAM lParam)
++int my_hook (void* p_hWnd, HWND dst_wnd, UINT msg, WPARAM wParam, LPARAM lParam)
+ {
+ #if 0
+     if( msg == MSG_KEYUP && wParam == SCANCODE_ESCAPE){
+diff -uNrp mdolphin-release-tv/src/mdtv_tooltipwin.cpp mdolphin-release-tv/src/mdtv_tooltipwin.cpp
+--- a/src/mdtv_tooltipwin.cpp	2017-05-29 15:19:42.000000000 +0800
++++ b/src/mdtv_tooltipwin.cpp	2018-05-14 17:34:41.626190816 +0800
+@@ -42,7 +42,7 @@
+         ShowWindow(hwnd, SW_HIDE);
+ }
+ 
+-int mdolphin_ToolTipWinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++LRESULT mdolphin_ToolTipWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     switch (message) 
+     {
+diff -uNrp mdolphin-release-tv/src/mdtv_weather.cpp mdolphin-release-tv/src/mdtv_weather.cpp
+--- a/src/mdtv_weather.cpp	2017-05-29 15:19:43.000000000 +0800
++++ b/src/mdtv_weather.cpp	2018-05-14 17:15:04.802224766 +0800
+@@ -14,12 +14,12 @@
+ #ifndef NDEBUG
+ #define DEBUG_TRACE(P) {fprintf (stderr, "FIXME: %s,%d,%s: %s\n", __FILE__, __LINE__, __FUNCTION__ ,(P));}
+ 
+-#define error(fmt...) fprintf (stderr, "mdtv_weather[ERROR]:"fmt)
+-#define debug(fmt...) fprintf (stderr, "mdtv_weather[DEBUG]:"fmt)
++#define error(fmt...) fprintf (stderr, "mdtv_weather[ERROR]:" fmt )
++#define debug(fmt...) fprintf (stderr, "mdtv_weather[DEBUG]:" fmt )
+ 
+ #else
+ #define DEBUG_TRACE(P) 
+-#define error(fmt...) fprintf (stderr, "mdtv_weather[ERROR]:"fmt)
++#define error(fmt...) fprintf (stderr, "mdtv_weather[ERROR]:" fmt )
+ #define debug(fmt...)
+ #endif
+ 
+@@ -1055,7 +1055,7 @@ static void WeatherOnKeyupEnter(HWND hWn
+     }
+ }
+ 
+-static int WeatherWndProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT WeatherWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     HDC subdc_weather;
+     switch(message)
+@@ -1116,7 +1116,7 @@ static int WeatherWndProc(HWND hWnd, int
+     }
+     return DefaultSVGUIMainWinProc(hWnd, message, wParam, lParam);
+ }
+-static int WeatherBigWndProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT WeatherBigWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ //    RECT dst_rc;
+     HDC subdc_weather;
+diff -uNrp mdolphin-release-tv/src/mdtv_website.cpp mdolphin-release-tv/src/mdtv_website.cpp
+--- a/src/mdtv_website.cpp	2017-05-29 15:19:43.000000000 +0800
++++ b/src/mdtv_website.cpp	2018-05-14 17:34:05.598191855 +0800
+@@ -1300,7 +1300,7 @@ static void CloseWebsiteAndOpenBrowser (
+     mdtv_CreateWebSiteNavigate (url);
+ }
+ 
+-static int WebsiteDlgLevel3Proc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT WebsiteDlgLevel3Proc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ 
+     switch (message) 
+@@ -1570,7 +1570,7 @@ HWND CreateDlgLevel3 (HWND hParent,const
+ }
+ 
+ //static   HDC hd;
+-static int WebsiteDlgLevel2Proc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT WebsiteDlgLevel2Proc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     int selected_id;
+     float scale;
+@@ -1719,7 +1719,7 @@ static int WebsiteDlgLevel2Proc (HWND hW
+     return DefaultSVGUIMainWinProc (hWnd, message, wParam, lParam);
+ }
+ 
+-int CreateDlgLevel2 (HWND hParent)
++HWND CreateDlgLevel2 (HWND hParent)
+ {
+     HWND hMainWnd;
+     MAINWINCREATE CreateInfo;
+@@ -1772,6 +1772,6 @@ int CreateDlgLevel2 (HWND hParent)
+ 
+ void mdtv_CreateWebsiteWindow (HWND hParent)
+ {
+-    g_website_hwnd = CreateDlgLevel2 (hParent);
++    g_website_hwnd = (HWND)CreateDlgLevel2 (hParent);
+ }
+ 
+diff -uNrp mdolphin-release-tv/src/prompt_dialog.cpp mdolphin-release-tv/src/prompt_dialog.cpp
+--- a/src/prompt_dialog.cpp	2017-05-29 15:19:43.000000000 +0800
++++ b/src/prompt_dialog.cpp	2018-05-14 17:29:35.526199647 +0800
+@@ -19,7 +19,7 @@ extern int g_win_height;
+ 
+ static char *inputboxbuf;
+ static int inputboxbuflen;
+-static int InputBoxProc(HWND hDlg, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT InputBoxProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     if ( message == MSG_COMMAND ) {
+         if ( wParam == IDOK ) {

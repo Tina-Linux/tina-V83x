@@ -1,0 +1,91 @@
+#!/bin/sh
+
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+iwlist scanning 2> /dev/null |
+    grep -e "Quality=" -e "ESSID:" -e "Encryption key:on" -e "IE:" -e "Pairwise Ciphers" -e "Authentication Suites" |
+    {
+    while read -r line; do
+        case "$line" in
+            ESSID:\"* )
+                ## Handling a new SSID. Print out previously processed SSID only if it is defined.
+                ## Note the different syntax based on WPA/WPA2 VS Open or WEP
+                if [ "$enc" == "Open" ] || [ "$enc" == "WEP" ]; then
+                    printf "%s\t%s\t%s\n" "$quality" "$enc" "$ssid"
+                elif [ -n "$ssid" ]; then
+                    printf "%s\t%s-%s-%s-%s\t%s\n" "$quality" "$enc" "$ccmp" "$tkip" "$psk" "$ssid"
+                fi
+
+                ## Initialize the variables
+                ssid=$(echo "${line%?}" | sed s/ESSID:\"//)
+                enc="Open"
+                ccmp=""
+                tkip=""
+                psk=""
+                quality=""
+                ;;
+            Quality=* )
+                ## Set signal quality variables
+                quality=$(echo "$line" | sed s/.*"Signal level="// | sed s/" dBm".*/" dBm"/)
+                ;;
+            Encryption* )
+                ## Encryption is on. We assume it's WEP by default, if we later find out it's WPA or WPA2 we override it
+                enc="WEP"
+                ;;
+            IE:* )
+                ## Set Encryption to be WPA or WPA2
+                case "$line" in
+                    *WPA2* )
+                        enc="WPA2"
+                        ccmp=""
+                        tkip=""
+                        psk=""
+                        ;;
+                    *WPA* )
+                        if [ "$enc" != "WPA2" ]; then
+                            enc="WPA"
+                            ccmp=""
+                            tkip=""
+                            psk=""
+                        fi
+                        ;;
+                esac
+                ;;
+            Pairwise* )
+                ## Set the appropriate cipher variables
+                if [ -z "$ccmp" -a $(echo $line | grep "CCMP" | wc -l) -ne 0 ]; then
+                    ccmp="CCMP"
+                fi
+                if [ -z "$tkip" -a $(echo $line | grep "TKIP" | wc -l) -ne 0 ]; then
+                    tkip="TKIP"
+                fi
+                ;;
+            Authentication* )
+                ## Set the appropriate Authentication Suite variable
+                if [ -z "$psk" -a $(echo $line | grep "PSK" | wc -l) -ne 0 ]; then
+                    psk="PSK";
+                fi
+                ;;
+            * ) ;;
+       esac
+    done
+
+    if [ "$enc" == "Open" ] || [ "$enc" == "WEP" ]; then
+        printf "%s\t%s\t%s\n" "$quality" "$enc" "$ssid"
+    elif [ -n "$ssid" ]; then
+        printf "%s\t%s-%s-%s-%s\t%s\n" "$quality" "$enc" "$ccmp" "$tkip" "$psk" "$ssid"
+    fi
+}

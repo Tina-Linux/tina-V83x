@@ -1,0 +1,8 @@
+mali-utgard: r8p1-00rel0 um 012
+
+Build Parameters:
+CROSS_COMPILE=/home/dengbo/workspace/gpu-src-utgard-r8p1/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/aarch64-openwrt-linux-musl-
+TARGET_TOOLCHAIN=aarch64-linux-gcc
+TARGET_PLATFORM=default_8a
+CONFIG=release
+VARIANT=mali400-gles-linux-wayland-drm-dma_buf-no_Werror

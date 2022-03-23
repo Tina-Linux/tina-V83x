@@ -1,0 +1,26 @@
+# rcinit -
+type rcinit, domain;
+type rcinit_exec, exec_type, file_type;
+# permissive rcinit;
+init_daemon_domain(rcinit)
+# domain_auto_trans(rcinit,audio_exec,audio);
+# domain_auto_trans(rcinit,busybox_exec,busybox)
+# # domain_auto_trans(adbd,adbd_exec,adbd)
+# allow rcinit rcinit_exec:file rwx_file_perms;
+
+# allow rcinit console_device:chr_file rw_file_perms;
+# allow rcinit sysfs:file rw_file_perms;
+
+# allow rcinit system_file:file { execute execute_no_trans open execmod };
+# allow rcinit shell_exec:file rx_file_perms;
+# allow rcinit shell_exec:lnk_file r_file_perms;
+# allow rcinit etc_initd:dir search;
+# allow rcinit etc_initd:file r_file_perms;
+
+# allow rcinit {mount_exec temp_exec}:file {read getattr execute execute_no_trans open execmod};
+# allow rcinit {mount_exec temp_exec}:lnk_file { getattr open read execute };
+# allow rcinit etc_selinux:dir { search open read getattr };
+# allow rcinit etc_selinux:{ file lnk_file } { open read getattr };
+
+# allow rcinit { nand_device mmc_device }:blk_file getattr;
+# allow rcinit etc_passwd:file r_file_perms;

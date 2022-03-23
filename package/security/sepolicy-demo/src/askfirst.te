@@ -1,0 +1,11 @@
+# askfirst daemon
+type askfirst, domain;
+type askfirst_exec, exec_type, file_type;
+# permissive askfirst;
+domain_auto_trans(init,askfirst_exec,askfirst)
+domain_auto_trans(askfirst,shell_exec,shell)
+domain_auto_trans(askfirst,busybox_exec,busybox)
+
+allow askfirst { serial_device tty_device }:chr_file { ioctl read write };
+allow askfirst etc_selinux:dir { search open read getattr };
+# allow askfirst shell:file { execute open execmod };

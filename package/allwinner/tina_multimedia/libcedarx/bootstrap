@@ -1,0 +1,23 @@
+# 'ltmain.sh'
+libtoolize
+
+# 'aclocal.m4'
+# 'autom4te.cache/'
+aclocal
+
+# 'cdx_config.h.in'
+autoheader
+
+autoconf --initialization
+
+# aclocal.m4
+# ar-lib
+# autom4te.cache/
+# compile
+# config.guess
+# cdx_config.h.in
+# config.sub
+# depcomp
+# install-sh
+# missing
+automake --add-missing

@@ -1,0 +1,20 @@
+#generate configure.in
+autoscan
+#mv configure.scan configure.in
+
+#generate some files
+touch NEWS
+touch README
+touch ChangeLog
+touch AUTHORS
+
+#copy the binary-tools
+#cp /usr/share/automake-1.11/depcomp ./
+#cp /usr/share/automake-1.11/compile ./
+
+#generate the configure
+aclocal
+autoconf
+automake -a
+
+

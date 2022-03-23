@@ -1,0 +1,142 @@
+diff --git a/ext/wayland/gstwaylandsink.c b/ext/wayland/gstwaylandsink.c
+index c697ef7..111a869 100644
+--- a/ext/wayland/gstwaylandsink.c
++++ b/ext/wayland/gstwaylandsink.c
+@@ -71,18 +71,41 @@ enum
+ GST_DEBUG_CATEGORY (gstwayland_debug);
+ #define GST_CAT_DEFAULT gstwayland_debug
+
+-#define WL_VIDEO_FORMATS \
+-    "{ BGRx, BGRA, RGBx, xBGR, xRGB, RGBA, ABGR, ARGB, RGB, BGR, " \
+-    "RGB16, BGR16, YUY2, YVYU, UYVY, AYUV, NV12, NV21, NV16, " \
+-    "YUV9, YVU9, Y41B, I420, YV12, Y42B, v308 }"
+-
+-static GstStaticPadTemplate sink_template = GST_STATIC_PAD_TEMPLATE ("sink",
+-    GST_PAD_SINK,
+-    GST_PAD_ALWAYS,
+-    GST_STATIC_CAPS (GST_VIDEO_CAPS_MAKE (WL_VIDEO_FORMATS) ";"
+-        GST_VIDEO_CAPS_MAKE_WITH_FEATURES (GST_CAPS_FEATURE_MEMORY_DMABUF,
+-            WL_VIDEO_FORMATS))
+-    );
++#define GST_WAYLANDSINK_TEMPLATE_CAPS \
++         GST_VIDEO_CAPS_MAKE ("BGRx") \
++         "; " GST_VIDEO_CAPS_MAKE ("BGRA") \
++         "; " GST_VIDEO_CAPS_MAKE ("RGBx") \
++         "; " GST_VIDEO_CAPS_MAKE ("xBGR") \
++         "; " GST_VIDEO_CAPS_MAKE ("xRGB") \
++         "; " GST_VIDEO_CAPS_MAKE ("RGBA") \
++         "; " GST_VIDEO_CAPS_MAKE ("ABGR") \
++         "; " GST_VIDEO_CAPS_MAKE ("ARGB") \
++         "; " GST_VIDEO_CAPS_MAKE ("RGB") \
++         "; " GST_VIDEO_CAPS_MAKE ("BGR") \
++         "; " GST_VIDEO_CAPS_MAKE ("RGB16") \
++         "; " GST_VIDEO_CAPS_MAKE ("BGR16") \
++         "; " GST_VIDEO_CAPS_MAKE ("YUY2") \
++         "; " GST_VIDEO_CAPS_MAKE ("YVYU") \
++         "; " GST_VIDEO_CAPS_MAKE ("UYVY") \
++         "; " GST_VIDEO_CAPS_MAKE ("AYUV") \
++         "; " GST_VIDEO_CAPS_MAKE ("NV12") \
++         "; " GST_VIDEO_CAPS_MAKE ("NV21") \
++         "; " GST_VIDEO_CAPS_MAKE ("NV16") \
++         "; " GST_VIDEO_CAPS_MAKE ("YUV9") \
++         "; " GST_VIDEO_CAPS_MAKE ("YVU9") \
++         "; " GST_VIDEO_CAPS_MAKE ("Y41B") \
++         "; " GST_VIDEO_CAPS_MAKE ("I420") \
++         "; " GST_VIDEO_CAPS_MAKE ("YV12") \
++         "; " GST_VIDEO_CAPS_MAKE ("Y42B") \
++         "; " GST_VIDEO_CAPS_MAKE ("v308") ", " \
++         "framerate = (fraction) [ 0, MAX ], " \
++         "width = (int) [ 1, MAX ], " "height = (int) [ 1, MAX ]"
++
++ static GstStaticPadTemplate sink_template = GST_STATIC_PAD_TEMPLATE ("sink",
++     GST_PAD_SINK,
++     GST_PAD_ALWAYS,
++     GST_STATIC_CAPS (GST_WAYLANDSINK_TEMPLATE_CAPS)
++     );
+
+ static void gst_wayland_sink_get_property (GObject * object,
+     guint prop_id, GValue * value, GParamSpec * pspec);
+@@ -768,18 +791,28 @@ gst_wayland_sink_show_frame (GstVideoSink * vsink, GstBuffer * buffer)
+   /* update video info from video meta */
+   mem = gst_buffer_peek_memory (buffer, 0);
+
+-  old_vinfo = sink->video_info;
+   vmeta = gst_buffer_get_video_meta (buffer);
+   if (vmeta) {
+     gint i;
+
+     for (i = 0; i < vmeta->n_planes; i++) {
+-      sink->video_info.offset[i] = vmeta->offset[i];
+-      sink->video_info.stride[i] = vmeta->stride[i];
++         /* When format is YV12 change u and v offset */
++         if (vmeta->format == GST_VIDEO_FORMAT_YV12) {
++             if (i == 0)
++                 sink->video_info.offset[i] = vmeta->offset[i];
++             else
++                 sink->video_info.offset[i] = vmeta->offset[vmeta->n_planes - i];
++             sink->video_info.stride[i] = vmeta->stride[i];
++         } else {
++             sink->video_info.offset[i] = vmeta->offset[i];
++             sink->video_info.stride[i] = vmeta->stride[i];
++         }
+     }
+     sink->video_info.size = gst_buffer_get_size (buffer);
+   }
+
++  old_vinfo = sink->video_info;
++
+   GST_LOG_OBJECT (sink, "buffer %p does not have a wl_buffer from our "
+       "display, creating it", buffer);
+
+@@ -826,7 +859,9 @@ gst_wayland_sink_show_frame (GstVideoSink * vsink, GstBuffer * buffer)
+         gst_buffer_pool_config_get_params (config, &caps, NULL, NULL, NULL);
+
+         /* revert back to default strides and offsets */
+-        gst_video_info_from_caps (&sink->video_info, caps);
++        /* if format is YV12 not revert back */
++        if (vmeta->format != GST_VIDEO_FORMAT_YV12)
++          gst_video_info_from_caps (&sink->video_info, caps);
+         gst_buffer_pool_config_set_params (config, caps, sink->video_info.size,
+             2, 0);
+
+diff --git a/ext/wayland/wlshmallocator.c b/ext/wayland/wlshmallocator.c
+index 8207113..5e384fd 100644
+--- a/ext/wayland/wlshmallocator.c
++++ b/ext/wayland/wlshmallocator.c
+@@ -198,9 +198,12 @@ gst_wl_shm_memory_construct_wl_buffer (GstMemory * mem, GstWlDisplay * display,
+   struct wl_shm_pool *wl_pool;
+   struct wl_buffer *wbuffer;
+
+-  if (!gst_wl_shm_validate_video_info (info)) {
+-    GST_DEBUG_OBJECT (display, "Unsupported strides and offsets.");
+-    return NULL;
++  /* if format is YV12 will not check info */
++  if (info->finfo->format != GST_VIDEO_FORMAT_YV12) {
++    if (!gst_wl_shm_validate_video_info (info)) {
++      GST_DEBUG_OBJECT (display, "Unsupported strides and offsets.");
++      return NULL;
++    }
+   }
+
+   width = GST_VIDEO_INFO_WIDTH (info);
+diff --git a/ext/wayland/wlvideoformat.c b/ext/wayland/wlvideoformat.c
+index 77cfac8..dd0f64e 100644
+--- a/ext/wayland/wlvideoformat.c
++++ b/ext/wayland/wlvideoformat.c
+@@ -78,7 +78,7 @@ static const wl_ShmVideoFormat shm_formats[] = {
+   {WL_SHM_FORMAT_YVU410, GST_VIDEO_FORMAT_YVU9},
+   {WL_SHM_FORMAT_YUV411, GST_VIDEO_FORMAT_Y41B},
+   {WL_SHM_FORMAT_YUV420, GST_VIDEO_FORMAT_I420},
+-  {WL_SHM_FORMAT_YVU420, GST_VIDEO_FORMAT_YV12},
++  {WL_SHM_FORMAT_YUV420, GST_VIDEO_FORMAT_YV12},
+   {WL_SHM_FORMAT_YUV422, GST_VIDEO_FORMAT_Y42B},
+   {WL_SHM_FORMAT_YUV444, GST_VIDEO_FORMAT_v308},
+ };
+@@ -110,6 +110,7 @@ static const wl_DmabufVideoFormat dmabuf_formats[] = {
+   {DRM_FORMAT_RGB565, GST_VIDEO_FORMAT_RGB16},
+   {DRM_FORMAT_YUYV, GST_VIDEO_FORMAT_YUY2},
+   {DRM_FORMAT_NV12, GST_VIDEO_FORMAT_NV12},
++  {DRM_FORMAT_YVU420, GST_VIDEO_FORMAT_YV12},
+ };
+
+ enum wl_shm_format

@@ -1,0 +1,356 @@
+# Rules for all domains.
+
+# Allow reaping by init.
+allow domain init:process sigchld;
+
+# Read access to properties mapping.
+allow domain kernel:fd use;
+allow domain tmpfs:file { read getattr };
+allow domain tmpfs:lnk_file { read getattr };
+
+# Search /storage/emulated tmpfs mount.
+allow domain tmpfs:dir r_dir_perms;
+
+# binder adjusts the nice value during IPC.
+allow domain self:capability sys_nice;
+
+# Intra-domain accesses.
+allow domain self:process {
+    fork
+    sigchld
+    sigkill
+    sigstop
+    signull
+    signal
+    getsched
+    setsched
+    getsession
+    getpgid
+    setpgid
+    getcap
+    setcap
+    getattr
+    setrlimit
+};
+allow domain self:fd use;
+allow domain self:dir r_dir_perms;
+allow domain self:lnk_file r_file_perms;
+allow domain self:{ fifo_file file } rw_file_perms;
+allow domain self:unix_dgram_socket { create_socket_perms sendto };
+allow domain self:unix_stream_socket { create_stream_socket_perms connectto };
+
+# Inherit or receive open files from others.
+allow domain init:fd use;
+# allow domain system:fd use;
+
+# Connect to adbd and use a socket transferred from it.
+# This is used for e.g. adb backup/restore.
+allow domain adbd:unix_stream_socket connectto;
+allow domain adbd:fd use;
+allow domain adbd:unix_stream_socket { getattr getopt read write shutdown };
+
+###
+### Talk to debuggerd.
+###
+# allow domain debuggerd:process sigchld;
+# allow domain debuggerd:unix_stream_socket connectto;
+# b/9858255 - debuggerd sockets are not getting properly labeled.
+# TODO: Remove this temporary workaround.
+# allow domain init:unix_stream_socket connectto;
+
+allow { domain - kernel } temp_exec:file {read getattr execute execute_no_trans open execmod};
+allow { domain - kernel } temp_exec:lnk_file { getattr open read execute };
+
+
+# Root fs.
+allow domain rootfs:dir r_dir_perms;
+allow domain rootfs:file r_file_perms;
+allow domain rootfs:lnk_file r_file_perms;
+
+# Device accesses.
+allow domain device:dir search;
+allow domain dev_type:lnk_file r_file_perms;
+allow domain devpts:dir search;
+allow domain device:file read;
+allow domain socket_device:dir r_dir_perms;
+allow domain owntty_device:chr_file rw_file_perms;
+allow domain null_device:chr_file rw_file_perms;
+allow domain zero_device:chr_file rw_file_perms;
+allow domain ashmem_device:chr_file rw_file_perms;
+allow domain binder_device:chr_file rw_file_perms;
+allow domain ptmx_device:chr_file rw_file_perms;
+allow domain alarm_device:chr_file r_file_perms;
+allow domain urandom_device:chr_file rw_file_perms;
+allow domain random_device:chr_file rw_file_perms;
+allow domain properties_device:file r_file_perms;
+allow domain init:key search;
+
+# Filesystem accesses.
+allow domain fs_type:filesystem getattr;
+allow domain fs_type:dir getattr;
+
+# System file accesses.
+allow domain system_file:dir r_dir_perms;
+allow domain system_file:file r_file_perms;
+allow domain system_file:file execute;
+allow domain system_file:lnk_file r_file_perms;
+
+# Read files already opened under /data.
+allow domain system_data_file:dir { search getattr };
+allow domain system_data_file:file { getattr read };
+allow domain system_data_file:lnk_file r_file_perms;
+
+# Read apk files under /data/app.
+allow domain apk_data_file:dir { getattr search };
+allow domain apk_data_file:file r_file_perms;
+allow domain apk_data_file:lnk_file r_file_perms;
+
+# Read /data/dalvik-cache.
+allow domain dalvikcache_data_file:dir { search getattr };
+allow domain dalvikcache_data_file:file r_file_perms;
+
+# Read already opened /cache files.
+allow domain cache_file:dir r_dir_perms;
+allow domain cache_file:file { getattr read };
+allow domain cache_file:lnk_file r_file_perms;
+
+# For /acct/uid/*/tasks.
+allow domain cgroup:dir { search write };
+allow domain cgroup:file w_file_perms;
+
+#Allow access to ion memory allocation device
+allow domain ion_device:chr_file rw_file_perms;
+
+# Read access to pseudo filesystems.
+r_dir_file(domain, proc)
+r_dir_file(domain, sysfs)
+r_dir_file(domain, sysfs_devices_system_cpu)
+r_dir_file(domain, inotify)
+r_dir_file(domain, cgroup)
+r_dir_file(domain, proc_net)
+allow domain proc_cpuinfo:file r_file_perms;
+
+# debugfs access
+allow domain debugfs:dir r_dir_perms;
+allow domain debugfs:file w_file_perms;
+
+# Get SELinux enforcing status.
+allow domain selinuxfs:dir r_dir_perms;
+allow domain selinuxfs:file r_file_perms;
+
+# security files
+allow domain security_file:dir { search getattr };
+allow domain security_file:file getattr;
+allow domain security_file:lnk_file r_file_perms;
+
+# read /etc/selinux/
+allow domain etc_selinux:dir { search open read getattr };
+allow domain etc_selinux:{ file lnk_file } { open read getattr };
+
+###
+### neverallow rules
+###
+
+# Do not allow any domain other than init or recovery to create unlabeled files.
+neverallow { domain -init} unlabeled:dir_file_class_set create;
+
+# Limit ability to ptrace or read sensitive /proc/pid files of processes
+# with other UIDs to these whitelisted domains.
+neverallow {
+  domain
+} self:capability sys_ptrace;
+
+# Limit device node creation to these whitelisted domains.
+neverallow {
+  domain
+  -kernel
+  -init
+} self:capability mknod;
+
+# Limit raw I/O to these whitelisted domains.
+neverallow { domain -kernel -init -lvm2 } self:capability sys_rawio;
+
+# No process can map low memory (< CONFIG_LSM_MMAP_MIN_ADDR).
+neverallow domain self:memprotect mmap_zero;
+
+# No domain needs mac_override as it is unused by SELinux.
+neverallow domain self:capability2 mac_override;
+
+# Only recovery needs mac_admin to set contexts not defined in current policy.
+neverallow { domain - init} self:capability2 mac_admin;
+
+# Only init should be able to load SELinux policies.
+# The first load technically occurs while still in the kernel domain,
+# but this does not trigger a denial since there is no policy yet.
+# Policy reload requires allowing this to the init domain.
+neverallow { domain -init } kernel:security load_policy;
+
+
+# Only init prior to switching context should be able to set enforcing mode.
+# init starts in kernel domain and switches to init domain via setcon in
+# the init.rc, so the setenforce occurs while still in kernel. After
+# switching domains, there is never any need to setenforce again by init.
+neverallow domain kernel:security setenforce;
+neverallow { domain -kernel } kernel:security setcheckreqprot;
+
+# No booleans in AOSP policy, so no need to ever set them.
+neverallow domain kernel:security setbool;
+
+# Adjusting the AVC cache threshold.
+# Not presently allowed to anything in policy, but possibly something
+# that could be set from init.rc.
+neverallow { domain -init } kernel:security setsecparam;
+# Ensure that all entrypoint executables are in exec_type.
+neverallow domain { file_type -exec_type }:file entrypoint;
+
+# Ensure that nothing in userspace can access /dev/mem or /dev/kmem
+neverallow { domain -kernel -init - udevd - mdev -lvm2 } kmem_device:chr_file *;
+neverallow { domain -kernel -init - udevd - mdev -lvm2 } kmem_device:chr_file ~{ create relabelto unlink setattr getattr};
+
+# Only init should be able to configure kernel usermodehelpers or
+# security-sensitive proc settings.
+neverallow { domain -init -sysctl -udevd } usermodehelper:file { append write };
+neverallow { domain -init } proc_security:file { append write };
+
+# No domain should be allowed to ptrace init.
+neverallow domain init:process ptrace;
+
+# Init can't do anything with binder calls. If this neverallow rule is being
+# triggered, it's probably due to a service with no SELinux domain.
+neverallow domain init:binder *;
+
+# Don't allow raw read/write/open access to block_device
+# Rather force a relabel to a more specific type
+neverallow { domain -kernel -init -mdev } block_device:blk_file { open read write };
+
+# Don't allow raw read/write/open access to generic devices.
+# Rather force a relabel to a more specific type.
+# init is exempt from this as there are character devices that only it uses.
+# ueventd is exempt from this, as it is managing these devices.
+neverallow { domain -init -kernel } device:chr_file { open read write };
+
+# Limit what domains can mount filesystems or change their mount flags.
+# sdcard_type / vfat is exempt as a larger set of domains need
+# this capability, including device-specific domains.
+neverallow { domain -kernel -init -shell } { fs_type -sdcard_type }:filesystem { mount remount relabelfrom relabelto };
+
+#
+# Assert that, to the extent possible, we're not loading executable content from
+# outside the rootfs or /system partition except for a few whitelisted domains.
+#
+neverallow {
+    domain
+    -appdomain
+    -shell - kernel
+} { file_type -system_file -exec_type }:file execute;
+neverallow {
+    domain
+    -appdomain # for oemfs
+} { fs_type -rootfs }:file execute;
+
+# Only recovery should be doing writes to /system
+# neverallow { domain } { system_file exec_type }:dir_file_class_set
+#     { create write setattr relabelfrom append unlink link rename };
+# neverallow { domain -kernel } { system_file exec_type }:dir_file_class_set relabelto;
+
+# Don't allow mounting on top of /system files or directories
+neverallow { domain -init} { system_file exec_type }:dir_file_class_set mounton;
+
+# Nothing should be writing to files in the rootfs.
+neverallow domain rootfs:file { create write setattr relabelto append unlink link rename };
+
+# Restrict context mounts to specific types marked with
+# the contextmount_type attribute.
+neverallow domain fs_type:filesystem relabelto;
+
+
+
+
+# Only servicemanager should be able to register with binder as the context manager
+neverallow domain *:binder set_context_mgr;
+
+# Android does not support System V IPCs.
+#
+# The reason for this is due to the fact that, by design, they lead to global
+# kernel resource leakage.
+#
+# For example, there is no way to automatically release a SysV semaphore
+# allocated in the kernel when:
+#
+# - a buggy or malicious process exits
+# - a non-buggy and non-malicious process crashes or is explicitly killed.
+#
+# Killing processes automatically to make room for new ones is an
+# important part of Android's application lifecycle implementation. This means
+# that, even assuming only non-buggy and non-malicious code, it is very likely
+# that over time, the kernel global tables used to implement SysV IPCs will fill
+# up.
+neverallow domain domain:{ shm sem msg msgq } *;
+
+# Do not mount on top of symlinks, fifos, or sockets.
+# Feature parity with Chromium LSM.
+neverallow domain { file_type fs_type dev_type }:{ lnk_file fifo_file sock_file } mounton;
+
+# Do not allow the introduction of new execmod rules. Text relocations
+# and modification of executable pages are unsafe.
+# The only exceptions are for NDK text relocations associated with
+# https://code.google.com/p/android/issues/detail?id=23203
+# which, long term, need to go away.
+# neverallow { domain -init -kernel -rcinit} {
+#  file_type
+#  -system_file      # needs to die. b/20013628
+#  -app_data_file
+#}:file execmod;
+
+# TODO: prohibit non-zygote spawned processes from using shared libraries
+# with text relocations. b/20013628 .
+# neverallow { domain -appdomain } file_type:file execmod;
+
+neverallow { domain -init } proc:{ file dir } mounton;
+
+# Ensure that all types assigned to processes are included
+# in the domain attribute, so that all allow and neverallow rules
+# written on domain are applied to all processes.
+# This is achieved by ensuring that it is impossible to transition
+# from a domain to a non-domain type and vice versa.
+neverallow domain ~domain:process { transition dyntransition };
+neverallow ~domain domain:process { transition dyntransition };
+
+#
+# Only system_app and system_server should be creating or writing
+# their files. The proper way to share files is to setup
+# type transitions to a more specific type or assigning a type
+# to its parent directory via a file_contexts entry.
+# Example type transition:
+#  mydomain.te:file_type_auto_trans(mydomain, system_data_file, new_file_type)
+#
+neverallow {
+  domain
+  -init
+} system_data_file:file no_w_file_perms;
+
+#
+# Only these domains should transition to shell domain. This domain is
+# permissible for the "shell user". If you need a process to exec a shell
+# script with differing privilege, define a domain and set up a transition.
+#
+neverallow {
+  domain
+  -adbd
+  -init
+  -askfirst
+  -netifd
+  -audio
+} shell:process { transition dyntransition };
+
+# Minimize read access to shell- or app-writable symlinks.
+# This is to prevent malicious symlink attacks.
+neverallow {
+  domain
+  -appdomain
+} app_data_file:lnk_file read;
+
+neverallow {
+  domain
+  -shell
+} shell_data_file:lnk_file read;

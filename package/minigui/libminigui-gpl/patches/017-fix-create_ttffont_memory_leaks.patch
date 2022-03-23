@@ -1,0 +1,11 @@
+--- a/src/font/freetype2.c	2018-04-09 15:25:51.000000000 +0800
++++ b/src/font/freetype2.c	2019-03-29 09:59:33.000000000 +0800
+@@ -866,7 +866,7 @@
+         __mg_ttc_release(ft_inst_info->cache);
+     }
+ #endif 
+-
++    FT_Done_Size(ft_inst_info->size);
+     free (ft_inst_info);
+     free (devfont->data);
+     free (devfont);

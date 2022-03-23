@@ -1,0 +1,28 @@
+type start_stop_exec, exec_type, file_type;
+type start_stop, domain;
+# permissive start_stop;
+domain_auto_trans(init,start_stop_exec,start_stop)
+domain_auto_trans(start_stop,busybox_exec,busybox)
+# domain_auto_trans(start_stop,logd_exec,logd)
+domain_auto_trans(start_stop,dbusd_exec,dbusd)
+
+# tmpfs_domain(start_stop)
+allow start_stop tmpfs:file r_file_perms;
+
+allow start_stop init:fifo_file write;
+
+# allow start_stop logd_exec:lnk_file r_file_perms;
+
+# allow init start_stop_exec:lnk_file r_file_perms;
+
+allow start_stop console_device:chr_file rw_file_perms;
+allow start_stop serial_device:chr_file r_file_perms;
+
+allow start_stop etc_selinux:dir { search open read getattr };
+allow start_stop etc_selinux:{ file lnk_file } { open read getattr };
+
+allow start_stop domain:dir { search open read getattr };
+allow start_stop domain:{ file lnk_file } { open read getattr };
+
+allow start_stop dbusd:fd use;
+allow start_stop dbusd:process signal;

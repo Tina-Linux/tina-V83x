@@ -1,0 +1,594 @@
+diff --git a/Makefile.am b/Makefile.am
+old mode 100644
+new mode 100755
+index cdf82ab..8a6d0c2
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -184,6 +184,9 @@ BUILT_SOURCES += $(nodist_libweston_@LIBWESTON_MAJOR@_la_SOURCES)
+ 
+ bin_PROGRAMS += weston
+ 
++bin_PROGRAMS += weston-layer-dump
++weston_layer_dump_SOURCES = clients/layer-dump.c
++ 
+ weston_LDFLAGS = -export-dynamic
+ weston_CPPFLAGS = $(AM_CPPFLAGS) -DIN_WESTON 		\
+ 				 -DMODULEDIR='"$(moduledir)"' \
+diff --git a/clients/desktop-shell.c b/clients/desktop-shell.c
+index ad301b3..7931d82 100755
+--- a/clients/desktop-shell.c
++++ b/clients/desktop-shell.c
+@@ -281,6 +281,7 @@ panel_redraw_handler(struct widget *widget, void *data)
+ 
+ 	cairo_destroy(cr);
+ 	surface = window_get_surface(panel->window);
++	
+ 	cairo_surface_destroy(surface);
+ 	panel->painted = 1;
+ 	check_desktop_ready(panel->window);
+diff --git a/clients/window.c b/clients/window.c
+index 9e2b5c4..95796d4 100755
+--- a/clients/window.c
++++ b/clients/window.c
+@@ -42,9 +42,6 @@
+ #include <sys/timerfd.h>
+ #include <stdbool.h>
+ 
+-#define HAVE_CAIRO_EGL 1
+-#define USE_CAIRO_GLESV2 1
+-
+ #ifdef HAVE_CAIRO_EGL
+ #include <wayland-egl.h>
+ 
+diff --git a/ivi-shell/weston.ini.in b/ivi-shell/weston.ini.in
+old mode 100644
+new mode 100755
+index 9b53691..d5717c7
+--- a/ivi-shell/weston.ini.in
++++ b/ivi-shell/weston.ini.in
+@@ -1,9 +1,16 @@
+ [core]
+-shell=@plugin_prefix@ivi-shell.so
++#modules=cms-colord.so
++#xwayland=true
++shell=/usr/lib/weston/ivi-shell.so
++#gbm-format=xrgb2101010
++#require-input=true
++log-open=true
++use-overlay=true
++render-on-top=false
+ 
+ [ivi-shell]
+-ivi-module=@plugin_prefix@hmi-controller.so
+-ivi-shell-user-interface=@abs_top_builddir@/weston-ivi-shell-user-interface
++ivi-module=/usr/lib/weston/hmi-controller.so
++ivi-shell-user-interface=/usr/libexec/weston-ivi-shell-user-interface
+ 
+ #developermode=true
+ 
+@@ -19,83 +26,82 @@ application-layer-id=4000
+ 
+ transition-duration=300
+ 
+-background-image=@abs_top_srcdir@/data/background.png
++background-image=/usr/share/weston/background.png
+ background-id=1001
+-panel-image=@abs_top_srcdir@/data/panel.png
++panel-image=/usr/share/weston/panel.png
+ panel-id=1002
+ surface-id-offset=10
+-tiling-image=@abs_top_srcdir@/data/tiling.png
++tiling-image=/usr/share/weston/tiling.png
+ tiling-id=1003
+-sidebyside-image=@abs_top_srcdir@/data/sidebyside.png
++sidebyside-image=/usr/share/weston/sidebyside.png
+ sidebyside-id=1004
+-fullscreen-image=@abs_top_srcdir@/data/fullscreen.png
++fullscreen-image=/usr/share/weston/fullscreen.png
+ fullscreen-id=1005
+-random-image=@abs_top_srcdir@/data/random.png
++random-image=/usr/share/weston/random.png
+ random-id=1006
+-home-image=@abs_top_srcdir@/data/home.png
++home-image=/usr/share/weston/home.png
+ home-id=1007
+ workspace-background-color=0x99000000
+ workspace-background-id=2001
+-
+ [input-method]
+-path=@libexecdir@/weston-keyboard
++path=/usr/libexec/weston-keyboard
+ 
+ [ivi-launcher]
+ workspace-id=0
+ icon-id=4001
+-icon=@abs_top_srcdir@/data/icon_ivi_flower.png
+-path=@abs_top_builddir@/weston-flower
++icon=/usr/share/weston/icon_ivi_flower.png
++path=/usr/bin/weston-flower
+ 
+ [ivi-launcher]
+ workspace-id=0
+ icon-id=4002
+-icon=@abs_top_srcdir@/data/icon_ivi_clickdot.png
+-path=@abs_top_builddir@/weston-clickdot
++icon=/usr/share/weston/icon_ivi_clickdot.png
++path=/usr/bin/weston-clickdot
+ 
+ [ivi-launcher]
+ workspace-id=1
+ icon-id=4003
+-icon=@abs_top_srcdir@/data/icon_ivi_simple-egl.png
+-path=@abs_top_builddir@/weston-simple-egl
++icon=/usr/share/weston/icon_ivi_simple-egl.png
++path=/usr/bin/weston-simple-egl
+ 
+ [ivi-launcher]
+ workspace-id=1
+ icon-id=4004
+-icon=@abs_top_srcdir@/data/icon_ivi_simple-shm.png
+-path=@abs_top_builddir@/weston-simple-shm
++icon=/usr/share/weston/icon_ivi_simple-shm.png
++path=/usr/bin/weston-simple-shm
+ 
+ [ivi-launcher]
+ workspace-id=2
+ icon-id=4005
+-icon=@abs_top_srcdir@/data/icon_ivi_smoke.png
+-path=@abs_top_builddir@/weston-smoke
++icon=/usr/share/weston/icon_ivi_smoke.png
++path=/usr/bin/weston-smoke
+ 
+ [ivi-launcher]
+ workspace-id=3
+ icon-id=4006
+-icon=@abs_top_srcdir@/data/icon_ivi_flower.png
+-path=@abs_top_builddir@/weston-flower
++icon=/usr/share/weston/icon_ivi_flower.png
++path=/usr/bin/weston-flower
+ 
+ [ivi-launcher]
+ workspace-id=3
+ icon-id=4007
+-icon=@abs_top_srcdir@/data/icon_ivi_clickdot.png
+-path=@abs_top_builddir@/weston-clickdot
++icon=/usr/share/weston/icon_ivi_clickdot.png
++path=/usr/bin/weston-clickdot
+ 
+ [ivi-launcher]
+ workspace-id=3
+ icon-id=4008
+-icon=@abs_top_srcdir@/data/icon_ivi_simple-egl.png
+-path=@abs_top_builddir@/weston-simple-egl
++icon=/usr/share/weston/icon_ivi_simple-egl.png
++path=/usr/bin/weston-simple-egl
+ 
+ [ivi-launcher]
+ workspace-id=3
+ icon-id=4009
+-icon=@abs_top_srcdir@/data/icon_ivi_simple-shm.png
+-path=@abs_top_builddir@/weston-simple-shm
++icon=/usr/share/weston/icon_ivi_simple-shm.png
++path=/usr/bin/weston-simple-shm
+ 
+ [ivi-launcher]
+ workspace-id=3
+ icon-id=4010
+-icon=@abs_top_srcdir@/data/icon_ivi_smoke.png
+-path=@abs_top_builddir@/weston-smoke
++icon=/usr/share/weston/icon_ivi_smoke.png
++path=/usr/bin/weston-smoke
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 6b30941..5ab6962 100755
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -115,6 +115,7 @@ struct drm_backend {
+ 	int use_pixman;
+ #ifdef DRM_OVERLAY_SUPPORT		
+ 	int use_overlay;
++	int render_on_top;
+ #endif
+ 	struct udev_input input;
+ 
+@@ -199,6 +200,7 @@ typedef struct {
+ typedef struct {
+ 	//bool video_layer_top;
+ 	bool need_gpu_compositor;
++	bool gpu_render_on_top;
+ 	int32_t gpu_plane_id;	
+ 	uint32_t overlay_layer_num;
+ 	uint32_t gpu_layer_num;
+@@ -334,9 +336,11 @@ to_drm_backend(struct weston_compositor *base)
+ 	return container_of(base->backend, struct drm_backend, base);
+ }
+ 
++
+ static void
+ drm_output_set_cursor(struct drm_output *output);
+ 
++
+ static void
+ drm_output_update_msc(struct drm_output *output, unsigned int seq);
+ 
+@@ -920,7 +924,7 @@ drm_output_repaint(struct weston_output *output_base,
+ 			goto err_pageflip;
+ 		}
+ 		weston_log_continue("overlay channel config: plane_id=%d,dest(%d,%d,%d,%d)\n",s->plane_id,s->dest_x,s->dest_y,s->dest_w,s->dest_h);
+-		//weston_log("drmModeSetPlane %d,(%d,%d,%d,%d)\n",s->plane_id,s->src_x,s->src_y,s->src_w,s->src_h);
++		weston_log_continue("overlay channel config: plane_id=%d,src(%d,%d,%d,%d)\n",s->plane_id,s->src_x>>16,s->src_y>>16,s->src_w>>16,s->src_h>>16);
+ 		ret = drmModeSetPlane(backend->drm.fd, s->plane_id,
+ 				      output->crtc_id, fb_id, flags,
+ 				      s->dest_x, s->dest_y,
+@@ -953,6 +957,7 @@ drm_output_repaint(struct weston_output *output_base,
+ 	 * becomes active on the display or has been replaced.
+ 	 */
+ 	vbl.request.signal = (unsigned long)output;
++
+ 	ret = drmWaitVBlank(backend->drm.fd, &vbl);
+ 	if (ret) {
+ 		weston_log("vblank event request failed: %d: %s\n",
+@@ -990,6 +995,7 @@ drm_output_start_repaint_loop(struct weston_output *output_base)
+ 		.request.signal = 0,
+ 	};
+ 
++
+ 	if (output->disable_pending || output->destroy_pending)
+ 		return;
+ 
+@@ -998,6 +1004,7 @@ drm_output_start_repaint_loop(struct weston_output *output_base)
+ 		goto finish_frame;
+ 	}
+ 
++
+ 	/* Try to get current msc and timestamp via instant query */
+ 	vbl.request.type |= drm_waitvblank_pipe(output);
+ 	ret = drmWaitVBlank(backend->drm.fd, &vbl);
+@@ -1165,6 +1172,7 @@ drm_output_check_sprite_format(struct drm_sprite *s,
+ static int
+ drm_view_transform_supported(struct weston_view *ev)
+ {
++	
+ 	return !ev->transform.enabled ||
+ 		(ev->transform.matrix.type < WESTON_MATRIX_TRANSFORM_ROTATE);
+ }
+@@ -1290,6 +1298,7 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 
+ 	s->next = drm_fb_get_from_bo(bo, b, format);
+ 	if (!s->next) {
++		weston_log("failed to get drm_fb for bo in prepare func\n");
+ 		gbm_bo_destroy(bo);
+ 		return NULL;
+ 	}
+@@ -1454,6 +1463,7 @@ cursor_bo_update(struct drm_backend *b, struct gbm_bo *bo,
+ 		weston_log("failed update cursor: %m\n");
+ }
+ 
++
+ static void
+ drm_output_set_cursor(struct drm_output *output)
+ {
+@@ -1541,9 +1551,10 @@ drm_assign_planes(struct weston_output *output_base)
+ 
+ #ifdef DRM_OVERLAY_SUPPORT
+ 	int layer_num = 0, top = 0xff;
+-	drm_layer_t *current_layer = NULL,*next_layer = NULL;
++	drm_layer_t *current_layer = NULL,*next_layer = NULL, *prev_layer = NULL;
+ 
+ 	drm_overlay_init(&output->overlay_mgr);
++	output->overlay_mgr.gpu_render_on_top = (bool)b->render_on_top;
+ 
+ 	wl_list_for_each_safe(ev, next, &output_base->compositor->view_list, link) {
+ 			struct weston_surface *es = ev->surface;
+@@ -1577,22 +1588,17 @@ drm_assign_planes(struct weston_output *output_base)
+ 			
+ 	}
+ 
+-	//zoder up in layer list
+-	wl_list_for_each_safe(current_layer, next_layer, &output->overlay_mgr.layer_list, link) {
+-	    	assign_layer_to_channel(output, current_layer);
+-			if (current_layer->composition_type == DRM_COMPOSITION_GPU){
+-				weston_view_move_to_plane(current_layer->view, primary);
+-				output->overlay_mgr.need_gpu_compositor = true;
+-				current_layer->view->psf_flags = 0;
+-				output->overlay_mgr.gpu_layer_num++;
+-				weston_log_continue("view(%p) will be assigned to gpu render channel\n",current_layer->view);
+-			}
+-			else {
+-				weston_log_continue("view(%p) will be assigned to overlay channel\n",current_layer->view);
+-				output->overlay_mgr.overlay_layer_num++;
+-			}
+-	}	
+-
++	if (output->overlay_mgr.gpu_render_on_top) {
++		//zoder up
++		wl_list_for_each_safe(current_layer, next_layer, &output->overlay_mgr.layer_list, link) {
++				assign_layer_to_channel(output, current_layer);
++		}	
++	} else {
++		//zoder down 
++		wl_list_for_each_reverse_safe(current_layer, prev_layer, &output->overlay_mgr.layer_list, link) {
++				assign_layer_to_channel(output, current_layer);
++		}
++	}
+ 
+ 	drm_output_setup_render_plane(output);
+ 
+@@ -1895,6 +1901,7 @@ drm_backend_create_gl_renderer(struct drm_backend *b)
+ 
+ 	if (format[1])
+ 		n_formats = 3;
++	//printf("drm_backend_create_gl_renderer n_formats=%d,b->gbm_format=0x%x\n",n_formats,b->gbm_format);
+ 	if (gl_renderer->display_create(b->compositor,
+ 					EGL_PLATFORM_GBM_KHR,
+ 					(void *)b->gbm,
+@@ -3561,7 +3568,10 @@ drm_backend_create(struct weston_compositor *compositor,
+ 						   &config->use_overlay, true);
+ 		weston_config_section_get_bool(section, "log-open",
+ 						   &config->log_open, false);
++		weston_config_section_get_bool(section, "render-on-top",
++						   &config->render_on_top, true);
+ 		b->use_overlay = config->use_overlay;
++		b->render_on_top = config->render_on_top;
+ 		if (!config->log_open) {
+ 			weston_log_set_handler(vlog, vlog_continue);
+ 		}
+@@ -3582,7 +3592,7 @@ drm_backend_create(struct weston_compositor *compositor,
+ 			   "using weston-launch binary or as root\n");
+ 		goto err_compositor;
+ 	}
+-
++ 
+ 	b->udev = udev_new();
+ 	if (b->udev == NULL) {
+ 		weston_log("failed to initialize udev context\n");
+@@ -3790,18 +3800,26 @@ static bool check_layer_channel_intersect(drm_overlay_channel_t *channel, drm_la
+ 	return intersect;
+ }
+ 
+-static bool check_gpulayer_intersect(drm_overlay_manager_t *overlay_mgr, drm_layer_t *layer, bool top)
++static bool check_gpu_layer_intersect(drm_overlay_manager_t *overlay_mgr, drm_layer_t *layer)
+ {
+ 	bool intersect = false;
+-	drm_layer_t *current = NULL,*next = NULL;
++	drm_layer_t *current = NULL,*next = NULL, *prev = NULL;
++
++	if (overlay_mgr->gpu_render_on_top) {
++		wl_list_for_each_safe(current, next, &overlay_mgr->layer_list, link) {
++			if ((current->zorder >= layer->zorder) || intersect)
++				break;
++			if (current->composition_type == DRM_COMPOSITION_GPU)
++				intersect |= drm_layer_intersect(current, layer);
++		}
++	} else {
++		wl_list_for_each_reverse_safe(current, next, &overlay_mgr->layer_list, link) {
++			if ((current->zorder <= layer->zorder) || intersect)
++				break;
++			if (current->composition_type == DRM_COMPOSITION_GPU)
++				intersect |= drm_layer_intersect(current, layer);
++		}
+ 
+-	wl_list_for_each_safe(current, next, &overlay_mgr->layer_list, link) {
+-		if ((!top && current->zorder >= layer->zorder) || intersect)
+-			break;
+-		else if ((top && current->zorder < layer->zorder) || intersect)
+-			break;
+-		if (current->composition_type == DRM_COMPOSITION_GPU)
+-			intersect |= drm_layer_intersect(current, layer);
+ 	}
+ 	
+ 	return intersect;
+@@ -3982,16 +4000,19 @@ static drm_layer_t* assign_layer_to_channel(struct drm_output *output,
+ {
+ 	drm_overlay_channel_t *match_channel = NULL;
+ 	drm_overlay_manager_t* overlay_mgr = &output->overlay_mgr;
+-
++	struct weston_plane *primary = &output->base.compositor->primary_plane;
++	bool top = overlay_mgr->gpu_render_on_top;
++	unsigned int match_id = 0;
++	
+ 	/* when current layer' zoder is greater than the gpu render layer's,and intersect between the two layers.
+ 	*  current layer will assign to gpu render.
+ 	*/
+- 	if (check_gpulayer_intersect(overlay_mgr, layer, false)) {
++ 	if (top && check_gpu_layer_intersect(overlay_mgr, layer)) {
+ 		if (layer->video_layer && layer->composition_type != DRM_COMPOSITION_GPU) {
+ 			overlay_mgr->video_layer[overlay_mgr->video_layer_num++] = layer;
+ 		}		
+ 		layer->composition_type = DRM_COMPOSITION_GPU;
+-		return layer;
++		goto end;
+ 	}
+ 
+ 	for (unsigned int i = 0; i < overlay_mgr->channel_num; i++){
+@@ -3999,7 +4020,7 @@ static drm_layer_t* assign_layer_to_channel(struct drm_output *output,
+ 		if (match_channel == NULL && layer->composition_type != DRM_COMPOSITION_GPU &&
+ 			match_channel_attribute(overlay_mgr, i, layer)) {
+ 			match_channel = current_channel;
+-			//overlay_mgr->current_channel = i;
++			match_id = i;
+ 			weston_log_continue("view(%p) match to channel[%d]\n",layer->view,i);
+ 			if (match_channel->layer_num == 0)
+ 				break;
+@@ -4055,7 +4076,19 @@ static drm_layer_t* assign_layer_to_channel(struct drm_output *output,
+ 
+ 		match_channel->layer[match_channel->layer_num++] = layer;
+ 		layer->composition_type = DRM_COMPOSITION_OVERLAY;
+-		//weston_log_continue("match_channel=%d,view=0x%x\n",overlay_mgr->current_channel,layer->view);
++	}
++
++end:
++	if (layer->composition_type == DRM_COMPOSITION_GPU){
++		weston_view_move_to_plane(layer->view, primary);
++		overlay_mgr->need_gpu_compositor = true;
++		layer->view->psf_flags = 0;
++		overlay_mgr->gpu_layer_num++;
++		weston_log_continue("view(%p) will be assigned to gpu render channel\n",layer->view);
++	}
++	else {
++		weston_log_continue("view(%p) will be assigned to overlay channel\n",layer->view);
++		overlay_mgr->overlay_layer_num++;
+ 	}
+ 
+ 	return layer;
+@@ -4064,12 +4097,17 @@ static void reassign_layer_to_channel(struct drm_output *output)
+ {
+ 	
+ 	drm_overlay_manager_t* overlay_mgr = &output->overlay_mgr;
+-	unsigned int i = 0, j = 0, z = 0, zorder = 0, ui_bigen = overlay_mgr->video_channel_num, vi_bigen = 0, channel_id = 0;
++	unsigned z = 0, zorder = 0, ui_bigen = overlay_mgr->video_channel_num, vi_bigen = 0, channel_id = 0;
++	int i = 0, j = 0, k = 0;
+ 	drm_layer_t *layer = NULL;
+ 	drm_overlay_channel_t *channel = NULL;
+ 
++	zorder = overlay_mgr->gpu_render_on_top ? 0 : 1;
++
+ 	for (i = 0; i < overlay_mgr->channel_num; i++) {
+-		channel = &overlay_mgr->overlay_channel[i];
++
++		k = overlay_mgr->gpu_render_on_top ? i : overlay_mgr->channel_num - i - 1;
++		channel = &overlay_mgr->overlay_channel[k];
+ 		if (channel->type == NOT_ASSIGN)
+ 			continue;
+ 		
+@@ -4086,9 +4124,10 @@ static void reassign_layer_to_channel(struct drm_output *output)
+ 				overlay_mgr->used_video_channel++;
+ 			}
+ 		}
+-
++		
+ 		for (j = 0, z = 0; j < LAYER_BY_CHANNEL; j++) {
+-			layer = channel->layer[j];
++			k = overlay_mgr->gpu_render_on_top ? j : LAYER_BY_CHANNEL - j - 1;
++			layer = channel->layer[k];
+ 			if (layer != NULL) {
+ 				layer->channel_id = channel_id;
+ 				layer->layer_id = z;
+@@ -4101,7 +4140,8 @@ static void reassign_layer_to_channel(struct drm_output *output)
+ 				weston_log_continue("view(%p) is reassigned to overlay channel_[%d],layer_id=%d,zorder=%d\n",layer->view,channel_id,layer->layer_id,layer->zorder);
+ 			}
+ 		}
+-	}
++} 
++
+ }
+ 
+ 
+@@ -4111,7 +4151,7 @@ static void drm_overlay_init(drm_overlay_manager_t * overlay_mgr)
+ 	
+ 	overlay_mgr->gpu_plane_id = -1;
+ 	overlay_mgr->need_gpu_compositor = false;
+-	//overlay_mgr->video_layer_top = false;
++	overlay_mgr->gpu_render_on_top = false;
+ 	overlay_mgr->overlay_layer_num = 0;
+ 	overlay_mgr->gpu_layer_num = 0;
+ 	overlay_mgr->video_layer_num = 0;
+@@ -4181,7 +4221,7 @@ static void drm_output_setup_render_plane(struct drm_output *output)
+ 			current = overlay_mgr->video_layer[i];
+ 			if (current && current->composition_type == DRM_COMPOSITION_GPU) {
+ 				/*the gpu render layer's zorder is greater than the video layer,and not  intersect*/
+-				if (!check_gpulayer_intersect(overlay_mgr, current, true)) {
++				if (!check_gpu_layer_intersect(overlay_mgr, current)) {
+ 		
+ 					if (!first && overlay_mgr->used_channel == overlay_mgr->channel_num) {
+ 						reset_channel_to_render_plane(output, overlay_mgr->channel_num - 2, overlay_mgr->channel_num - 1);
+@@ -4201,7 +4241,9 @@ static void drm_output_setup_render_plane(struct drm_output *output)
+ 								overlay_mgr->used_video_channel++;
+ 								overlay_mgr->used_channel++;
+ 							}
+-							current->zorder_up = true;
++							
++							if (overlay_mgr->gpu_render_on_top)
++								current->zorder_up = true;
+ 						
+ 							current_channel->layer[current_channel->layer_num++] = current;		
+ 							video_layer_num++;
+@@ -4262,8 +4304,12 @@ static void drm_output_setup_render_plane(struct drm_output *output)
+ 			}
+ 		}
+ 	}
+-
+-	output->gpu_plane_zorder = overlay_mgr->overlay_layer_num - video_layer_num;
++	
++	if (overlay_mgr->gpu_render_on_top) {
++		output->gpu_plane_zorder = overlay_mgr->overlay_layer_num - video_layer_num;
++	} else 
++		output->gpu_plane_zorder = 0;
++	
+ 	output->gpu_plane_id = overlay_mgr->gpu_plane_id;
+ 
+ }
+@@ -4362,6 +4408,9 @@ static bool drm_ouput_setup_overlay_plane(struct drm_output *output)
+ 						format = layer->format;
+ 						s->next = drm_fb_get_from_bo(bo, b, format);
+ 						if (!s->next) {
++							weston_log("drm_fb_get_from_bo fail\n");
++							b->no_addfb2 = 0;
++							b->sprites_are_broken = 0;
+ 							gbm_bo_destroy(bo);
+ 							return false;
+ 						}
+@@ -4517,8 +4566,8 @@ drm_output_prepare_view(struct drm_output *output,
+ 	}
+ 	
+ 	if (!drm_view_transform_supported(ev)) {
+-		weston_log_continue("!drm_view_transform_supported\n");
+-		return NULL;
++		weston_log_continue("!drm_view_transform_supported:%d,0x%x\n",ev->transform.enabled,ev->transform.matrix.type);
++		//return NULL;
+ 	}
+ #if 0		
+ 	if (ev->alpha != 1.0f)
+@@ -4581,16 +4630,19 @@ drm_output_prepare_view(struct drm_output *output,
+ 		arg.handle = gbm_bo_get_handle(bo).u32;;
+ 		
+ 		ret = drmIoctl(b->drm.fd, DRM_IOCTL_MODE_MAP_DUMB, &arg);
+-		if (ret)
+-			weston_log("DRM_IOCTL_MODE_MAP_DUMB fail\n");
+-		
++		if (ret) {
++			weston_log("view(0x%x) DRM_IOCTL_MODE_MAP_DUMB fail\n",ev);
++			return NULL;
++		}
+ 		map = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, b->drm.fd, arg.offset);
+-		if (map == MAP_FAILED)
+-			weston_log("drm_mmap fail\n");
+-		
++		if (map == MAP_FAILED) {
++			weston_log("view(0x%x) drm_mmap fail\n",ev);
++			return NULL;
++		}
+ 		if (map){
+ 			layer->pixel_alpha = *((uint8_t*)map+3);
+ 			weston_log_continue("view(%p) pixel_alpha=%d\n",ev,layer->pixel_alpha);
++			munmap(map, size);
+ 		}
+ 		munmap(map, size);
+ 
+diff --git a/libweston/compositor-drm.h b/libweston/compositor-drm.h
+index e442df6..d113ff7 100755
+--- a/libweston/compositor-drm.h
++++ b/libweston/compositor-drm.h
+@@ -115,6 +115,7 @@ struct weston_drm_backend_config {
+ 	/** Whether to use the  hw overlay instead of the OpenGL ES renderer. */
+ 	int use_overlay;
+ 	int log_open;
++	int render_on_top;	
+ #endif
+ 	/** The seat to be used for input and output.
+ 	 *
+diff --git a/weston.ini.in b/weston.ini.in
+old mode 100644
+new mode 100755
+index 257c4ec..18a1129
+--- a/weston.ini.in
++++ b/weston.ini.in
+@@ -4,6 +4,9 @@
+ #shell=desktop-shell.so
+ #gbm-format=xrgb2101010
+ #require-input=true
++log-open=true
++use-overlay=true
++render-on-top=true
+ 
+ [shell]
+ background-image=/usr/share/backgrounds/gnome/Aqua.jpg

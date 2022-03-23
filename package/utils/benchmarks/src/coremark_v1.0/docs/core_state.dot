@@ -1,0 +1,31 @@
+digraph Number_Parse {
+	size="8,8";
+	ratio=fill;
+	VALID [style=filled color=grey];
+	INVALID [style=filled color=grey];
+	START -> INT [label="digit"];
+	START -> S1 [label="'+' or '-'"];
+	START -> FLOAT [label="dot"];
+	START -> INVALID [label="Other" fontcolor=red];
+	INT -> FLOAT [label="dot" tailport=e headport=nw];
+	INT -> INT [label="digit" tailport=w ];
+	INT -> INVALID [label="Other" fontcolor=red];
+	INT -> VALID [label="separator"];
+	S1 -> INT [label="digit"];
+	S1 -> FLOAT [label="dot"];
+	S1 -> INVALID [label="Other" fontcolor=red];
+	subgraph exponent {
+		S2 -> EXPONENT [label="'+' or '-'"];
+		S2 -> INVALID [label="Other" fontcolor=red];
+		EXPONENT -> SCIENTIFIC [label="digit"];
+		EXPONENT -> INVALID [label="Other" fontcolor=red];
+		SCIENTIFIC -> SCIENTIFIC [label="digit"];
+		SCIENTIFIC -> INVALID [label="Other" fontcolor=red];
+		SCIENTIFIC -> VALID [label="separator"];	
+	}
+	{ rank = same; "INT"; "FLOAT"; "S2"; } 
+	FLOAT -> S2 [label="'E' or 'e'"];
+	FLOAT -> FLOAT [label="digit" tailport=w ];
+	FLOAT -> INVALID [label="Other" fontcolor=red];
+	FLOAT -> VALID [label="separator"];
+}

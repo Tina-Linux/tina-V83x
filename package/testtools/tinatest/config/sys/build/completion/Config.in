@@ -1,0 +1,6 @@
+config TINATEST_SYS_BUILD_COMPLETION
+    bool "completion"
+    default y
+    help
+        Completion for ash for testcases.
+        Do conplete by making direcotry and file for each testcase.

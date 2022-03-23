@@ -1,0 +1,35 @@
+--- a/rcS.c
++++ b/rcS.c
+@@ -26,7 +26,7 @@
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <glob.h>
+-
++#include <fcntl.h>
+ #include <libubox/ustream.h>
+ 
+ #include "procd.h"
+@@ -88,6 +88,7 @@
+ 
+ 	if (pid) {
+ 		close(pipefd[1]);
++		fcntl(pipefd[0], F_SETFD, FD_CLOEXEC);
+ 		s->fd.stream.string_data = true,
+ 		s->fd.stream.notify_read = pipe_cb,
+ 		runqueue_process_add(q, &s->proc, pid);
+--- a/service/instance.c
++++ b/service/instance.c
+@@ -417,11 +417,13 @@
+ 	if (opipe[0] > -1) {
+ 		ustream_fd_init(&in->_stdout, opipe[0]);
+ 		closefd(opipe[1]);
++		fcntl(opipe[0], F_SETFD, FD_CLOEXEC);
+ 	}
+ 
+ 	if (epipe[0] > -1) {
+ 		ustream_fd_init(&in->_stderr, epipe[0]);
+ 		closefd(epipe[1]);
++		fcntl(epipe[0], F_SETFD, FD_CLOEXEC);
+ 	}
+ 
+ 	service_event("instance.start", in->srv->name, in->name);

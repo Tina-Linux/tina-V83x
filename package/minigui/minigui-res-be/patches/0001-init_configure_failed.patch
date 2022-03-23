@@ -1,0 +1,13 @@
+--- a/configure
++++ b/configure
+@@ -411,8 +411,8 @@
+     as_lineno=${as_lineno-"$3"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+     $as_echo "$as_me:${as_lineno-$LINENO}: error: $2" >&$4
+   fi
+-  $as_echo "$as_me: error: $2" >&2
+-  as_fn_exit $as_status
++  #$as_echo "$as_me: error: $2" >&2
++  #as_fn_exit $as_status
+ } # as_fn_error
+ 
+ if expr a : '\(a\)' >/dev/null 2>&1 &&

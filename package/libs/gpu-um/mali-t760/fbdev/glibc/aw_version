@@ -1,0 +1,38 @@
+mali-t760: r18p0-01rel0 linux fbdev glibc arm/arm64 um 012
+
+Improve glmark2-es2-fbdev scores:
+Need set cache flag to allocate color buffer in fbdev window
+system, cause everyframe it need copy color buffer to framebuffer
+by CPU;
+
+Build parameters:
+profile=tx011-release (32-bit), profile=tx011-release-64 (64-bit)
+gpu=t76x
+hwver=r1p0
+kernel_modules=0
+winsys=fbdev
+ump=0
+afbc=0
+toolchain_prefix_target=arm-openwrt-linux-gnueabi- (32-bit)
+toolchain_prefix_target=aarch64-openwrt-linux-gnu- (64-bit)
+
+MD5 information:
+594aeb65d5729784f8924e0399a9a76c  lib/libmali.so
+5632f419e37994484d64686b3032ff0c  lib64/libmali.so
+
+Toolchain information:
+Reading specs from /home/yuxyun/tina/prebuilt/gcc/linux-x86/arm/toolchain-sunxi-glibc/toolchain/bin/../lib/gcc/arm-openwrt-linux-gnueabi/6.4.1/specs
+COLLECT_GCC=arm-openwrt-linux-gnueabi-gcc.bin
+COLLECT_LTO_WRAPPER=/home/yuxyun/tina/prebuilt/gcc/linux-x86/arm/toolchain-sunxi-glibc/toolchain/bin/../libexec/gcc/arm-openwrt-linux-gnueabi/6.4.1/lto-wrapper
+Target: arm-openwrt-linux-gnueabi
+Configured with: /home/caiyongheng/tina/out/r16-parrot/compile_dir/toolchain/gcc-linaro-6.4-2017.11/configure --with-bugurl=https://dev.openwrt.org/ --with-pkgversion='OpenWrt/Linaro GCC 6.4-2017.11 2017-11' --prefix=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=arm-openwrt-linux-gnueabi --with-gnu-ld --enable-target-optspace --enable-libgomp --disable-libmudflap --disable-multilib --disable-nls --without-isl --without-cloog --with-host-libstdcxx=-lstdc++ --with-gmp=/home/caiyongheng/tina/out/host --with-mpfr=/home/caiyongheng/tina/out/host --with-mpc=/home/caiyongheng/tina/out/host --disable-decimal-float --with-diagnostics-color=auto-if-env --enable-libssp --enable-__cxa_atexit --with-arch=armv7-a --with-float=hard --with-headers=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain/include --disable-libsanitizer --enable-languages=c,c++ --enable-shared --enable-threads --with-slibdir=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain/lib --enable-lto --with-libelf=/home/caiyongheng/tina/out/host
+Thread model: posix
+gcc version 6.4.1 (OpenWrt/Linaro GCC 6.4-2017.11 2017-11)
+
+Reading specs from /home/yuxyun/tina/prebuilt/gcc/linux-x86/aarch64/toolchain-sunxi-glibc/toolchain/bin/../lib/gcc/aarch64-openwrt-linux-gnu/6.4.1/specs
+COLLECT_GCC=aarch64-openwrt-linux-gnu-gcc.bin
+COLLECT_LTO_WRAPPER=/home/yuxyun/tina/prebuilt/gcc/linux-x86/aarch64/toolchain-sunxi-glibc/toolchain/bin/../libexec/gcc/aarch64-openwrt-linux-gnu/6.4.1/lto-wrapper
+Target: aarch64-openwrt-linux-gnu
+Configured with: /home/caiyongheng/tina/out/r18-noma/compile_dir/toolchain/gcc-linaro-6.4-2017.11/configure --with-bugurl=https://dev.openwrt.org/ --with-pkgversion='OpenWrt/Linaro GCC 6.4-2017.11 2017-11' --prefix=/home/caiyongheng/tina/out/r18-noma/staging_dir/toolchain --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=aarch64-openwrt-linux-gnu --with-gnu-ld --enable-target-optspace --enable-libgomp --disable-libmudflap --disable-multilib --disable-nls --without-isl --without-cloog --with-host-libstdcxx=-lstdc++ --with-gmp=/home/caiyongheng/tina/out/host --with-mpfr=/home/caiyongheng/tina/out/host --with-mpc=/home/caiyongheng/tina/out/host --disable-decimal-float --with-diagnostics-color=auto-if-env --enable-libssp --enable-fix-cortex-a53-835769 --enable-fix-cortex-a53-843419 --enable-__cxa_atexit --with-headers=/home/caiyongheng/tina/out/r18-noma/staging_dir/toolchain/include --disable-libsanitizer --enable-languages=c,c++ --enable-shared --enable-threads --with-slibdir=/home/caiyongheng/tina/out/r18-noma/staging_dir/toolchain/lib --enable-lto --with-libelf=/home/caiyongheng/tina/out/host
+Thread model: posix
+gcc version 6.4.1 (OpenWrt/Linaro GCC 6.4-2017.11 2017-11)

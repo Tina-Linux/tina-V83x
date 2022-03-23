@@ -1,0 +1,32 @@
+# bluetoothd - bluetooth daemon
+type bluetoothd, domain;
+# permissive bluetoothd;
+type bluetoothd_exec, exec_type, file_type;
+
+domain_auto_trans(init,bluetoothd_exec,bluetoothd)
+# unconfined_domain(bluetoothd)
+# domain_auto_trans(bluetoothd,busybox_exec,busybox)
+# domain_auto_trans(bluetoothd,ubusd_exec,ubusd)
+
+# allow bluetoothd console_device:chr_file read;
+# allow bluetoothd init:fifo_file write;
+
+# allow bluetoothd temp_exec:file {read getattr execute execute_no_trans open execmod};
+# allow bluetoothd temp_exec:lnk_file { getattr open read execute };
+
+allow bluetoothd self:socket { create bind write getattr listen read };
+allow bluetoothd self:capability { net_admin net_bind_service };
+allow bluetoothd device:sock_file write;
+allow bluetoothd logd:unix_dgram_socket sendto;
+
+allow bluetoothd tmpfs:sock_file w_file_perms;
+
+allow bluetoothd dbusd:unix_stream_socket connectto;
+
+allow bluetoothd rfkill_device:chr_file rw_file_perms;
+
+allow bluetoothd kernel:system module_request;
+
+# allow bluetoothd { etc_selinux etc_initd }:dir { search open read getattr };
+# allow bluetoothd { etc_selinux etc_initd }:{ file lnk_file } { open read getattr };
+

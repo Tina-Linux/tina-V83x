@@ -1,0 +1,33 @@
+type cam, domain;
+type cam_exec, exec_type, file_type;
+#permissive cam;
+
+# for camerademo can be found
+domain_auto_trans(shell,cam_exec,cam)
+
+# for devpts
+allow cam devpts:chr_file rw_file_perms;
+
+allow cam shell:fd use;
+
+# for restorecon if camera drivers not built in
+#allow cam shell_exec:file rx_file_perms;
+#domain_auto_trans(cam,busybox_exec,busybox)
+#domain_auto_trans(cam,selinux_exec,selinux)
+
+# for camerademo use /dev/video0
+allow cam cam_device:chr_file rw_file_perms;
+
+# for isp use /dev/media0 /dev/v4l-sbudev
+allow cam isp_device:chr_file { open write read ioctl getattr };
+allow cam v4lsub_device:chr_file { open getattr read write ioctl };
+
+allow cam device:dir { open read };
+
+# for save pic.bmp
+allow cam tmpfs:dir { write create add_name setattr mounton search };
+allow cam tmpfs:file { write create open ioctl };
+
+# for isp.save.bin
+allow cam storage_file:dir { search open read getattr };
+allow cam storage_file:file { write create open ioctl };

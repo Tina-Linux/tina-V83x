@@ -1,0 +1,6 @@
+---- switch to channel Matches (1 in 1 files) ----
+airkiss_app.c:    LOG_MSG( "switch to channel %d\n", g_cur_channel );
+---- switch to channel Search Errors Encountered (2) ----
+The following 2 files could not be processed:
+Y:\c600_linux_bak\airkiss_app_allwiner\Project\airkiss_app_allwiner.IAB : File could not be opened.
+Y:\c600_linux_bak\airkiss_app_allwiner\Project\airkiss_app_allwiner.IMB : File could not be opened.

@@ -1,0 +1,9 @@
+#!/bin/sh
+# get target
+# output: r40-evb
+# example: var=`get_target`
+# target_file: The file could get target.
+target_file="/etc/openwrt_release"
+
+[ -f "${target_file}" ] \
+    && cat ${target_file} | awk -F"['/]" '/TARGET/{print $2}'

@@ -1,0 +1,31 @@
+
+#include "tdmin_interface.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+int main () {
+    PCMContainer_t PcmParmter;
+    int i, ret;
+    FILE *debug;
+
+    ret = alsa_tdmin_init(&PcmParmter);
+    if (ret != 0) {
+        printf("the alsa_tdmin_init ret is %d\n", ret);
+        return -1;
+    }
+
+
+    debug = fopen("./1chs.pcm", "w");
+
+    for (i = 0; i < 100; i++) {
+        ret = alsa_read_tdmin_pcm(&PcmParmter);
+        if (ret) {
+            printf("alsa_read_tdmin_pcm error is %d\n", ret);
+            return -1;
+        }
+
+        if (debug)
+            fwrite((char *)PcmParmter.data_buf, 1, PcmParmter.chunk_bytes, debug);
+    }
+}

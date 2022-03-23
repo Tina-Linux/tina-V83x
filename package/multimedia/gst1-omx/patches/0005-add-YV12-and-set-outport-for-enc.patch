@@ -1,0 +1,56 @@
+diff --git a/omx/gstomxvideoenc.c b/omx/gstomxvideoenc.c
+index bfad2f3..36b6927 100644
+--- a/omx/gstomxvideoenc.c
++++ b/omx/gstomxvideoenc.c
+@@ -1022,6 +1022,9 @@ gst_omx_video_enc_set_format (GstVideoEncoder * encoder,
+       case GST_VIDEO_FORMAT_I420:
+         port_def.format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+         break;
++      case GST_VIDEO_FORMAT_YV12:
++        port_def.format.video.eColorFormat = OMX_COLOR_FormatYVU420Planar;
++        break;
+       case GST_VIDEO_FORMAT_NV12:
+         port_def.format.video.eColorFormat = OMX_COLOR_FormatYUV420SemiPlanar;
+         break;
+@@ -1057,6 +1060,7 @@ gst_omx_video_enc_set_format (GstVideoEncoder * encoder,
+ 
+   switch (port_def.format.video.eColorFormat) {
+     case OMX_COLOR_FormatYUV420Planar:
++    case OMX_COLOR_FormatYVU420Planar:
+     case OMX_COLOR_FormatYUV420PackedPlanar:
+       port_def.nBufferSize =
+           (port_def.format.video.nStride * port_def.format.video.nFrameHeight) +
+@@ -1135,8 +1139,13 @@ gst_omx_video_enc_set_format (GstVideoEncoder * encoder,
+   }
+ 
+   GST_DEBUG_OBJECT (self, "Updating outport port definition");
++
++  gst_omx_port_get_port_definition (self->enc_out_port, &port_def);
++  port_def.format.video.nFrameWidth = info->width;
++  port_def.format.video.nFrameHeight = info->height;
++
+   if (gst_omx_port_update_port_definition (self->enc_out_port,
+-          NULL) != OMX_ErrorNone)
++          &port_def) != OMX_ErrorNone)
+     return FALSE;
+ 
+   if (self->target_bitrate != 0xffffffff) {
+@@ -1285,7 +1294,7 @@ gst_omx_video_enc_fill_buffer (GstOMXVideoEnc * self, GstBuffer * inbuf,
+ {
+   GstVideoCodecState *state = gst_video_codec_state_ref (self->input_state);
+   GstVideoInfo *info = &state->info;
+-  OMX_PARAM_PORTDEFINITIONTYPE *port_def = &self->enc_in_port->port_def;
++  OMX_PARAM_PORTDEFINITIONTYPE *port_def = &self->enc_out_port->port_def;
+   gboolean ret = FALSE;
+   GstVideoFrame frame;
+ 
+@@ -1310,7 +1319,8 @@ gst_omx_video_enc_fill_buffer (GstOMXVideoEnc * self, GstBuffer * inbuf,
+   /* Different strides */
+ 
+   switch (info->finfo->format) {
+-    case GST_VIDEO_FORMAT_I420:{
++    case GST_VIDEO_FORMAT_I420:
++    case GST_VIDEO_FORMAT_YV12:{
+       gint i, j, height, width;
+       guint8 *src, *dest;
+       gint src_stride, dest_stride;

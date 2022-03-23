@@ -1,0 +1,85 @@
+diff --git a/omx/gstomxvideodec.c b/omx/gstomxvideodec.c
+index 38de95b..894f813 100644
+--- a/omx/gstomxvideodec.c
++++ b/omx/gstomxvideodec.c
+@@ -1879,9 +1879,12 @@ gst_omx_video_dec_set_format (GstVideoDecoder * decoder,
+ 
+     GST_DEBUG_OBJECT (self, "Need to disable and drain decoder");
+ 
++    /*
+     gst_omx_video_dec_drain (decoder);
+     gst_omx_video_dec_flush (decoder);
+     gst_omx_port_set_flushing (out_port, 5 * GST_SECOND, TRUE);
++    */
++    gst_omx_video_dec_flush (decoder);
+ 
+     if (klass->cdata.hacks & GST_OMX_HACK_NO_COMPONENT_RECONFIGURE) {
+       GST_VIDEO_DECODER_STREAM_UNLOCK (self);
+@@ -1901,7 +1904,7 @@ gst_omx_video_dec_set_format (GstVideoDecoder * decoder,
+         gst_omx_port_set_flushing (self->egl_out_port, 5 * GST_SECOND, TRUE);
+       }
+ #endif
+-
++      /*
+       if (gst_omx_port_set_enabled (self->dec_in_port, FALSE) != OMX_ErrorNone)
+         return FALSE;
+       if (gst_omx_port_set_enabled (out_port, FALSE) != OMX_ErrorNone)
+@@ -1921,7 +1924,7 @@ gst_omx_video_dec_set_format (GstVideoDecoder * decoder,
+         return FALSE;
+       if (gst_omx_port_wait_enabled (out_port, 1 * GST_SECOND) != OMX_ErrorNone)
+         return FALSE;
+-
++      */
+ #if defined (USE_OMX_TARGET_RPI) && defined (HAVE_GST_GL)
+       if (self->eglimage) {
+         OMX_STATETYPE egl_state;
+@@ -1959,6 +1962,9 @@ gst_omx_video_dec_set_format (GstVideoDecoder * decoder,
+     self->input_state = NULL;
+ 
+     GST_DEBUG_OBJECT (self, "Decoder drained and disabled");
++    /* The local port_def is now obsolete so get it again. */
++    if (!needs_disable)
++      gst_omx_port_get_port_definition (self->dec_in_port, &port_def);
+   }
+ 
+   port_def.format.video.nFrameWidth = info->width;
+@@ -1994,15 +2000,17 @@ gst_omx_video_dec_set_format (GstVideoDecoder * decoder,
+   if (needs_disable) {
+     if (gst_omx_port_set_enabled (self->dec_in_port, TRUE) != OMX_ErrorNone)
+       return FALSE;
++    /*
+     if (gst_omx_port_allocate_buffers (self->dec_in_port) != OMX_ErrorNone)
+       return FALSE;
+-
++    */
+     if ((klass->cdata.hacks & GST_OMX_HACK_NO_DISABLE_OUTPORT)) {
+       if (gst_omx_port_set_enabled (self->dec_out_port, TRUE) != OMX_ErrorNone)
+         return FALSE;
++    /*
+       if (gst_omx_port_allocate_buffers (self->dec_out_port) != OMX_ErrorNone)
+         return FALSE;
+-
++    */
+       if (gst_omx_port_wait_enabled (self->dec_out_port,
+               5 * GST_SECOND) != OMX_ErrorNone)
+         return FALSE;
+@@ -2100,7 +2108,9 @@ gst_omx_video_dec_flush (GstVideoDecoder * decoder)
+ 
+   /* 1) Flush the ports */
+   GST_DEBUG_OBJECT (self, "flushing ports");
++  /*
+   gst_omx_port_set_flushing (self->dec_in_port, 5 * GST_SECOND, TRUE);
++  */
+   gst_omx_port_set_flushing (self->dec_out_port, 5 * GST_SECOND, TRUE);
+ 
+ #if defined (USE_OMX_TARGET_RPI) && defined (HAVE_GST_GL)
+@@ -2129,7 +2139,9 @@ gst_omx_video_dec_flush (GstVideoDecoder * decoder)
+ #endif
+ 
+   /* 4) Unset flushing to allow ports to accept data again */
++  /*
+   gst_omx_port_set_flushing (self->dec_in_port, 5 * GST_SECOND, FALSE);
++  */
+   gst_omx_port_set_flushing (self->dec_out_port, 5 * GST_SECOND, FALSE);
+ 
+ #if defined (USE_OMX_TARGET_RPI) && defined (HAVE_GST_GL)

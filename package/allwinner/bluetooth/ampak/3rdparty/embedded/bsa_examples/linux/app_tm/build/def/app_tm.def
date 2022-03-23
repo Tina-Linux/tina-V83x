@@ -1,0 +1,24 @@
+# list of required include directories for the current application
+appincdir := $(appdir)/include \
+             $(appdir)/../app_common/include
+
+# list of required source directories for the current application
+appsrcdir := $(appdir)/source \
+            $(appdir)/../app_common/source
+
+# list of sources for the current application
+appsrcs := \
+    app_tm_main.c \
+    app_tm.c \
+    app_tm_vse.c \
+    app_tm_vsc.c \
+    app_mgt.c \
+    app_utils.c
+
+
+# add the include and source directories to the whole project
+incdirs := $(incdirs) $(appincdir)
+srcdirs := $(srcdirs) $(appsrcdir)
+
+# add the list of sources to the current list
+appsources := $(appsources) $(appsrcs)

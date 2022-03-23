@@ -1,0 +1,13 @@
+diff --git a/ext/wayland/wlwindow.c b/ext/wayland/wlwindow.c
+index 97c3698..5b2f66d 100644
+--- a/ext/wayland/wlwindow.c
++++ b/ext/wayland/wlwindow.c
+@@ -451,6 +451,8 @@ gst_wl_window_set_render_rectangle (GstWlWindow * window, gint x, gint y,
+   window->render_rectangle.w = w;
+   window->render_rectangle.h = h;
+ 
++  wl_shell_surface_set_window_position(window->shell_surface, x, y);
++
+   /* position the area inside the parent - needs a parent commit to apply */
+   if (window->area_subsurface)
+     wl_subsurface_set_position (window->area_subsurface, x, y);

@@ -1,0 +1,22 @@
+{
+    "volume_manager" : {
+        "SpeakerMute" : {
+            "type" : "MuteSwitch",
+            "device" : "dueros",
+            "iface" : "MIXER",
+            "name" : "Dueros Playback Mute Switch",
+            "mute_value" : 0,
+            "unmute_value" : 1,
+            "default" : "unmute"
+        },
+        "SpeakerVolume" : {
+            "type" : "VolumeControl",
+            "device" : "dueros",
+            "iface" : "MIXER",
+            "name" : "Dueros Playback Volume",
+            "valid_min" : 0,
+            "valid_max" : 100,
+            "default" : 75
+        }
+    }
+}

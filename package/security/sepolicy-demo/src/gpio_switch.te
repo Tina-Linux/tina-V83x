@@ -1,0 +1,23 @@
+type gpio_switch, domain, mlstrustedsubject;
+
+type gpio_switch_exec, exec_type, file_type;
+# permissive gpio_switch;
+#domain_auto_trans(shell,gpio_switch_exec,gpio_switch)
+domain_auto_trans(init,gpio_switch_exec,gpio_switch)
+# domain_auto_trans(gpio_switch,busybox_exec,busybox)
+# domain_auto_trans(gpio_switch,ubusd_exec,ubusd)
+
+# allow gpio_switch init:fifo_file { read write };
+
+# allow gpio_switch console_device:chr_file read;
+# allow gpio_switch serial_device:chr_file r_file_perms;
+
+# allow gpio_switch system_file:file { execute execute_no_trans open execmod };
+# allow gpio_switch tmpfs:sock_file { read write };
+# allow gpio_switch ubusd:unix_stream_socket connectto;
+
+# allow gpio_switch { etc_selinux etc_initd }:dir { search open read getattr };
+
+# allow gpio_switch { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow gpio_switch { mount_exec temp_exec }:lnk_file { getattr open read execute };
+

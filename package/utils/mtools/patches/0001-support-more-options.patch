@@ -1,0 +1,877 @@
+--- a/Makefile.Be
++++ b/Makefile.Be
+@@ -29,12 +29,117 @@ CC=mwcc -O7
+ 
+ OBJS=buffer.o codepage.o codepages.o config.o copyfile.o devices.o \
+ directory.o expand.o fat.o fat_free.o file.o file_name.o file_read.o \
+-filter.o force_io.o hash.o init.o match.o mainloop.o mattrib.o mbadblocks.o \
+-mcd.o mcopy.o mdel.o mdir.o mformat.o minfo.o misc.o missFuncs.o \
+-mk_direntry.o mlabel.o mmd.o mmount.o mmove.o mpartition.o mzip.o mtools.o \
++filter.o force_io.o hash.o init.o match.o mainloop.o \
++misc.o missFuncs.o \
++mk_direntry.o mtools.o \
+ parse.o plain_io.o precmd.o privileges.o scsi.o signal.o stream.o \
+ streamcache.o subdir.o toupper.o tty.o vfat.o xdf_io.o
+ 
++if MATTRIB
++OBJS+=mattrib.o
++endif
++
++if MBADBLOCKS
++OBJS+=mbadblocks.o
++endif
++
++if MCAT
++OBJS+=mcat.o
++endif
++
++if MCD
++OBJS+=mcd.o
++endif
++
++if MCLASSERASE
++OBJS+=mclasserase.o
++endif
++
++if MCOPY
++OBJS+=mcopy.o
++endif
++
++if MDEL
++OBJS+=mdel.o
++endif
++
++if MDELTREE
++OBJS+=mdeltree.o
++endif
++
++if MDIR
++OBJS+=mdir.o
++endif
++
++if MDOCTORFAT
++OBJS+=mdoctorfat.o
++endif
++
++if MDU
++OBJS+=mdu.o
++endif
++
++if MFORMAT
++OBJS+=mformat.o
++endif
++
++if MINFO
++OBJS+=minfo.o
++endif
++
++if MLABEL
++OBJS+=mlabel.o
++endif
++
++if MMD
++OBJS+=mmd.o
++endif
++
++if MMOUNT
++OBJS+=mmount.o
++endif
++
++if MPARTITION
++OBJS+=mpartition.o
++endif
++
++if MRD
++OBJS+=mrd.o
++endif
++
++if MREAD
++OBJS+=mread.o
++endif
++
++if MMOVE
++OBJS+=mmove.o
++endif
++
++if MREN
++OBJS+=mren.o
++endif
++
++if MSHOWFAT
++OBJS+=mshowfat.o
++endif
++
++if MSHORTNAME
++OBJS+=mshortname.o
++endif
++
++if MTYPE
++OBJS+=mtype.o
++endif
++
++if MWRITE
++OBJS+=mwrite.o
++endif
++
++if MZIP
++OBJS+=mzip.o
++endif
++
++
+ all: mtools mkmanifest
+ 
+ $(OBJS): config.h
+--- a/configure.in
++++ b/configure.in
+@@ -15,7 +15,8 @@ dnl You should have received a copy of t
+ dnl along with Mtools.  If not, see <http://www.gnu.org/licenses/>.
+ dnl
+ dnl Process this file with autoconf to produce a configure script.
+-AC_INIT(buffer.c)
++AC_PREREQ(2.60)
++AC_INIT(mtools, 4.0.18)
+ 
+ AC_CONFIG_HEADER(config.h)
+ 
+@@ -31,6 +32,7 @@ AC_PATH_PROG(INSTALL_INFO, install-info,
+ dnl Check for Systems
+ AC_USE_SYSTEM_EXTENSIONS
+ AC_CANONICAL_SYSTEM
++AM_INIT_AUTOMAKE
+ 
+ AC_C_CONST
+ AC_C_INLINE
+@@ -82,6 +84,309 @@ AC_ARG_ENABLE(raw_term,
+ fi],
+ AC_DEFINE([USE_RAWTERM],1,[Define on non Unix OS'es which don't have the concept of tty's]))
+ 
++build_mattrib="yes"
++build_mbadblocks="yes"
++build_mcat="yes"
++build_mcd="yes"
++build_mclasserase="yes"
++build_mcopy="yes"
++build_mdel="yes"
++build_mdeltree="yes"
++build_mdir="yes"
++build_mdoctorfat="yes"
++build_mdu="yes"
++build_mformat="yes"
++build_minfo="yes"
++build_mlabel="yes"
++build_mmd="yes"
++build_mmount="yes"
++build_mpartition="yes"
++build_mrd="yes"
++build_mread="yes"
++build_mmove="yes"
++build_mren="yes"
++build_mshowfat="yes"
++build_mshortname="yes"
++build_mtoolstest="yes"
++build_mtype="yes"
++build_mwrite="yes"
++build_mzip="yes"
++
++dnl Check for configuration options
++dnl Raw terminal code (enabled by default)
++AC_ARG_ENABLE(mattrib,
++[  --enable-mattrib       build support for mattrib <default=yes>],
++build_mattrib=$enableval)
++
++AC_ARG_ENABLE(mbadblocks,
++[  --enable-mbadblocks    build support for mbadblocks <default=yes>],
++build_mbadblocks=$enableval)
++
++AC_ARG_ENABLE(mcat,
++[  --enable-mcat          build support for mcat <default=yes>],
++build_mcat=$enableval)
++
++
++AC_ARG_ENABLE(mcd,
++[  --enable-mcd           build support for mcd <default=yes>],
++build_mcd=$enableval)
++
++
++AC_ARG_ENABLE(mclasserase,
++[  --enable-mclasserase   build support for mclasserase <default=yes>],
++build_mclasserase=$enableval)
++
++
++AC_ARG_ENABLE(mcopy,
++[  --enable-mcopy         build support for mcopy <default=yes>],
++build_mcopy=$enableval)
++
++
++AC_ARG_ENABLE(mdel,
++[  --enable-mdel          build support for mdel <default=yes>],
++build_mdel=$enableval)
++
++
++AC_ARG_ENABLE(mdeltree,
++[  --enable-mdeltree      build support for mdeltree <default=yes>],
++build_mdeltree=$enableval)
++
++
++AC_ARG_ENABLE(mdir,
++[  --enable-mdir          build support for mdir <default=yes>],
++build_mdir=$enableval)
++
++
++AC_ARG_ENABLE(mdoctorfat,
++[  --enable-mdoctorfat    build support for mdoctorfat <default=yes>],
++build_mdoctorfat=$enableval)
++
++
++AC_ARG_ENABLE(mdu,
++[  --enable-mdu           build support for mdu <default=yes>],
++build_mdu=$enableval)
++
++
++AC_ARG_ENABLE(mformat,
++[  --enable-mformat       build support for mformat <default=yes>],
++build_mformat=$enableval)
++
++
++AC_ARG_ENABLE(minfo,
++[  --enable-minfo         build support for minfo <default=yes>],
++build_minfo=$enableval)
++
++
++AC_ARG_ENABLE(mlabel,
++[  --enable-mlabel        build support for mlabel <default=yes>],
++build_mlabel=$enableval)
++
++
++AC_ARG_ENABLE(mmd,
++[  --enable-mmd           build support for mmd <default=yes>],
++build_mmd=$enableval)
++
++
++AC_ARG_ENABLE(mmount,
++[  --enable-mmount        build support for mmount <default=yes>],
++build_mmount=$enableval)
++
++
++AC_ARG_ENABLE(mpartition,
++[  --enable-mpartition    build support for mpartition <default=yes>],
++build_mpartition=$enableval)
++
++
++AC_ARG_ENABLE(mrd,
++[  --enable-mrd           build support for mrd <default=yes>],
++build_mrd=$enableval)
++
++
++AC_ARG_ENABLE(mread,
++[  --enable-mread         build support for mread <default=yes>],
++build_mread=$enableval)
++
++
++AC_ARG_ENABLE(mmove,
++[  --enable-mmove         build support for mmove <default=yes>],
++build_mmove=$enableval)
++
++
++AC_ARG_ENABLE(mren,
++[  --enable-mren          build support for mren <default=yes>],
++build_mren=$enableval)
++
++
++AC_ARG_ENABLE(mshowfat,
++[  --enable-mshowfat      build support for mshowfat <default=yes>],
++build_mshowfat=$enableval)
++
++
++AC_ARG_ENABLE(mshortname,
++[  --enable-mshortname    build support for mshortname <default=yes>],
++build_mshortname=$enableval)
++
++
++AC_ARG_ENABLE(mtoolstest,
++[  --enable-mtoolstest    build support for mtoolstest <default=yes>],
++build_mtoolstest=$enableval)
++
++
++AC_ARG_ENABLE(mtype,
++[  --enable-mtype         build support for mtype <default=yes>],
++build_mtype=$enableval)
++
++
++AC_ARG_ENABLE(mwrite,
++[  --enable-mwrite        build support for mwrite <default=yes>],
++build_mwrite=$enableval)
++
++
++AC_ARG_ENABLE(mzip,
++[  --enable-mzip          build support for mzip <default=yes>],
++build_mzip=$enableval)
++
++if test "x$build_ctrl_static" = "xyes"; then
++    AC_DEFINE(_MGCTRL_STATIC, 1,
++            [Define if include STATIC control])
++fi
++
++if test "x$build_mattrib" = "xyes"; then
++	AC_DEFINE(USE_MATTRIB, 1,
++		[Define if enable mattrib])
++fi
++
++if test "x$build_mbadblocks" = "xyes"; then
++	AC_DEFINE(USE_MBADBLOCKS, 1,
++		[Define if enable mbadblocks])
++fi
++
++if test "x$build_mcat" = "xyes"; then
++	AC_DEFINE(USE_MCAT, 1,
++		[Define if enable mcat])
++fi
++
++if test "x$build_mcd" = "xyes"; then
++	AC_DEFINE(USE_MCD, 1,
++		[Define if enable mcd])
++fi
++
++if test "x$build_mclasserase" = "xyes"; then
++	AC_DEFINE(USE_MCLASSERASE, 1,
++		[Define if enable mclasserase])
++fi
++
++if test "x$build_mcopy" = "xyes"; then
++	AC_DEFINE(USE_MCOPY, 1,
++		[Define if enable mcopy])
++fi
++
++if test "x$build_mdel" = "xyes"; then
++	AC_DEFINE(USE_MDEL, 1,
++		[Define if enable mdel])
++fi
++
++if test "x$build_mdeltree" = "xyes"; then
++	AC_DEFINE(USE_MDELTREE, 1,
++		[Define if enable mdeltree])
++fi
++
++if test "x$build_mdir" = "xyes"; then
++	AC_DEFINE(USE_MDIR, 1,
++		[Define if enable mdir])
++fi
++
++if test "x$build_mdoctorfat" = "xyes"; then
++	AC_DEFINE(USE_MDOCTORFAT, 1,
++		[Define if enable mdoctorfat])
++fi
++
++if test "x$build_mdu" = "xyes"; then
++	AC_DEFINE(USE_MDU, 1,
++		[Define if enable mdu])
++fi
++
++if test "x$build_mformat" = "xyes"; then
++	AC_DEFINE(USE_MFORMAT, 1,
++		[Define if enable mformat])
++fi
++
++if test "x$build_minfo" = "xyes"; then
++	AC_DEFINE(USE_MINFO, 1,
++		[Define if enable minfo])
++fi
++
++if test "x$build_mlabel" = "xyes"; then
++	AC_DEFINE(USE_MLABEL, 1,
++		[Define if enable mlabel])
++fi
++
++if test "x$build_mmd" = "xyes"; then
++	AC_DEFINE(USE_MMD, 1,
++		[Define if enable mmd])
++fi
++
++if test "x$build_mmount" = "xyes"; then
++	AC_DEFINE(USE_MMOUNT, 1,
++		[Define if enable mmount])
++fi
++
++if test "x$build_mpartition" = "xyes"; then
++	AC_DEFINE(USE_MPARTITION, 1,
++		[Define if enable mpartition])
++fi
++
++if test "x$build_mrd" = "xyes"; then
++	AC_DEFINE(USE_MRD, 1,
++		[Define if enable mrd])
++fi
++
++if test "x$build_mread" = "xyes"; then
++	AC_DEFINE(USE_MREAD, 1,
++		[Define if enable mread])
++fi
++
++if test "x$build_mmove" = "xyes"; then
++	AC_DEFINE(USE_MMOVE, 1,
++		[Define if enable mmove])
++fi
++
++if test "x$build_mren" = "xyes"; then
++	AC_DEFINE(USE_MREN, 1,
++		[Define if enable mren])
++fi
++
++if test "x$build_mshowfat" = "xyes"; then
++	AC_DEFINE(USE_MSHOWFAT, 1,
++		[Define if enable mshowfat])
++fi
++
++if test "x$build_mshortname" = "xyes"; then
++	AC_DEFINE(USE_MSHORTNAME, 1,
++		[Define if enable mshortname])
++fi
++
++if test "x$build_mtoolstest" = "xyes"; then
++	AC_DEFINE(USE_MTOOLSTEST, 1,
++		[Define if enable mtoolstest])
++fi
++
++if test "x$build_mtype" = "xyes"; then
++	AC_DEFINE(USE_MTYPE, 1,
++		[Define if enable mtype])
++fi
++
++if test "x$build_mwrite" = "xyes"; then
++	AC_DEFINE(USE_MWRITE, 1,
++		[Define if enable mwrite])
++fi
++
++if test "x$build_mzip" = "xyes"; then
++	AC_DEFINE(USE_MZIP, 1,
++		[Define if enable mzip])
++fi
++
++
+ 
+ dnl Checks for libraries.
+ 
+@@ -392,4 +697,35 @@ AC_SUBST(MACHDEPLIBS)
+ AC_SUBST(SHLIB)
+ AC_SUBST(host_cpu)
+ AC_SUBST(HOST_ID)
+-AC_OUTPUT(Makefile)
++
++AM_CONDITIONAL(MATTRIB, test "x$build_mattrib" = "xyes")
++AM_CONDITIONAL(MBADBLOCKS, test "x$build_mbadblocks" = "xyes")
++AM_CONDITIONAL(MCAT, test "x$build_mcat" = "xyes")
++AM_CONDITIONAL(MCD, test "x$build_mcd" = "xyes")
++AM_CONDITIONAL(MCLASSERASE, test "x$build_mclasserase" = "xyes")
++AM_CONDITIONAL(MCOPY, test "x$build_mcopy" = "xyes")
++AM_CONDITIONAL(MDEL, test "x$build_mdel" = "xyes")
++AM_CONDITIONAL(MDELTREE, test "x$build_mdeltree" = "xyes")
++AM_CONDITIONAL(MDIR, test "x$build_mdir" = "xyes")
++AM_CONDITIONAL(MDOCTORFAT, test "x$build_mdoctorfat" = "xyes")
++AM_CONDITIONAL(MDU, test "x$build_mdu" = "xyes")
++AM_CONDITIONAL(MFORMAT, test "x$build_mformat" = "xyes")
++AM_CONDITIONAL(MINFO, test "x$build_minfo" = "xyes")
++AM_CONDITIONAL(MLABEL, test "x$build_mlabel" = "xyes")
++AM_CONDITIONAL(MMD, test "x$build_mmd" = "xyes")
++AM_CONDITIONAL(MMOUNT, test "x$build_mmount" = "xyes")
++AM_CONDITIONAL(MPARTITION, test "x$build_mpartition" = "xyes")
++AM_CONDITIONAL(MRD, test "x$build_mrd" = "xyes")
++AM_CONDITIONAL(MREAD, test "x$build_mread" = "xyes")
++AM_CONDITIONAL(MMOVE, test "x$build_mmove" = "xyes")
++AM_CONDITIONAL(MREN, test "x$build_mren" = "xyes")
++AM_CONDITIONAL(MSHOWFAT, test "x$build_mshowfat" = "xyes")
++AM_CONDITIONAL(MSHORTNAME, test "x$build_mshortname" = "xyes")
++AM_CONDITIONAL(MTOOLSTEST, test "x$build_mtoolstest" = "xyes")
++AM_CONDITIONAL(MTYPE, test "x$build_mtype" = "xyes")
++AM_CONDITIONAL(MWRITE, test "x$build_mwrite" = "xyes")
++AM_CONDITIONAL(MZIP, test "x$build_mzip" = "xyes")
++
++AC_CONFIG_FILES([Makefile])
++
++AC_OUTPUT
+--- a/mtools.c
++++ b/mtools.c
+@@ -28,33 +28,87 @@ static const struct dispatch {
+ 	void (*fn)(int, char **, int);
+ 	int type;
+ } dispatch[] = {
++#if USE_MATTRIB
+ 	{"mattrib",mattrib, 0},
++#endif
++#if USE_MBADBLOCKS
+ 	{"mbadblocks",mbadblocks, 0},
++#endif
++#if USE_MCAT
+ 	{"mcat",mcat, 0},
++#endif
++#if USE_MCD
+ 	{"mcd",mcd, 0},
++#endif
++#if USE_MCLASSERASE
+ 	{"mclasserase",mclasserase, 0},
++#endif
++#if USE_MCOPY
+ 	{"mcopy",mcopy, 0},
++#endif
++#if USE_MDEL
+ 	{"mdel",mdel, 0},
++#endif
++#if USE_MDELTREE
+ 	{"mdeltree",mdel, 2},
++#endif
++#if USE_MDIR
+ 	{"mdir",mdir, 0},
++#endif
++#if USE_MDOCTORFAT
+ 	{"mdoctorfat",mdoctorfat, 0},
++#endif
++#if USE_MDU
+ 	{"mdu",mdu, 0},
++#endif
++#if USE_MFORMAT
+ 	{"mformat",mformat, 0},
++#endif
++#if USE_MINFO
+ 	{"minfo", minfo, 0},
++#endif
++#if USE_MLABEL
+ 	{"mlabel",mlabel, 0},
++#endif
++#if USE_MMD
+ 	{"mmd",mmd, 0},
++#endif
++#if USE_MMOUNT
+ 	{"mmount",mmount, 0},
++#endif
++#if USE_MPARTITION
+ 	{"mpartition",mpartition, 0},
++#endif
++#if USE_MRD
+ 	{"mrd",mdel, 1},
++#endif
++#if USE_MREAD
+ 	{"mread",mcopy, 0},
++#endif
++#if USE_MMOVE
+ 	{"mmove",mmove, 0},
++#endif
++#if USE_MREN
+ 	{"mren",mmove, 1},
++#endif
++#if USE_MSHOWFAT
+ 	{"mshowfat", mshowfat, 0},
++#endif
++#if USE_MSHORTNAME
+ 	{"mshortname", mshortname, 0},
++#endif
++#if USE_MTOOLSTEST
+ 	{"mtoolstest", mtoolstest, 0},
++#endif
++#if USE_MTYPE
+ 	{"mtype",mcopy, 1},
++#endif
++#if USE_MWRITE
+ 	{"mwrite",mcopy, 0},
++#endif
++#if USE_MZIP
+ 	{"mzip", mzip, 0}
++#endif
+ };
+ #define NDISPATCH (sizeof dispatch / sizeof dispatch[0])
+ 
+--- /dev/null
++++ b/Makefile.am
+@@ -0,0 +1,218 @@
++#  Copyright 1997 Marco Nelissen
++#  This file is part of mtools.
++#
++#  Mtools is free software: you can redistribute it and/or modify
++#  it under the terms of the GNU General Public License as published by
++#  the Free Software Foundation, either version 3 of the License, or
++#  (at your option) any later version.
++#
++#  Mtools is distributed in the hope that it will be useful,
++#  but WITHOUT ANY WARRANTY; without even the implied warranty of
++#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++#  GNU General Public License for more details.
++#
++#  You should have received a copy of the GNU General Public License
++#  along with Mtools.  If not, see <http://www.gnu.org/licenses/>.
++#
++#       Makefile for Mtools
++#
++# check the Configure file for some examples of device-specific setups
++# Berkeley flavors of Unix should include -DBSD in the CFLAGS.  Pick
++# a lock method... either -DLOCKF, -DFLOCK, or -DFCNTL and put that
++# string in the CFLAGS line below.
++
++#
++# rudimentary makefile for building mtools 3.1 on the BeOS
++#
++
++
++bin_PROGRAMS = mtools floppyd mkmanifest
++
++mtools_SOURCES = buffer.c charsetConv.c codepages.c config.c copyfile.c \
++devices.c dirCache.c directory.c direntry.c expand.c fat.c fat_free.c file.c  \
++file_name.c filter.c floppyd_io.c force_io.c hash.c init.c llong.c match.c \
++mainloop.c misc.c missFuncs.c mk_direntry.c mtools.c patchlevel.c \
++plain_io.c precmd.c privileges.c scsi.c signal.c stream.c streamcache.c \
++subdir.c unixdir.c tty.c vfat.c xdf_io.c mpartition.c mdel.c mformat.c
++
++floppyd_SOURCES = floppyd.c llong.c
++
++mkmanifest_SOURCES = missFuncs.c mkmanifest.c misc.c patchlevel.c
++
++floppyd_installtest_SOURCES = floppyd_installtest.c misc.c expand.c privileges.c
++
++mtools_LINKS=
++
++if MTOOLSTEST
++mtools_LINKS += mtoolstest 
++endif
++
++if MATTRIB
++mtools_SOURCES += mattrib.c
++mtools_LINKS += mattrib
++endif
++
++if MBADBLOCKS
++mtools_SOURCES += mbadblocks.c
++mtools_LINKS += mbadblocks
++endif
++
++if MCAT
++mtools_SOURCES += mcat.c
++mtools_LINKS += mcat
++endif
++
++if MCD
++mtools_SOURCES += mcd.c
++mtools_LINKS += mcd
++endif
++
++if MCLASSERASE
++mtools_SOURCES += mclasserase.c
++mtools_LINKS += mclasserase
++endif
++
++if MCOPY
++mtools_SOURCES += mcopy.c
++mtools_LINKS += mcopy
++endif
++
++if MDEL
++mtools_LINKS += mdel
++endif
++
++if MDELTREE
++mtools_SOURCES += mdeltree.c
++mtools_LINKS += mdeltree
++endif
++
++if MDIR
++mtools_SOURCES += mdir.c
++mtools_LINKS += mdir
++endif
++
++if MDOCTORFAT
++mtools_SOURCES += mdoctorfat.c
++mtools_LINKS += mdoctorfat
++endif
++
++if MDU
++mtools_SOURCES += mdu.c
++mtools_LINKS += mdu
++endif
++
++if MFORMAT
++mtools_LINKS += mformat
++endif
++
++if MINFO
++mtools_SOURCES += minfo.c
++mtools_LINKS += minfo
++endif
++
++if MLABEL
++mtools_SOURCES += mlabel.c
++mtools_LINKS += mlabel
++endif
++
++if MMD
++mtools_SOURCES += mmd.c
++mtools_LINKS += mmd
++endif
++
++if MMOUNT
++mtools_SOURCES += mmount.c
++mtools_LINKS += mmount
++endif
++
++if MPARTITION
++mtools_LINKS += mpartition
++endif
++
++if MRD
++mtools_SOURCES += mrd.c
++mtools_LINKS += mrd
++endif
++
++if MREAD
++mtools_SOURCES += mread.c
++mtools_LINKS += mread
++endif
++
++if MMOVE
++mtools_SOURCES += mmove.c
++mtools_LINKS += mmove
++endif
++
++if MREN
++mtools_SOURCES += mren.c
++mtools_LINKS += mren
++endif
++
++if MSHOWFAT
++mtools_SOURCES += mshowfat.c
++mtools_LINKS += mshowfat
++endif
++
++if MSHORTNAME
++mtools_SOURCES += mshortname.c
++mtools_LINKS += mshortname
++endif
++
++if MTYPE
++mtools_SOURCES += mtype.c
++mtools_LINKS += mtype
++endif
++
++if MWRITE
++mtools_SOURCES += mwrite.c
++mtools_LINKS += mwrite
++endif
++
++if MZIP
++mtools_SOURCES += mzip.c
++mtools_LINKS += mzip
++endif
++
++mtools_CFLAGS = -DSYSCONFDIR=\"$(sysconfdir)\"
++
++mtools_CPPFLAGS = -I. 
++
++mtools_LDADD = -ldl -lc
++
++
++dist_man_MANS = floppyd.1 floppyd_installtest.1 mattrib.1 mbadblocks.1 mcat.1 mcd.1 \
++mclasserase.1 mcopy.1 mdel.1 mdeltree.1 mdir.1 mdu.1 mformat.1  minfo.1 \
++mkmanifest.1 mlabel.1 mmd.1 mmount.1 mmove.1 mpartition.1 \
++mrd.1 mren.1 mshortname.1 mshowfat.1 mtoolstest.1 mtools.1 mtype.1 mzip.1
++
++
++install-exec-hook:
++	cd $(DESTDIR)$(bindir) && \
++	target=`echo mtools | sed '$(transform)'`$(EXEEXT) && \
++	for name in $(mtools_LINKS); do \
++		link=`echo $$name | sed '$(transform)'`$(LN_EXEEXT) && \
++		rm -f $$link && \
++		$(LN_S) $$target $$link; \
++	done
++
++install-data-hook:
++	cd $(DESTDIR)$(mandir)/man1 && \
++	target=`echo mtools | sed '$(transform)'` && \
++	for name in $(mtools_LINKS); do \
++		link=`echo $$name | sed '$(transform)'` && \
++		rm -f $$link.1 && \
++		$(LN_S) $$target.1 $$link.1; \
++	done
++
++uninstall-hook:
++	cd $(DESTDIR)$(bindir) && \
++	for name in $(mtools_LINKS); do \
++		link=`echo $$name | sed '$(transform)'`$(LN_EXEEXT) && \
++		rm -f $$link; \
++	done
++	cd $(DESTDIR)$(mandir)/man1 && \
++	for name in $(mtools_LINKS); do \
++		link=`echo $$name | sed '$(transform)'` && \
++		rm -f $$link.1; \
++	done
+--- a/config.c
++++ b/config.c
+@@ -728,6 +728,7 @@ void read_config(void)
+ 	mtools_fat_compatibility=1;
+ }
+ 
++#if USE_MTOOLSTEST
+ void mtoolstest(int argc, char **argv, int type  UNUSEDP)
+ {
+     /* testing purposes only */
+@@ -804,3 +805,4 @@ void mtoolstest(int argc, char **argv, i
+ 
+     exit(0);
+ }
++#endif
+--- a/mdel.c
++++ b/mdel.c
+@@ -139,6 +139,7 @@ static int del_file(direntry_t *entry, M
+ 	return del_entry(entry, mp);
+ }
+ 
++#if USE_MDEL
+ static void usage(int ret) NORETURN;
+ static void usage(int ret)
+ {
+@@ -206,3 +207,4 @@ void mdel(int argc, char **argv, int del
+ 		
+ 	exit(main_loop(&mp, argv + optind, argc - optind));
+ }
++#endif
+--- a/mformat.c
++++ b/mformat.c
+@@ -698,6 +698,7 @@ static void calc_fs_parameters_32(unsign
+ 
+ 
+ 
++#if USE_MFORMAT
+ static void usage(int ret)
+ {
+ 	fprintf(stderr,
+@@ -717,6 +718,7 @@ static void usage(int ret)
+ 		"device\n", progname);
+ 	exit(ret);
+ }
++#endif
+ 
+ #ifdef OS_linux
+ static int get_block_geom(int fd, struct device *dev, char *errmsg) {
+@@ -763,6 +765,7 @@ static int get_block_geom(int fd, struct
+ }
+ #endif
+ 
++#if USE_MFORMAT
+ void mformat(int argc, char **argv, int dummy)
+ {
+ 	int r; /* generic return value */
+@@ -1380,3 +1383,4 @@ void mformat(int argc, char **argv, int
+ #endif
+ 	exit(0);
+ }
++#endif
+--- a/mpartition.c
++++ b/mpartition.c
+@@ -261,6 +261,7 @@ static void setsize0(unsigned long capac
+ }
+ 
+ 
++#if USE_MPARTITION
+ static void usage(int ret) NORETURN;
+ static void usage(int ret)
+ {
+@@ -740,3 +741,4 @@ void mpartition(int argc, char **argv, i
+ 	FREE(&Stream);
+ 	exit(0);
+ }
++#endif

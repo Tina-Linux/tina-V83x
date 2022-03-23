@@ -1,0 +1,931 @@
+diff a/clients/roscpp/CMakeLists.txt openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/CMakeLists.txt
+--- a/clients/roscpp/CMakeLists.txt	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/CMakeLists.txt	2019-11-29 16:37:51.688655759 +0800
+@@ -24,7 +24,16 @@
+ 
+ find_package(Boost REQUIRED COMPONENTS chrono filesystem signals system)
+ 
+-include_directories(include ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_INCLUDE_DESTINATION}/ros ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
++# Make sure we use CLOCK_MONOTONIC for the condition variable wait_for if not Apple.
++if(NOT APPLE AND NOT WIN32)
++  if(Boost_VERSION LESS 106700)
++    # CLOCK_MONOTONIC became the default in Boost 1.67:
++    # https://github.com/boostorg/thread/commit/1e84b978b2bb0aae830cc14533dea3b7ddda5cde
++    add_definitions(-DBOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC)
++  endif()
++endif()
++
++include_directories(include ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_INCLUDE_DESTINATION} ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_INCLUDE_DESTINATION}/ros ${catkin_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
+ 
+ add_message_files(
+   DIRECTORY msg
+diff a/clients/roscpp/include/boost_161_condition_variable.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/boost_161_condition_variable.h
+--- a/clients/roscpp/include/boost_161_condition_variable.h	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/include/boost_161_condition_variable.h	2019-11-29 15:46:11.840523660 +0800
+@@ -1,5 +1,5 @@
+-#ifndef BOOST_THREAD_CONDITION_VARIABLE_HPP
+-#define BOOST_THREAD_CONDITION_VARIABLE_HPP
++#ifndef BOOST_161_THREAD_CONDITION_VARIABLE_HPP
++#define BOOST_161_THREAD_CONDITION_VARIABLE_HPP
+ 
+ //  condition_variable.hpp
+ //
+@@ -13,7 +13,6 @@
+ #if defined(BOOST_THREAD_PLATFORM_WIN32)
+ #include <boost/thread/win32/condition_variable.hpp>
+ #elif defined(BOOST_THREAD_PLATFORM_PTHREAD)
+-//#include <boost/thread/pthread/condition_variable.hpp>
+ #include "boost_161_pthread_condition_variable.h"
+ #else
+ #error "Boost threads unavailable on this platform"
+diff a/clients/roscpp/include/boost_161_pthread_condition_variable_fwd.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/boost_161_pthread_condition_variable_fwd.h
+--- a/clients/roscpp/include/boost_161_pthread_condition_variable_fwd.h	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/include/boost_161_pthread_condition_variable_fwd.h	2019-11-29 15:34:08.868492850 +0800
+@@ -1,38 +1,22 @@
+-#ifndef BOOST_THREAD_PTHREAD_CONDITION_VARIABLE_FWD_HPP
+-#define BOOST_THREAD_PTHREAD_CONDITION_VARIABLE_FWD_HPP
++#ifndef BOOST_161_THREAD_PTHREAD_CONDITION_VARIABLE_FWD_HPP
++#define BOOST_161_THREAD_PTHREAD_CONDITION_VARIABLE_FWD_HPP
+ // Distributed under the Boost Software License, Version 1.0. (See
+ // accompanying file LICENSE_1_0.txt or copy at
+ // http://www.boost.org/LICENSE_1_0.txt)
+ // (C) Copyright 2007-8 Anthony Williams
+ // (C) Copyright 2011-2012 Vicente J. Botet Escriba
+ 
+-// define to check if this backported version was included
+-#define USING_BACKPORTED_BOOST_CONDITION_VARIABLE 1
+-
+-#include <boost/assert.hpp>
+-#include <boost/throw_exception.hpp>
+-#include <pthread.h>
+-#include <boost/thread/cv_status.hpp>
+-#include <boost/thread/mutex.hpp>
+-#include <boost/thread/lock_types.hpp>
+-#include <boost/thread/thread_time.hpp>
+-#include <boost/thread/pthread/timespec.hpp>
+-#if defined BOOST_THREAD_USES_DATETIME
+-#include <boost/thread/xtime.hpp>
+-#endif
+-
+-#ifdef BOOST_THREAD_USES_CHRONO
+-#include <boost/chrono/system_clocks.hpp>
+-#include <boost/chrono/ceil.hpp>
+-#endif
+-#include <boost/thread/detail/delete.hpp>
+-#include <boost/date_time/posix_time/posix_time_duration.hpp>
++// include upstream
++#include <boost/thread/pthread/condition_variable_fwd.hpp>
+ 
+ #include <boost/config/abi_prefix.hpp>
+ 
+-namespace boost
++namespace boost_161
+ {
+-  namespace detail {
++  using namespace boost;
++  namespace detail = boost::detail;
++
++  namespace detail_161 {
+     inline int monotonic_pthread_cond_init(pthread_cond_t& cond) {
+ 
+ #ifdef BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+@@ -100,7 +84,7 @@
+                 boost::throw_exception(thread_resource_error(res, "boost::condition_variable::condition_variable() constructor failed in pthread_mutex_init"));
+             }
+ #endif
+-            res = detail::monotonic_pthread_cond_init(cond);
++            res = detail_161::monotonic_pthread_cond_init(cond);
+             if (res)
+             {
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+diff a/clients/roscpp/include/boost_161_pthread_condition_variable.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/boost_161_pthread_condition_variable.h
+--- a/clients/roscpp/include/boost_161_pthread_condition_variable.h	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/include/boost_161_pthread_condition_variable.h	2019-11-29 16:18:32.488606360 +0800
+@@ -1,5 +1,5 @@
+-#ifndef BOOST_THREAD_CONDITION_VARIABLE_PTHREAD_HPP
+-#define BOOST_THREAD_CONDITION_VARIABLE_PTHREAD_HPP
++#ifndef BOOST_161_THREAD_CONDITION_VARIABLE_PTHREAD_HPP
++#define BOOST_161_THREAD_CONDITION_VARIABLE_PTHREAD_HPP
+ // Distributed under the Boost Software License, Version 1.0. (See
+ // accompanying file LICENSE_1_0.txt or copy at
+ // http://www.boost.org/LICENSE_1_0.txt)
+@@ -7,70 +7,28 @@
+ // (C) Copyright 2011-2012 Vicente J. Botet Escriba
+ 
+ // make sure we include our backported version first!!
+-// (before the system version might be included via some of the other header files)
+ #include "boost_161_pthread_condition_variable_fwd.h"
+ 
+-#include <boost/thread/pthread/timespec.hpp>
+-#include <boost/thread/pthread/pthread_mutex_scoped_lock.hpp>
+-#if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-#include <boost/thread/pthread/thread_data.hpp>
+-#endif
+-//#include <boost/thread/pthread/condition_variable_fwd.hpp>
+-#ifdef BOOST_THREAD_USES_CHRONO
+-#include <boost/chrono/system_clocks.hpp>
+-#include <boost/chrono/ceil.hpp>
+-#endif
+-#include <boost/thread/detail/delete.hpp>
++// include upstream
++#include <boost/thread/pthread/condition_variable.hpp>
+ 
+ #include <boost/config/abi_prefix.hpp>
+ 
+-namespace boost
++namespace boost_161
+ {
+-#if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-    namespace this_thread
+-    {
+-        void BOOST_THREAD_DECL interruption_point();
+-    }
+-#endif
+ 
+-    namespace thread_cv_detail
+-    {
+-        template<typename MutexType>
+-        struct lock_on_exit
+-        {
+-            MutexType* m;
+-
+-            lock_on_exit():
+-                m(0)
+-            {}
+-
+-            void activate(MutexType& m_)
+-            {
+-                m_.unlock();
+-                m=&m_;
+-            }
+-            ~lock_on_exit()
+-            {
+-                if(m)
+-                {
+-                    m->lock();
+-                }
+-           }
+-        };
+-    }
+-
+-    inline void condition_variable::wait(unique_lock<mutex>& m)
++    inline void condition_variable::wait(boost::unique_lock<mutex>& m)
+     {
+ #if defined BOOST_THREAD_THROW_IF_PRECONDITION_NOT_SATISFIED
+         if(! m.owns_lock())
+         {
+-            boost::throw_exception(condition_error(-1, "boost::condition_variable::wait() failed precondition mutex not owned"));
++            boost::throw_exception(boost::condition_error(-1, "boost::condition_variable::wait() failed precondition mutex not owned"));
+         }
+ #endif
+         int res=0;
+         {
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-            thread_cv_detail::lock_on_exit<unique_lock<mutex> > guard;
++            boost::thread_cv_detail::lock_on_exit<boost::unique_lock<mutex> > guard;
+             detail::interruption_checker check_for_interruption(&internal_mutex,&cond);
+             pthread_mutex_t* the_mutex = &internal_mutex;
+             guard.activate(m);
+@@ -80,28 +38,28 @@
+             res = pthread_cond_wait(&cond,the_mutex);
+         }
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-        this_thread::interruption_point();
++        boost::this_thread::interruption_point();
+ #endif
+         if(res && res != EINTR)
+         {
+-            boost::throw_exception(condition_error(res, "boost::condition_variable::wait failed in pthread_cond_wait"));
++            boost::throw_exception(boost::condition_error(res, "boost::condition_variable::wait failed in pthread_cond_wait"));
+         }
+     }
+ 
+     inline bool condition_variable::do_wait_until(
+-                unique_lock<mutex>& m,
++                boost::unique_lock<mutex>& m,
+                 struct timespec const &timeout)
+     {
+ #if defined BOOST_THREAD_THROW_IF_PRECONDITION_NOT_SATISFIED
+         if (!m.owns_lock())
+         {
+-            boost::throw_exception(condition_error(EPERM, "boost::condition_variable::do_wait_until() failed precondition mutex not owned"));
++            boost::throw_exception(boost::condition_error(EPERM, "boost::condition_variable::do_wait_until() failed precondition mutex not owned"));
+         }
+ #endif
+         int cond_res;
+         {
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-            thread_cv_detail::lock_on_exit<unique_lock<mutex> > guard;
++            boost::thread_cv_detail::lock_on_exit<boost::unique_lock<mutex> > guard;
+             detail::interruption_checker check_for_interruption(&internal_mutex,&cond);
+             pthread_mutex_t* the_mutex = &internal_mutex;
+             guard.activate(m);
+@@ -111,7 +69,7 @@
+             cond_res=pthread_cond_timedwait(&cond,the_mutex,&timeout);
+         }
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-        this_thread::interruption_point();
++        boost::this_thread::interruption_point();
+ #endif
+         if(cond_res==ETIMEDOUT)
+         {
+@@ -119,7 +77,7 @@
+         }
+         if(cond_res)
+         {
+-            boost::throw_exception(condition_error(cond_res, "boost::condition_variable::do_wait_until failed in pthread_cond_timedwait"));
++            boost::throw_exception(boost::condition_error(cond_res, "boost::condition_variable::do_wait_until failed in pthread_cond_timedwait"));
+         }
+         return true;
+     }
+@@ -152,13 +110,13 @@
+             int const res=pthread_mutex_init(&internal_mutex,NULL);
+             if(res)
+             {
+-                boost::throw_exception(thread_resource_error(res, "boost::condition_variable_any::condition_variable_any() failed in pthread_mutex_init"));
++                boost::throw_exception(boost::thread_resource_error(res, "boost::condition_variable_any::condition_variable_any() failed in pthread_mutex_init"));
+             }
+-            int const res2 = detail::monotonic_pthread_cond_init(cond);
++            int const res2 = detail_161::monotonic_pthread_cond_init(cond);
+             if(res2)
+             {
+                 BOOST_VERIFY(!pthread_mutex_destroy(&internal_mutex));
+-                boost::throw_exception(thread_resource_error(res2, "boost::condition_variable_any::condition_variable_any() failed in detail::monotonic_pthread_cond_init"));
++                boost::throw_exception(boost::thread_resource_error(res2, "boost::condition_variable_any::condition_variable_any() failed in detail::monotonic_pthread_cond_init"));
+             }
+         }
+         ~condition_variable_any()
+@@ -172,7 +130,7 @@
+         {
+             int res=0;
+             {
+-                thread_cv_detail::lock_on_exit<lock_type> guard;
++                boost::thread_cv_detail::lock_on_exit<lock_type> guard;
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+                 detail::interruption_checker check_for_interruption(&internal_mutex,&cond);
+ #else
+@@ -182,11 +140,11 @@
+                 res=pthread_cond_wait(&cond,&internal_mutex);
+             }
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-            this_thread::interruption_point();
++            boost::this_thread::interruption_point();
+ #endif
+             if(res)
+             {
+-                boost::throw_exception(condition_error(res, "boost::condition_variable_any::wait() failed in pthread_cond_wait"));
++                boost::throw_exception(boost::condition_error(res, "boost::condition_variable_any::wait() failed in pthread_cond_wait"));
+             }
+         }
+ 
+@@ -200,19 +158,19 @@
+         template<typename lock_type>
+         bool timed_wait(lock_type& m,boost::system_time const& abs_time)
+         {
+-            struct timespec const timeout=detail::to_timespec(abs_time);
++            struct timespec const timeout=boost::detail::to_timespec(abs_time);
+             return do_wait_until(m, timeout);
+         }
+         template<typename lock_type>
+-        bool timed_wait(lock_type& m,xtime const& abs_time)
++        bool timed_wait(lock_type& m,boost::xtime const& abs_time)
+         {
+-            return timed_wait(m,system_time(abs_time));
++            return timed_wait(m,boost::system_time(abs_time));
+         }
+ 
+         template<typename lock_type,typename duration_type>
+         bool timed_wait(lock_type& m,duration_type const& wait_duration)
+         {
+-            return timed_wait(m,get_system_time()+wait_duration);
++            return timed_wait(m,boost::get_system_time()+wait_duration);
+         }
+ 
+         template<typename lock_type,typename predicate_type>
+@@ -227,127 +185,120 @@
+         }
+ 
+         template<typename lock_type,typename predicate_type>
+-        bool timed_wait(lock_type& m,xtime const& abs_time, predicate_type pred)
++        bool timed_wait(lock_type& m,boost::xtime const& abs_time, predicate_type pred)
+         {
+-            return timed_wait(m,system_time(abs_time),pred);
++            return timed_wait(m,boost::system_time(abs_time),pred);
+         }
+ 
+         template<typename lock_type,typename duration_type,typename predicate_type>
+         bool timed_wait(lock_type& m,duration_type const& wait_duration,predicate_type pred)
+         {
+-            return timed_wait(m,get_system_time()+wait_duration,pred);
++            return timed_wait(m,boost::get_system_time()+wait_duration,pred);
+         }
+ #endif
+ #ifndef BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+ 
+ #ifdef BOOST_THREAD_USES_CHRONO
+         template <class lock_type,class Duration>
+-        cv_status
++        boost::cv_status
+         wait_until(
+                 lock_type& lock,
+-                const chrono::time_point<chrono::system_clock, Duration>& t)
++                const boost::chrono::time_point<boost::chrono::system_clock, Duration>& t)
+         {
+-          using namespace chrono;
+-          typedef time_point<system_clock, nanoseconds> nano_sys_tmpt;
++          typedef boost::chrono::time_point<boost::chrono::system_clock, boost::chrono::nanoseconds> nano_sys_tmpt;
+           wait_until(lock,
+-                        nano_sys_tmpt(ceil<nanoseconds>(t.time_since_epoch())));
+-          return system_clock::now() < t ? cv_status::no_timeout :
+-                                             cv_status::timeout;
++                        nano_sys_tmpt(ceil<boost::chrono::nanoseconds>(t.time_since_epoch())));
++          return boost::chrono::system_clock::now() < t ? boost::cv_status::no_timeout :
++                                             boost::cv_status::timeout;
+         }
+ 
+         template <class lock_type, class Clock, class Duration>
+-        cv_status
++        boost::cv_status
+         wait_until(
+                 lock_type& lock,
+-                const chrono::time_point<Clock, Duration>& t)
++                const boost::chrono::time_point<Clock, Duration>& t)
+         {
+-          using namespace chrono;
+-          system_clock::time_point     s_now = system_clock::now();
++          boost::chrono::system_clock::time_point     s_now = boost::chrono::system_clock::now();
+           typename Clock::time_point  c_now = Clock::now();
+-          wait_until(lock, s_now + ceil<nanoseconds>(t - c_now));
+-          return Clock::now() < t ? cv_status::no_timeout : cv_status::timeout;
++          wait_until(lock, s_now + ceil<boost::chrono::nanoseconds>(t - c_now));
++          return Clock::now() < t ? boost::cv_status::no_timeout : boost::cv_status::timeout;
+         }
+ 
+         template <class lock_type, class Rep, class Period>
+-        cv_status
++        boost::cv_status
+         wait_for(
+                 lock_type& lock,
+-                const chrono::duration<Rep, Period>& d)
++                const boost::chrono::duration<Rep, Period>& d)
+         {
+-          using namespace chrono;
+-          system_clock::time_point s_now = system_clock::now();
+-          steady_clock::time_point c_now = steady_clock::now();
+-          wait_until(lock, s_now + ceil<nanoseconds>(d));
+-          return steady_clock::now() - c_now < d ? cv_status::no_timeout :
+-                                                   cv_status::timeout;
++          boost::chrono::system_clock::time_point s_now = boost::chrono::system_clock::now();
++          boost::chrono::steady_clock::time_point c_now = boost::chrono::steady_clock::now();
++          wait_until(lock, s_now + ceil<boost::chrono::nanoseconds>(d));
++          return boost::chrono::steady_clock::now() - c_now < d ? boost::cv_status::no_timeout :
++                                                   boost::cv_status::timeout;
+ 
+         }
+ 
+         template <class lock_type>
+-        cv_status wait_until(
++        boost::cv_status wait_until(
+             lock_type& lk,
+-            chrono::time_point<chrono::system_clock, chrono::nanoseconds> tp)
++            boost::chrono::time_point<boost::chrono::system_clock, boost::chrono::nanoseconds> tp)
+         {
+-            using namespace chrono;
+-            nanoseconds d = tp.time_since_epoch();
++            boost::chrono::nanoseconds d = tp.time_since_epoch();
+             timespec ts = boost::detail::to_timespec(d);
+-            if (do_wait_until(lk, ts)) return cv_status::no_timeout;
+-            else return cv_status::timeout;
++            if (do_wait_until(lk, ts)) return boost::cv_status::no_timeout;
++            else return boost::cv_status::timeout;
+         }
+ #endif
+ #else // defined BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+ #ifdef BOOST_THREAD_USES_CHRONO
+ 
+         template <class lock_type, class Duration>
+-        cv_status
++        boost::cv_status
+         wait_until(
+             lock_type& lock,
+-            const chrono::time_point<chrono::steady_clock, Duration>& t)
++            const boost::chrono::time_point<boost::chrono::steady_clock, Duration>& t)
+         {
+             using namespace chrono;
+-            typedef time_point<steady_clock, nanoseconds> nano_sys_tmpt;
++            typedef boost::chrono::time_point<boost::chrono::steady_clock, boost::chrono::nanoseconds> nano_sys_tmpt;
+             wait_until(lock,
+-                        nano_sys_tmpt(ceil<nanoseconds>(t.time_since_epoch())));
+-            return steady_clock::now() < t ? cv_status::no_timeout :
+-                                             cv_status::timeout;
++                        nano_sys_tmpt(ceil<boost::chrono::nanoseconds>(t.time_since_epoch())));
++            return boost::chrono::steady_clock::now() < t ? boost::cv_status::no_timeout :
++                                             boost::cv_status::timeout;
+         }
+ 
+         template <class lock_type, class Clock, class Duration>
+-        cv_status
++        boost::cv_status
+         wait_until(
+             lock_type& lock,
+-            const chrono::time_point<Clock, Duration>& t)
++            const boost::chrono::time_point<Clock, Duration>& t)
+         {
+-            using namespace chrono;
+-            steady_clock::time_point     s_now = steady_clock::now();
++            boost::chrono::steady_clock::time_point     s_now = boost::chrono::steady_clock::now();
+             typename Clock::time_point  c_now = Clock::now();
+-            wait_until(lock, s_now + ceil<nanoseconds>(t - c_now));
+-            return Clock::now() < t ? cv_status::no_timeout : cv_status::timeout;
++            wait_until(lock, s_now + ceil<boost::chrono::nanoseconds>(t - c_now));
++            return Clock::now() < t ? boost::cv_status::no_timeout : boost::cv_status::timeout;
+         }
+ 
+         template <class lock_type, class Rep, class Period>
+-        cv_status
++        boost::cv_status
+         wait_for(
+             lock_type& lock,
+-            const chrono::duration<Rep, Period>& d)
++            const boost::chrono::duration<Rep, Period>& d)
+         {
+-            using namespace chrono;
+-            steady_clock::time_point c_now = steady_clock::now();
+-            wait_until(lock, c_now + ceil<nanoseconds>(d));
+-            return steady_clock::now() - c_now < d ? cv_status::no_timeout :
+-                                                   cv_status::timeout;
++            boost::chrono::steady_clock::time_point c_now = boost::chrono::steady_clock::now();
++            wait_until(lock, c_now + ceil<boost::chrono::nanoseconds>(d));
++            return boost::chrono::steady_clock::now() - c_now < d ? boost::cv_status::no_timeout :
++                                                   boost::cv_status::timeout;
+         }
+ 
+         template <class lock_type>
+-        inline cv_status wait_until(
++        inline boost::cv_status wait_until(
+             lock_type& lock,
+-            chrono::time_point<chrono::steady_clock, chrono::nanoseconds> tp)
++            boost::chrono::time_point<boost::chrono::steady_clock, boost::chrono::nanoseconds> tp)
+         {
+-            using namespace chrono;
+-            nanoseconds d = tp.time_since_epoch();
++            boost::chrono::nanoseconds d = tp.time_since_epoch();
+             timespec ts = boost::detail::to_timespec(d);
+-            if (do_wait_until(lock, ts)) return cv_status::no_timeout;
+-            else return cv_status::timeout;
++            if (do_wait_until(lock, ts)) return boost::cv_status::no_timeout;
++            else return boost::cv_status::timeout;
+         }
+ 
+ #endif
+@@ -358,12 +309,12 @@
+         bool
+         wait_until(
+                 lock_type& lock,
+-                const chrono::time_point<Clock, Duration>& t,
++                const boost::chrono::time_point<Clock, Duration>& t,
+                 Predicate pred)
+         {
+             while (!pred())
+             {
+-                if (wait_until(lock, t) == cv_status::timeout)
++                if (wait_until(lock, t) == boost::cv_status::timeout)
+                     return pred();
+             }
+             return true;
+@@ -373,10 +324,10 @@
+         bool
+         wait_for(
+                 lock_type& lock,
+-                const chrono::duration<Rep, Period>& d,
++                const boost::chrono::duration<Rep, Period>& d,
+                 Predicate pred)
+         {
+-          return wait_until(lock, chrono::steady_clock::now() + d, boost::move(pred));
++          return wait_until(lock, boost::chrono::steady_clock::now() + d, boost::move(pred));
+         }
+ #endif
+ 
+@@ -400,7 +351,7 @@
+         {
+           int res=0;
+           {
+-              thread_cv_detail::lock_on_exit<lock_type> guard;
++              boost::thread_cv_detail::lock_on_exit<lock_type> guard;
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+               detail::interruption_checker check_for_interruption(&internal_mutex,&cond);
+ #else
+@@ -410,7 +361,7 @@
+               res=pthread_cond_timedwait(&cond,&internal_mutex,&timeout);
+           }
+ #if defined BOOST_THREAD_PROVIDES_INTERRUPTIONS
+-          this_thread::interruption_point();
++          boost::this_thread::interruption_point();
+ #endif
+           if(res==ETIMEDOUT)
+           {
+@@ -418,7 +369,7 @@
+           }
+           if(res)
+           {
+-              boost::throw_exception(condition_error(res, "boost::condition_variable_any::do_wait_until() failed in pthread_cond_timedwait"));
++              boost::throw_exception(boost::condition_error(res, "boost::condition_variable_any::do_wait_until() failed in pthread_cond_timedwait"));
+           }
+           return true;
+         }
+diff a/clients/roscpp/include/ros/callback_queue.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/ros/callback_queue.h
+--- a/clients/roscpp/include/ros/callback_queue.h	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/include/ros/callback_queue.h	2019-11-29 16:27:44.328629876 +0800
+@@ -35,24 +35,9 @@
+ #ifndef ROSCPP_CALLBACK_QUEUE_H
+ #define ROSCPP_CALLBACK_QUEUE_H
+ 
+-// check if we might need to include our own backported version boost::condition_variable
+-// in order to use CLOCK_MONOTONIC for the condition variable
+-// the include order here is important!
+-#ifdef BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-#include <boost/version.hpp>
+-#if BOOST_VERSION < 106100
+-// use backported version of boost condition variable, see https://svn.boost.org/trac/boost/ticket/6377
+-#include "boost_161_condition_variable.h"
+-#else // Boost version is 1.61 or greater and has the steady clock fixes
+-#include <boost/thread/condition_variable.hpp>
+-#endif
+-#else // !BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-#include <boost/thread/condition_variable.hpp>
+-#endif // BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-
+ #include "ros/callback_queue_interface.h"
++#include "ros/internal_condition_variable.h"
+ #include "ros/time.h"
+-#include "common.h"
+ 
+ #include <boost/shared_ptr.hpp>
+ #include <boost/thread/mutex.hpp>
+@@ -177,7 +162,7 @@
+   D_CallbackInfo callbacks_;
+   size_t calling_;
+   boost::mutex mutex_;
+-  boost::condition_variable condition_;
++  roscpp::internal::condition_variable condition_;
+ 
+   boost::mutex id_info_mutex_;
+   M_IDInfo id_info_;
+diff a/clients/roscpp/include/ros/internal_condition_variable.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/ros/internal_condition_variable.h
+--- a/clients/roscpp/include/ros/internal_condition_variable.h	1970-01-01 08:00:00.000000000 +0800
++++ b/clients/roscpp/include/ros/internal_condition_variable.h	2019-11-29 16:29:13.544633678 +0800
+@@ -0,0 +1,56 @@
++/*
++ * Copyright (C) 2008, Morgan Quigley and Willow Garage, Inc.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *   * Redistributions of source code must retain the above copyright notice,
++ *     this list of conditions and the following disclaimer.
++ *   * Redistributions in binary form must reproduce the above copyright
++ *     notice, this list of conditions and the following disclaimer in the
++ *     documentation and/or other materials provided with the distribution.
++ *   * Neither the names of Stanford University or Willow Garage, Inc. nor the names of its
++ *     contributors may be used to endorse or promote products derived from
++ *     this software without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#ifndef ROSCPP_INTERNAL_CONDITION_VARIABLE_H
++#define ROSCPP_INTERNAL_CONDITION_VARIABLE_H
++
++#include <boost/version.hpp>
++
++// check if we might need to include our own backported version boost::condition_variable
++// in order to use CLOCK_MONOTONIC for the condition variable and for the SteadyTimer
++#if !defined(_WIN32) && !defined(__APPLE__) && (BOOST_VERSION < 106100)
++  #define ROSCPP_USE_BACKPORTED_BOOST_CONDITION_VARIABLE_IMPLEMENTATION
++#endif
++
++#ifdef ROSCPP_USE_BACKPORTED_BOOST_CONDITION_VARIABLE_IMPLEMENTATION
++  // use backported version of boost condition variable, see https://svn.boost.org/trac/boost/ticket/6377
++  #include "boost_161_condition_variable.h"
++  namespace roscpp {
++  namespace internal {
++    typedef boost_161::condition_variable condition_variable;
++  }
++  }
++#else
++  #include <boost/thread/condition_variable.hpp>
++  namespace roscpp {
++  namespace internal {
++    typedef boost::condition_variable condition_variable;
++  }
++  }
++#endif
++
++#endif  // ROSCPP_INTERNAL_CONDITION_VARIABLE_H
+diff a/clients/roscpp/include/ros/rosout_appender.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/ros/rosout_appender.h
+--- a/clients/roscpp/include/ros/rosout_appender.h	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/include/ros/rosout_appender.h	2019-11-29 16:30:08.736636030 +0800
+@@ -35,8 +35,9 @@
+ #ifndef ROSCPP_ROSOUT_APPENDER_H
+ #define ROSCPP_ROSOUT_APPENDER_H
+ 
++#include <ros/common.h>
++#include <ros/internal_condition_variable.h>
+ #include <ros/message_forward.h>
+-#include "common.h"
+ 
+ #include <boost/shared_ptr.hpp>
+ #include <boost/weak_ptr.hpp>
+@@ -73,7 +74,7 @@
+   typedef std::vector<rosgraph_msgs::LogPtr> V_Log;
+   V_Log log_queue_;
+   boost::mutex queue_mutex_;
+-  boost::condition_variable queue_condition_;
++  roscpp::internal::condition_variable queue_condition_;
+   bool shutting_down_;
+ 
+   boost::thread publish_thread_;
+diff a/clients/roscpp/include/ros/service_server_link.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/ros/service_server_link.h
+--- a/clients/roscpp/include/ros/service_server_link.h	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/include/ros/service_server_link.h	2019-11-29 16:30:55.436638020 +0800
+@@ -35,7 +35,8 @@
+ #ifndef ROSCPP_SERVICE_SERVER_LINK_H
+ #define ROSCPP_SERVICE_SERVER_LINK_H
+ 
+-#include "ros/common.h"
++#include <ros/common.h>
++#include <ros/internal_condition_variable.h>
+ 
+ #include <boost/thread/mutex.hpp>
+ #include <boost/shared_array.hpp>
+@@ -64,7 +65,7 @@
+     SerializedMessage* resp_;
+ 
+     bool finished_;
+-    boost::condition_variable finished_condition_;
++    roscpp::internal::condition_variable finished_condition_;
+     boost::mutex finished_mutex_;
+     boost::thread::id caller_thread_id_;
+ 
+diff a/clients/roscpp/include/ros/timer_manager.h openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/include/ros/timer_manager.h
+--- a/clients/roscpp/include/ros/timer_manager.h	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/include/ros/timer_manager.h	2019-11-29 16:31:44.452640109 +0800
+@@ -28,22 +28,8 @@
+ #ifndef ROSCPP_TIMER_MANAGER_H
+ #define ROSCPP_TIMER_MANAGER_H
+ 
+-// check if we might need to include our own backported version boost::condition_variable
+-// in order to use CLOCK_MONOTONIC for the SteadyTimer
+-// the include order here is important!
+-#ifdef BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-#include <boost/version.hpp>
+-#if BOOST_VERSION < 106100
+-// use backported version of boost condition variable, see https://svn.boost.org/trac/boost/ticket/6377
+-#include "boost_161_condition_variable.h"
+-#else // Boost version is 1.61 or greater and has the steady clock fixes
+-#include <boost/thread/condition_variable.hpp>
+-#endif
+-#else // !BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-#include <boost/thread/condition_variable.hpp>
+-#endif // BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-
+ #include "ros/forwards.h"
++#include "ros/internal_condition_variable.h"
+ #include "ros/time.h"
+ #include "ros/file_log.h"
+ 
+@@ -60,6 +46,22 @@
+ namespace ros
+ {
+ 
++namespace {
++  template<class T>
++  class TimerManagerTraits
++  {
++  public:
++    typedef boost::chrono::system_clock::time_point time_point;
++  };
++
++  template<>
++  class TimerManagerTraits<SteadyTime>
++  {
++  public:
++    typedef boost::chrono::steady_clock::time_point time_point;
++  };
++}
++
+ template<class T, class D, class E>
+ class TimerManager
+ {
+@@ -125,7 +127,7 @@
+ 
+   V_TimerInfo timers_;
+   boost::mutex timers_mutex_;
+-  boost::condition_variable timers_cond_;
++  roscpp::internal::condition_variable timers_cond_;
+   volatile bool new_timer_;
+ 
+   boost::mutex waiting_mutex_;
+@@ -222,7 +224,13 @@
+ TimerManager<T, D, E>::TimerManager() :
+   new_timer_(false), id_counter_(0), thread_started_(false), quit_(false)
+ {
+-
++#if !defined(BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC) && !defined(BOOST_THREAD_INTERNAL_CLOCK_IS_MONO)
++  ROS_ASSERT_MSG(false,
++                 "ros::TimerManager was instantiated by package " ROS_PACKAGE_NAME ", but "
++                 "neither BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC nor BOOST_THREAD_INTERNAL_CLOCK_IS_MONO is defined! "
++                 "Be aware that timers might misbehave when system time jumps, "
++                 "e.g. due to network time corrections.");
++#endif
+ }
+ 
+ template<class T, class D, class E>
+@@ -570,14 +578,14 @@
+       // since simulation time may be running faster than real time.
+       if (!T::isSystemTime())
+       {
+-        timers_cond_.timed_wait(lock, boost::posix_time::milliseconds(1));
++        timers_cond_.wait_for(lock, boost::chrono::milliseconds(1));
+       }
+       else
+       {
+         // On system time we can simply sleep for the rest of the wait time, since anything else requiring processing will
+         // signal the condition variable
+-        int64_t remaining_time = std::max<int64_t>((sleep_end - current).toSec() * 1000.0f, 1);
+-        timers_cond_.timed_wait(lock, boost::posix_time::milliseconds(remaining_time));
++        typename TimerManagerTraits<T>::time_point end_tp(boost::chrono::nanoseconds(sleep_end.toNSec()));
++        timers_cond_.wait_until(lock, end_tp);
+       }
+     }
+ 
+diff a/clients/roscpp/src/libros/callback_queue.cpp openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/src/libros/callback_queue.cpp
+--- a/clients/roscpp/src/libros/callback_queue.cpp	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/src/libros/callback_queue.cpp	2019-11-29 15:41:42.724512191 +0800
+@@ -32,23 +32,10 @@
+  *  POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-// Make sure we use CLOCK_MONOTONIC for the condition variable wait_for if not Apple.
+-#ifndef __APPLE__
+-#define BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-#endif
+-
+ #include "ros/callback_queue.h"
+ #include "ros/assert.h"
+ #include <boost/scope_exit.hpp>
+ 
+-// check if we have really included the backported boost condition variable
+-// just in case someone messes with the include order...
+-#if BOOST_VERSION < 106100
+-#ifndef USING_BACKPORTED_BOOST_CONDITION_VARIABLE
+-#error "needs boost version >= 1.61 or the backported headers!"
+-#endif
+-#endif
+-
+ namespace ros
+ {
+ 
+diff a/clients/roscpp/src/libros/internal_timer_manager.cpp openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/src/libros/internal_timer_manager.cpp
+--- a/clients/roscpp/src/libros/internal_timer_manager.cpp	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/src/libros/internal_timer_manager.cpp	2019-11-29 15:42:18.768513727 +0800
+@@ -25,22 +25,9 @@
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-// Make sure we use CLOCK_MONOTONIC for the condition variable if not Apple.
+-#ifndef __APPLE__
+-#define BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-#endif
+-
+ #include "ros/timer_manager.h"
+ #include "ros/internal_timer_manager.h"
+ 
+-// check if we have really included the backported boost condition variable
+-// just in case someone messes with the include order...
+-#if BOOST_VERSION < 106100
+-#ifndef USING_BACKPORTED_BOOST_CONDITION_VARIABLE
+-#error "steady timer needs boost version >= 1.61 or the backported headers!"
+-#endif
+-#endif
+-
+ namespace ros
+ {
+ 
+diff a/clients/roscpp/src/libros/steady_timer.cpp openvslam/dl/ros_comm-kinetic-devel/clients/roscpp/src/libros/steady_timer.cpp
+--- a/clients/roscpp/src/libros/steady_timer.cpp	2018-08-24 02:40:21.000000000 +0800
++++ b/clients/roscpp/src/libros/steady_timer.cpp	2019-11-29 15:49:47.464532848 +0800
+@@ -25,93 +25,12 @@
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-// Make sure we use CLOCK_MONOTONIC for the condition variable if not Apple.
+-#ifndef __APPLE__
+-#define BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+-#endif
+-
+ #include "ros/steady_timer.h"
+ #include "ros/timer_manager.h"
+ 
+-// check if we have really included the backported boost condition variable
+-// just in case someone messes with the include order...
+-#if BOOST_VERSION < 106100
+-#ifndef USING_BACKPORTED_BOOST_CONDITION_VARIABLE
+-#error "steady timer needs boost version >= 1.61 or the backported headers!"
+-#endif
+-#endif
+-
+ namespace ros
+ {
+ 
+-// specialization for SteadyTimer, to make sure we use a version with wait_until that uses the monotonic clock
+-template<>
+-void TimerManager<SteadyTime, WallDuration, SteadyTimerEvent>::threadFunc()
+-{
+-  SteadyTime current;
+-  while (!quit_)
+-  {
+-    SteadyTime sleep_end;
+-
+-    boost::mutex::scoped_lock lock(timers_mutex_);
+-
+-    current = SteadyTime::now();
+-
+-    {
+-      boost::mutex::scoped_lock waitlock(waiting_mutex_);
+-
+-      if (waiting_.empty())
+-      {
+-        sleep_end = current + WallDuration(0.1);
+-      }
+-      else
+-      {
+-        TimerInfoPtr info = findTimer(waiting_.front());
+-
+-        while (!waiting_.empty() && info && info->next_expected <= current)
+-        {
+-          current = SteadyTime::now();
+-
+-          //ROS_DEBUG("Scheduling timer callback for timer [%d] of period [%f], [%f] off expected", info->handle, info->period.toSec(), (current - info->next_expected).toSec());
+-          CallbackInterfacePtr cb(boost::make_shared<TimerQueueCallback>(this, info, info->last_expected, info->last_real, info->next_expected));
+-          info->callback_queue->addCallback(cb, (uint64_t)info.get());
+-
+-          waiting_.pop_front();
+-
+-          if (waiting_.empty())
+-          {
+-            break;
+-          }
+-
+-          info = findTimer(waiting_.front());
+-        }
+-
+-        if (info)
+-        {
+-          sleep_end = info->next_expected;
+-        }
+-      }
+-    }
+-
+-    while (!new_timer_ && SteadyTime::now() < sleep_end && !quit_)
+-    {
+-      current = SteadyTime::now();
+-
+-      if (current >= sleep_end)
+-      {
+-        break;
+-      }
+-
+-      // requires boost 1.61 for wait_until to actually use the steady clock
+-      // see: https://svn.boost.org/trac/boost/ticket/6377
+-      boost::chrono::steady_clock::time_point end_tp(boost::chrono::nanoseconds(sleep_end.toNSec()));
+-      timers_cond_.wait_until(lock, end_tp);
+-    }
+-
+-    new_timer_ = false;
+-  }
+-}
+-
+ SteadyTimer::Impl::Impl()
+   : started_(false)
+   , timer_handle_(-1)
+diff a/test/test_rosbag/bag_migration_tests/CMakeLists.txt openvslam/dl/ros_comm-kinetic-devel/test/test_rosbag/bag_migration_tests/CMakeLists.txt
+--- a/test/test_rosbag/bag_migration_tests/CMakeLists.txt	2018-08-24 02:40:21.000000000 +0800
++++ b/test/test_rosbag/bag_migration_tests/CMakeLists.txt	2019-11-29 16:25:25.432623957 +0800
+@@ -67,3 +67,7 @@
+   ${PROJECT_BINARY_DIR}/test/random_play_sim.xml)
+ add_rostest(${PROJECT_BINARY_DIR}/test/random_play_sim.xml
+   DEPENDENCIES run_tests_test_rosbag_rostest_test_random_record.xml)
++
++# Make sure that rostest random_record.xml is not executed twice, running in
++# parallel (https://github.com/ros/ros_comm/pull/1651#issuecomment-482148146):
++add_dependencies(run_tests_test_rosbag_rostest_test_random_play.xml run_tests_test_rosbag_rostest_test_random_play_sim.xml)

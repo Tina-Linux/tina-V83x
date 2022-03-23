@@ -1,0 +1,25 @@
+From e615fd7837cb6e4b48104c2d265ddb763f012f00 Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Wed, 17 May 2017 09:06:07 +0800
+Subject: [PATCH 13/13] weston: Use GPU as default compositor
+
+---
+ libweston/compositor-drm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 4168a29..34cee59 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -3315,7 +3315,7 @@ drm_backend_create(struct weston_compositor *compositor,
+ 	 *
+ 	 * These can be enabled again when nuclear/atomic support lands.
+ 	 */
+-	b->sprites_are_broken = 0;
++	b->sprites_are_broken = 1;
+ 	b->compositor = compositor;
+ 	b->use_pixman = config->use_pixman;
+ 
+-- 
+1.9.1
+

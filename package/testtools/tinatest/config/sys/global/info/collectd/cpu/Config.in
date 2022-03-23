@@ -1,0 +1,10 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_CPU_ENABLE
+    bool "collectd_cpu"
+    select PACKAGE_collectd-mod-cpu
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_CPU_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_CPU_REPORT_TO_PERCENTAGE
+        bool "report_to_percentage"
+        default n
+endif

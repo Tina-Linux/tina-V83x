@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>MainPage.qml</file>
+        <file>HeadBar.qml</file>
+        <file>SideMenu.qml</file>
+        <file>SideButton.qml</file>
+        <file>Desktop.qml</file>
+        <file>FunWin.qml</file>
+        <file>BottomBar.qml</file>
+        <file>RotateButton.qml</file>
+        <file>BottomButton.qml</file>
+        <file>DefaultData.js</file>
+        <file>DataModel.qml</file>
+    </qresource>
+</RCC>

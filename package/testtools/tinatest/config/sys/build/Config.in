@@ -1,0 +1,5 @@
+menu "build"
+    comment "Settings For Build"
+    source boot-script/Config.in
+    source completion/Config.in
+endmenu

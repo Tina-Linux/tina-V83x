@@ -1,0 +1,9 @@
+This pacakge contains keys which are used for dm-verity.
+
+DO NOT use the defalut keys. You MUST generate your own keys.
+You can generate these keys by following steps:
+$ cd tina/
+$ ./scripts/dm-verity-key.sh
+It will generate new keys and copy them to 'package/security/dm-verity/files' and 'out/<target_board>/verity/keys'.
+
+You MUST keep your own keys secret. DO NOT lose or leak the keys.

@@ -1,0 +1,546 @@
+--- a/CMakeLists.txt	2019-04-08 01:09:10.000000000 +0800
++++ b/CMakeLists.txt	2019-05-08 15:33:18.295229981 +0800
+@@ -7,12 +7,12 @@
+ # ----------------------------------------------------------------------------
+ 
+ # Disable in-source builds to prevent source tree corruption.
+-if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
+-  message(FATAL_ERROR "
+-FATAL: In-source builds are not allowed.
+-       You should create a separate directory for build files.
+-")
+-endif()
++#if(" ${CMAKE_SOURCE_DIR}" STREQUAL " ${CMAKE_BINARY_DIR}")
++#  message(FATAL_ERROR "
++#FATAL: In-source builds are not allowed.
++#       You should create a separate directory for build files.
++#")
++#endif()
+ 
+ 
+ include(cmake/OpenCVMinDepVersions.cmake)
+@@ -339,6 +339,9 @@
+ OCV_OPTION(WITH_V4L "Include Video 4 Linux support" ON
+   VISIBLE_IF UNIX AND NOT ANDROID AND NOT APPLE
+   VERIFY HAVE_CAMV4L OR HAVE_CAMV4L2 OR HAVE_VIDEOIO)
++OCV_OPTION(WITH_VINISP "Include sunxi vin isp support" ON
++  VISIBLE_IF ENABLE_SUNXIVINISP
++  VERIFY HAVE_VINISP)
+ OCV_OPTION(WITH_DSHOW "Build VideoIO with DirectShow support" ON
+   VISIBLE_IF WIN32 AND NOT ARM AND NOT WINRT
+   VERIFY HAVE_DSHOW)
+@@ -484,6 +487,8 @@
+ OCV_OPTION(ENABLE_PYLINT              "Add target with Pylint checks"                            (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
+ OCV_OPTION(ENABLE_FLAKE8              "Add target with Python flake8 checker"                    (BUILD_DOCS OR BUILD_EXAMPLES) IF (NOT CMAKE_CROSSCOMPILING AND NOT APPLE_FRAMEWORK) )
+ 
++OCV_OPTION(ENABLE_SUNXIVINISP         "Enable sunxi vin isp" OFF)
++
+ if(ENABLE_IMPL_COLLECTION)
+   add_definitions(-DCV_COLLECT_IMPL_DATA)
+ endif()
+@@ -1435,6 +1440,13 @@
+   status("    v4l/v4l2:" HAVE_V4L THEN "YES (${v4l_status})" ELSE NO)
+ endif()
+ 
++if(WITH_VINISP OR HAVE_VINISP)
++  ocv_build_features_string(vinisp_status
++    IF HAVE_VINISP THEN "AWIspApi.h"
++    ELSE "NO")
++  status("    sunxivin:" HAVE_VINISP THEN "YES (${vinisp_status})" ELSE NO)
++endif()
++
+ if(WITH_DSHOW OR HAVE_DSHOW)
+   status("    DirectShow:" HAVE_DSHOW THEN YES ELSE NO)
+ endif()
+--- a/cmake/OpenCVMinDepVersions.cmake
++++ b/cmake/OpenCVMinDepVersions.cmake
+@@ -1,4 +1,4 @@
+-set(MIN_VER_CMAKE 3.5.1)
++set(MIN_VER_CMAKE 3.4.0)
+ set(MIN_VER_CUDA 6.5)
+ set(MIN_VER_PYTHON2 2.7)
+ set(MIN_VER_PYTHON3 3.2)
+--- a/modules/videoio/cmake/detect_vinisp.cmake	1970-01-01 08:00:00.000000000 +0800
++++ b/modules/videoio/cmake/detect_vinisp.cmake	2019-05-08 15:02:26.583283401 +0800
+@@ -0,0 +1,13 @@
++# --- VINISP ---
++if(NOT HAVE_VINISP)
++  set(CMAKE_REQUIRED_QUIET TRUE) # for check_include_file
++  check_include_file(AWIspApi.h HAVE_VINISP)
++  if(HAVE_VINISP)
++    set(HAVE_VINISP TRUE)
++    set(defs)
++    list(APPEND defs "HAVE_VINISP")
++    ocv_add_external_target(vinisp "" "" "${defs}")
++  endif()
++endif()
++
++set(HAVE_VINISP ${HAVE_VINISP} PARENT_SCOPE)
+--- a/modules/videoio/cmake/init.cmake	2019-04-08 01:09:10.000000000 +0800
++++ b/modules/videoio/cmake/init.cmake	2019-05-08 15:23:49.827246380 +0800
+@@ -24,6 +24,7 @@
+ add_backend("ffmpeg" WITH_FFMPEG)
+ add_backend("gstreamer" WITH_GSTREAMER)
+ add_backend("v4l" WITH_V4L)
++add_backend("vinisp" WITH_VINISP)
+ 
+ add_backend("aravis" WITH_ARAVIS)
+ add_backend("dc1394" WITH_1394)
+--- a/modules/videoio/CMakeLists.txt	2019-04-08 01:09:10.000000000 +0800
++++ b/modules/videoio/CMakeLists.txt	2019-05-08 15:44:35.927210431 +0800
+@@ -195,6 +195,11 @@
+ 
+ ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})
+ 
++if(TARGET ocv.3rdparty.vinisp)
++  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__USE_VIN_ISP__")
++  ocv_target_link_libraries(${the_module} LINK_PRIVATE m isp isp_ini AWIspApi)
++endif()
++
+ # copy FFmpeg dll to the output folder
+ if(WIN32 AND HAVE_FFMPEG_WRAPPER)
+   if(MSVC64 OR MINGW64)
+--- a/modules/videoio/src/cap_v4l.cpp	2019-04-08 01:09:10.000000000 +0800
++++ b/modules/videoio/src/cap_v4l.cpp	2019-05-05 10:49:51.099198321 +0800
+@@ -238,6 +238,11 @@
+ #include <sys/videoio.h>
+ #endif
+ 
++#ifdef __USE_VIN_ISP__
++#include "AWIspApi.h"
++#include "sunxi_camera_v2.h"
++#endif
++
+ // https://github.com/opencv/opencv/issues/13335
+ #ifndef V4L2_CID_ISO_SENSITIVITY
+ #define V4L2_CID_ISO_SENSITIVITY (V4L2_CID_CAMERA_CLASS_BASE+23)
+@@ -346,6 +351,14 @@
+     bool controlInfo(int property_id, __u32 &v4l2id, cv::Range &range) const;
+     bool icvControl(__u32 v4l2id, int &value, bool isSet) const;
+ 
++#ifdef __USE_VIN_ISP__
++	/* sunxi vin */
++	bool RawSensor;
++	bool RAWSensor();
++	int IspId;
++	AWIspApi *IspPort;
++#endif
++
+     bool icvSetFrameSize(int _width, int _height);
+     bool v4l2_reset();
+     bool setVideoInputChannel();
+@@ -373,6 +386,10 @@
+ {
+     frame = cvIplImage();
+     memset(&timestamp, 0, sizeof(timestamp));
++#ifdef __USE_VIN_ISP__
++	IspId = -1;
++	IspPort = NULL;
++#endif
+ }
+ 
+ CvCaptureCAM_V4L::~CvCaptureCAM_V4L() {
+@@ -390,33 +403,44 @@
+ bool CvCaptureCAM_V4L::try_palette_v4l2()
+ {
+     form = v4l2_format();
+-    form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+-    form.fmt.pix.pixelformat = palette;
+-    form.fmt.pix.field       = V4L2_FIELD_ANY;
+-    form.fmt.pix.width       = width;
+-    form.fmt.pix.height      = height;
++    if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) {
++		form.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++		form.fmt.pix.pixelformat = palette;
++		form.fmt.pix.field       = V4L2_FIELD_NONE;
++		form.fmt.pix.width       = width;
++		form.fmt.pix.height      = height;
++	} else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
++        form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++        form.fmt.pix_mp.width = width;
++        form.fmt.pix_mp.height = height;
++        form.fmt.pix_mp.pixelformat = palette;
++        form.fmt.pix_mp.field = V4L2_FIELD_NONE;
++	}
+ 
+     if (!tryIoctl(VIDIOC_S_FMT, &form))
+         return false;
+ 
+-    return palette == form.fmt.pix.pixelformat;
++    return (palette == form.fmt.pix.pixelformat || palette == form.fmt.pix_mp.pixelformat);
+ }
+ 
+ bool CvCaptureCAM_V4L::setVideoInputChannel()
+ {
+-    if(channelNumber < 0)
+-        return true;
++    //if(channelNumber < 0)
++    //    return true;
+     /* Query channels number */
+     int channel = 0;
+     if (!tryIoctl(VIDIOC_G_INPUT, &channel))
+         return false;
+ 
+-    if(channel == channelNumber)
+-        return true;
++    //if(channel == channelNumber)
++    //    return true;
++    if(channel < 0)
++        channel = 0;
++    channelNumber = channel;
+ 
+     /* Query information about new input channel */
+     videoInput = v4l2_input();
+-    videoInput.index = channelNumber;
++    videoInput.index = 0;
+     if (!tryIoctl(VIDIOC_ENUMINPUT, &videoInput))
+         return false;
+ 
+@@ -425,6 +449,7 @@
+     // For example inputs may support different video standards, so the driver may implicitly
+     // switch the current standard.
+     // It is good practice to select an input before querying or negotiating any other parameters.
++
+     return tryIoctl(VIDIOC_S_INPUT, &channelNumber);
+ }
+ 
+@@ -456,7 +481,7 @@
+         return false;
+     }
+ 
+-    if ((capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0)
++    if ((capability.capabilities & (V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE)) == 0)
+     {
+         /* Nope. */
+         fprintf(stderr, "VIDEOIO ERROR: V4L2: Unable to capture video memory.");
+@@ -472,15 +497,15 @@
+         return true;
+     }
+     __u32 try_order[] = {
+-            V4L2_PIX_FMT_BGR24,
+-            V4L2_PIX_FMT_RGB24,
++            V4L2_PIX_FMT_NV21,
++            V4L2_PIX_FMT_NV12,
+             V4L2_PIX_FMT_YVU420,
+             V4L2_PIX_FMT_YUV420,
+             V4L2_PIX_FMT_YUV411P,
+             V4L2_PIX_FMT_YUYV,
+             V4L2_PIX_FMT_UYVY,
+-            V4L2_PIX_FMT_NV12,
+-            V4L2_PIX_FMT_NV21,
++            V4L2_PIX_FMT_BGR24,
++            V4L2_PIX_FMT_RGB24,
+             V4L2_PIX_FMT_SBGGR8,
+             V4L2_PIX_FMT_SGBRG8,
+             V4L2_PIX_FMT_SN9C10X,
+@@ -507,13 +536,19 @@
+         return false;
+ 
+     v4l2_streamparm streamparm = v4l2_streamparm();
+-    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++    if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++	    streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++	else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++		streamparm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++
+     streamparm.parm.capture.timeperframe.numerator = 1;
+     streamparm.parm.capture.timeperframe.denominator = __u32(value);
+     if (!tryIoctl(VIDIOC_S_PARM, &streamparm) || !tryIoctl(VIDIOC_G_PARM, &streamparm))
+         return false;
+ 
+-    fps = streamparm.parm.capture.timeperframe.denominator;
++	/* sunxi vin bug: VIDIOC_G_PARM return error parameter*/
++    /* fps = streamparm.parm.capture.timeperframe.denominator; */
++	fps = value;
+     return true;
+ }
+ 
+@@ -613,35 +642,50 @@
+         return false;
+     }
+ 
++    /* try to set framerate */
++    setFps(fps);
++
++    if (!autosetup_capture_mode_v4l2()) {
++        fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
++        return false;
++    }
++
+     /* Find Window info */
+     form = v4l2_format();
+-    form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++    if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++    	form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++	else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++    	form.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+ 
+     if (!tryIoctl(VIDIOC_G_FMT, &form)) {
+         fprintf( stderr, "VIDEOIO ERROR: V4L2: Could not obtain specifics of capture window.\n");
+         return false;
+     }
+ 
+-    if (!autosetup_capture_mode_v4l2()) {
+-        fprintf(stderr, "VIDEOIO ERROR: V4L2: Pixel format of incoming image is unsupported by OpenCV\n");
+-        return false;
+-    }
+-
+-    /* try to set framerate */
+-    setFps(fps);
+-
+     unsigned int min;
+ 
+     /* Buggy driver paranoia. */
+-    min = form.fmt.pix.width * 2;
++    if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) {
++		min = form.fmt.pix.width * 2;
++
++		if (form.fmt.pix.bytesperline < min)
++		    form.fmt.pix.bytesperline = min;
+ 
+-    if (form.fmt.pix.bytesperline < min)
+-        form.fmt.pix.bytesperline = min;
++		min = form.fmt.pix.bytesperline * form.fmt.pix.height;
+ 
+-    min = form.fmt.pix.bytesperline * form.fmt.pix.height;
++		if (form.fmt.pix.sizeimage < min)
++		    form.fmt.pix.sizeimage = min;
++	} else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
++		min = form.fmt.pix_mp.width * 2;
+ 
+-    if (form.fmt.pix.sizeimage < min)
+-        form.fmt.pix.sizeimage = min;
++		if (form.fmt.pix_mp.plane_fmt[0].bytesperline < min)
++		    form.fmt.pix_mp.plane_fmt[0].bytesperline = min;
++
++		min = form.fmt.pix_mp.plane_fmt[0].bytesperline * form.fmt.pix_mp.height;
++
++		if (form.fmt.pix_mp.plane_fmt[0].sizeimage < min)
++		    form.fmt.pix_mp.plane_fmt[0].sizeimage = min;
++	}
+ 
+     if (!requestBuffers())
+         return false;
+@@ -687,9 +731,13 @@
+ 
+     req = v4l2_requestbuffers();
+     req.count = buffer_number;
+-    req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+     req.memory = V4L2_MEMORY_MMAP;
+ 
++    if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++    	req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++	else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++    	req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++
+     if (!tryIoctl(VIDIOC_REQBUFS, &req)) {
+         if (EINVAL == errno) {
+             fprintf(stderr, "%s does not support memory mapping\n", deviceName.c_str());
+@@ -706,28 +754,56 @@
+     size_t maxLength = 0;
+     for (unsigned int n_buffers = 0; n_buffers < req.count; ++n_buffers) {
+         v4l2_buffer buf = v4l2_buffer();
+-        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+         buf.memory = V4L2_MEMORY_MMAP;
+         buf.index = n_buffers;
+ 
++		if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++			buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++		else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
++			buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++			buf.length = form.fmt.pix_mp.num_planes;
++			buf.m.planes =  (struct v4l2_plane *)calloc(buf.length, sizeof(struct v4l2_plane));
++		}
++
+         if (!tryIoctl(VIDIOC_QUERYBUF, &buf)) {
+             perror("VIDIOC_QUERYBUF");
+             return false;
+         }
+ 
+-        buffers[n_buffers].length = buf.length;
+-        buffers[n_buffers].start =
+-            mmap(NULL /* start anywhere */,
+-                buf.length,
+-                PROT_READ /* required */,
+-                MAP_SHARED /* recommended */,
+-                deviceHandle, buf.m.offset);
++		if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE) {
++		    buffers[n_buffers].length = buf.length;
++		    buffers[n_buffers].start =
++		        mmap(NULL /* start anywhere */,
++		            buf.length,
++		            PROT_READ | PROT_WRITE /* required */,
++		            MAP_SHARED /* recommended */,
++		            deviceHandle, buf.m.offset);
++
++		    if (MAP_FAILED == buffers[n_buffers].start) {
++		        perror("mmap");
++		        return false;
++		    }
++		    maxLength = maxLength > buf.length ? maxLength : buf.length;
++		} else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
++		    buffers[n_buffers].length = buf.m.planes[0].length;
++		    buffers[n_buffers].start =
++		        mmap(NULL /* start anywhere */,
++		            buf.m.planes[0].length,
++		            PROT_READ | PROT_WRITE /* required */,
++		            MAP_SHARED /* recommended */,
++		            deviceHandle, buf.m.planes[0].m.mem_offset);
++
++		    if (MAP_FAILED == buffers[n_buffers].start) {
++		        perror("mmap");
++		        return false;
++		    }
++		    maxLength = maxLength > buf.m.planes[0].length ? maxLength : buf.m.planes[0].length;
+ 
+-        if (MAP_FAILED == buffers[n_buffers].start) {
+-            perror("mmap");
+-            return false;
+-        }
+-        maxLength = maxLength > buf.length ? maxLength : buf.length;
++			if (form.fmt.pix_mp.num_planes > 1)
++		        fprintf(stderr, "form.fmt.pix_mp.num_planes > 1, form.fmt.pix_mp.num_planes %d", form.fmt.pix_mp.num_planes);
++
++			free(buf.m.planes);
++		}
+     }
+     if (maxLength > 0) {
+         buffers[MAX_V4L_BUFFERS].start = malloc(maxLength);
+@@ -816,19 +892,31 @@
+ bool CvCaptureCAM_V4L::read_frame_v4l2()
+ {
+     v4l2_buffer buf = v4l2_buffer();
+-    buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+     buf.memory = V4L2_MEMORY_MMAP;
+ 
++	if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++	else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
++		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++		buf.length = form.fmt.pix_mp.num_planes;
++		buf.m.planes = (struct v4l2_plane *)calloc(buf.length, sizeof(struct v4l2_plane));
++	}
++
+     while (!tryIoctl(VIDIOC_DQBUF, &buf)) {
+         if (errno == EIO && !(buf.flags & (V4L2_BUF_FLAG_QUEUED | V4L2_BUF_FLAG_DONE))) {
+             // Maybe buffer not in the queue? Try to put there
+-            if (!tryIoctl(VIDIOC_QBUF, &buf))
++            if (!tryIoctl(VIDIOC_QBUF, &buf)) {
++				if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++					free(buf.m.planes);
+                 return false;
++			}
+             continue;
+         }
+         /* display the error and stop processing */
+         returnFrame = false;
+         perror("VIDIOC_DQBUF");
++		if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++			free(buf.m.planes);
+         return false;
+     }
+ 
+@@ -881,14 +969,26 @@
+         for (__u32 index = 0; index < req.count; ++index) {
+             v4l2_buffer buf = v4l2_buffer();
+ 
+-            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+             buf.memory = V4L2_MEMORY_MMAP;
+             buf.index = index;
+ 
++			if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++				buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++			else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE) {
++				buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++				buf.length = form.fmt.pix_mp.num_planes;
++				buf.m.planes = (struct v4l2_plane *)calloc(buf.length, sizeof(struct v4l2_plane));
++			}
++
+             if (!tryIoctl(VIDIOC_QBUF, &buf)) {
+                 perror("VIDIOC_QBUF");
++				if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++					free(buf.m.planes);
+                 return false;
+             }
++
++			if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++				free(buf.m.planes);
+         }
+ 
+         if(!streaming(true)) {
+@@ -1738,7 +1838,10 @@
+     case cv::CAP_PROP_FPS:
+     {
+         v4l2_streamparm sp = v4l2_streamparm();
+-        sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++		if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++			sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++		else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++			sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+         if (!tryIoctl(VIDIOC_G_PARM, &sp)) {
+             fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to get camera FPS\n");
+             return -1;
+@@ -1904,12 +2007,62 @@
+     requestBuffers(0);
+ };
+ 
++#ifdef __USE_VIN_ISP__
++bool CvCaptureCAM_V4L::RAWSensor()
++{
++    struct v4l2_control ctrl;
++    struct v4l2_queryctrl qc_ctrl;
++
++    memset(&ctrl, 0, sizeof(struct v4l2_control));
++    memset(&qc_ctrl, 0, sizeof(struct v4l2_queryctrl));
++    ctrl.id = V4L2_CID_SENSOR_TYPE;
++    qc_ctrl.id = V4L2_CID_SENSOR_TYPE;
++
++    if (-1 == ioctl (deviceHandle, VIDIOC_QUERYCTRL, &qc_ctrl)){
++        fprintf(stderr, "V4L2: %s QUERY V4L2_CID_SENSOR_TYPE failed\n", deviceName.c_str());
++        return false;
++    }
++
++    if (-1 == ioctl(deviceHandle, VIDIOC_G_CTRL, &ctrl)) {
++        fprintf(stderr, "V4L2: %s G_CTRL V4L2_CID_SENSOR_TYPE failed\n", deviceName.c_str());
++        return false;
++    }
++
++    return ctrl.value == V4L2_SENSOR_TYPE_RAW;
++}
++#endif
++
+ bool CvCaptureCAM_V4L::streaming(bool startStream)
+ {
+     if (!isOpened())
+         return !startStream;
+ 
+-    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++	if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE)
++		type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
++	else if (capability.capabilities & V4L2_CAP_VIDEO_CAPTURE_MPLANE)
++		type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++
++#ifdef __USE_VIN_ISP__
++	RawSensor = RAWSensor();
++
++	if (startStream && RawSensor) {
++		int VideoIndex = -1;
++
++		sscanf(deviceName.c_str(), "/dev/video%d", &VideoIndex);
++
++		IspPort = CreateAWIspApi();
++		IspId = -1;
++		IspId = IspPort->ispGetIspId(VideoIndex);
++		if (IspId >= 0)
++			IspPort->ispStart(IspId);
++	} else if (RawSensor && IspId >= 0 && IspPort) {
++		IspPort->ispStop(IspId);
++		DestroyAWIspApi(IspPort);
++		IspPort = NULL;
++		IspId = -1;
++	}
++#endif
++
+     return tryIoctl(startStream ? VIDIOC_STREAMON : VIDIOC_STREAMOFF, &type);
+ }
+ 

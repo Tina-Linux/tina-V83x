@@ -1,0 +1,33 @@
+>From 6b2c45cc5c93bd3d19467ffc22195d8dad32545f Mon Sep 17 00:00:00 2001
+From: xiebin <xiebin@allwinnertech.com>
+Date: Wed, 31 Jan 2018 13:38:08 +0800
+Subject: [PATCH 5/5] patch for omx drop frames
+
+---
+ omx/gstomxvideodec.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/omx/gstomxvideodec.c b/omx/gstomxvideodec.c
+index 79b4daa..a88bdba 100644
+--- a/omx/gstomxvideodec.c
++++ b/omx/gstomxvideodec.c
+@@ -2171,6 +2171,7 @@ gst_omx_video_dec_handle_frame (GstVideoDecoder * decoder,
+   guint offset = 0, size;
+   GstClockTime timestamp, duration;
+   OMX_ERRORTYPE err;
++  static int drop_num = 0;
+ 
+   self = GST_OMX_VIDEO_DEC (decoder);
+   klass = GST_OMX_VIDEO_DEC_GET_CLASS (self);
+@@ -2178,7 +2179,7 @@ gst_omx_video_dec_handle_frame (GstVideoDecoder * decoder,
+   GST_DEBUG_OBJECT (self, "Handling frame");
+ 
+   if (!self->started) {
+-    if (!GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (frame)) {
++    if (!GST_VIDEO_CODEC_FRAME_IS_SYNC_POINT (frame) && drop_num++ < 20) {
+       gst_video_decoder_drop_frame (GST_VIDEO_DECODER (self), frame);
+       return GST_FLOW_OK;
+     }
+-- 
+2.7.4
+

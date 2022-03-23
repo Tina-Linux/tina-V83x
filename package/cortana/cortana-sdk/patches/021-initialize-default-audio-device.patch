@@ -1,0 +1,11 @@
+--- a/c/cortana-core/SpeechAPI.c
++++ b/c/cortana-core/SpeechAPI.c
+@@ -1032,7 +1032,7 @@ speech_initialize(
+     SPEECH_CONTEXT* pSC = (SPEECH_CONTEXT*)hSpeech;
+ 
+     // initialize the default audio device.
+-    ret = cortana_create_audio(hSpeech, NULL);
++    ret = cortana_create_audio(hSpeech, "default");
+     if (ret)
+     {
+         LogInfo("WARNING: Failed to initialize default audio");

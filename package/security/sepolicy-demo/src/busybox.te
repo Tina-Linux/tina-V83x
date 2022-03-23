@@ -1,0 +1,23 @@
+# Restricted domain for busybox processes spawned by init
+type busybox, domain;
+type busybox_exec, file_type, exec_type;
+
+# permissive busybox;
+domain_auto_trans(init, busybox_exec, busybox)
+# unconfined_domain(busybox)
+
+allow init busybox_exec:lnk_file r_file_perms;
+
+allow busybox console_device:chr_file rw_file_perms;
+#allow busybox sysfixtime:fd use;
+#allow busybox sysfixtime:fifo_file { write ioctl };
+allow busybox init:fifo_file { write ioctl };
+allow busybox file_type:file getattr;
+
+allow busybox { etc_initd wpa_cfg }:dir search;
+
+#allow busybox { etc_selinux etc_initd }:dir { search open read getattr };
+#allow busybox { etc_selinux etc_initd }:{ file lnk_file } { open read getattr };
+
+allow busybox tmpfs:file r_file_perms;
+

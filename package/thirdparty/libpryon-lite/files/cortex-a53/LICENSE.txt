@@ -1,0 +1,3 @@
+ Amazon.com Confidential — Do Not Distribute.  Amazon materials in this package are licensed as
+ "Alexa Materials" under the terms and conditions of the Alexa Voice Service Agreement (the "Agreement"),
+ which is available at https://developer.amazon.com/public/solutions/alexa/alexa-voice-service/support/terms-and-agreements.

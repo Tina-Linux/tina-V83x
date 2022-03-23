@@ -1,0 +1,10 @@
+if PACKAGE_glmark2
+
+config GLMARK2_FBDEV
+    bool "Enabel fbdev support"
+    default n
+
+config GLMARK2_WAYLAND
+    bool "Enabel wayland support"
+    default y
+endif

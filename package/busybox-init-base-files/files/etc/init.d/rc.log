@@ -1,0 +1,8 @@
+#!/bin/sh
+mkdir -p /var/log
+if [ -d /var/log ]
+then
+	touch /var/log/messages
+	/sbin/syslogd -n -m 0 &
+	/sbin/klogd -n &
+fi

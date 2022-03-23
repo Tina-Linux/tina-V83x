@@ -1,0 +1,23 @@
+type selinux, domain, mlstrustedsubject;
+type selinux_exec, exec_type, file_type;
+# permissive selinux;
+domain_auto_trans(init,selinux_exec,selinux)
+domain_auto_trans(selinux,busybox_exec,busybox)
+
+selinux_check_context(selinux)
+
+allow selinux init:fifo_file {read write ioctl};
+
+allow selinux console_device:chr_file rw_file_perms;
+
+# allow selinux { system_file shell busybox_exec}:file {read execute execute_no_trans open execmod };
+
+allow selinux { storage_file etc_selinux }:dir { search open read getattr };
+allow selinux { storage_file etc_selinux }:{ file lnk_file } { open read getattr };
+
+# allow selinux { storage_file unlabeled }:dir { search getattr open read write setattr relabelfrom relabelto };
+# allow selinux unlabeled:file { getattr open read write setattr relabelfrom };
+
+# allow selinux tee_data_file:dir { rw_dir_perms relabelto };
+
+# allow selinux rootfs:chr_file rw_file_perms;

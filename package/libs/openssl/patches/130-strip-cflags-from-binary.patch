@@ -1,0 +1,25 @@
+From 61cf9109d9d0b9dc715ca3e6c19c9b5b9f02ed0e Mon Sep 17 00:00:00 2001
+From: leo <leo.feng@citybrandhk.com>
+Date: Fri, 9 Nov 2018 14:05:29 +0800
+Subject: [PATCH] 130-strip-cflags-from-binary
+
+---
+ Configurations/unix-Makefile.tmpl | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Configurations/unix-Makefile.tmpl b/Configurations/unix-Makefile.tmpl
+index 034d93e..56932d1 100644
+--- a/Configurations/unix-Makefile.tmpl
++++ b/Configurations/unix-Makefile.tmpl
+@@ -175,7 +175,7 @@ HTMLSUFFIX=html
+ CROSS_COMPILE= {- $config{cross_compile_prefix} -}
+ CC= $(CROSS_COMPILE){- $target{cc} -}
+ CFLAGS={- our $cflags2 = join(" ",(map { "-D".$_} @{$target{defines}}, @{$config{defines}}),"-DOPENSSLDIR=\"\\\"\$(OPENSSLDIR)\\\"\"","-DENGINESDIR=\"\\\"\$(ENGINESDIR)\\\"\"") -} {- $target{cflags} -} {- $config{cflags} -}
+-CFLAGS_Q={- $cflags2 =~ s|([\\"])|\\$1|g; $cflags2 -} {- $config{cflags} -}
++CFLAGS_Q=$(filter-out -I$(TOPDIR)%,{- $cflags2 =~ s|([\\"])|\\$1|g; $cflags2 -} {- $config{cflags} -})
+ LDFLAGS= {- $target{lflags} -}
+ PLIB_LDFLAGS= {- $target{plib_lflags} -}
+ EX_LIBS= {- $target{ex_libs} -} {- $config{ex_libs} -}
+-- 
+1.9.1
+

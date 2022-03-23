@@ -1,0 +1,21 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=99
+STOP=98
+DEPEND=sysntpd
+
+USE_PROCD=1
+PROG=/usr/bin/tinacvr
+
+start_service() {
+
+	$PROG 1>/dev/ttyS0 2>/dev/ttyS0 &
+	#procd_open_instance
+	#procd_set_param command $PROG
+	#procd_close_instance
+}
+
+shutdown() {
+	echo shutdown
+}

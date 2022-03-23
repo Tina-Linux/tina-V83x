@@ -1,0 +1,11 @@
+--- a/src/lat_http.c	2017-05-27 14:02:35.000000000 +0800
++++ a/src/lat_http.c	2017-05-27 13:42:30.000000000 +0800
+@@ -27,7 +27,7 @@
+	sock = tcp_connect(server, prog, SOCKOPT_REUSE);
+	sprintf(buf, "GET /%s HTTP/1.0\r\n\r\n\n", file);
+	if (debug) {
+-		printf(buf);
++		printf("%s\n", buf);
+	}
+	write(sock, buf, strlen(buf));
+	while ((n = read(sock, buf, XFERSIZE)) > 0) {

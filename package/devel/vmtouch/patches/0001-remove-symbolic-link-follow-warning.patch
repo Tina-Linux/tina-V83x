@@ -1,0 +1,20 @@
+--- vmtouch-1.3.1-bak/vmtouch.c	2019-04-09 11:02:27.000000000 +0800
++++ vmtouch-1.3.1/vmtouch.c	2019-04-09 11:33:42.000000000 +0800
+@@ -741,7 +741,7 @@
+     return;
+   } else {
+     if (S_ISLNK(sb.st_mode)) {
+-      warning("not following symbolic link %s", path);
++//      warning("not following symbolic link %s", path);
+       return;
+     }
+
+@@ -1025,7 +1025,7 @@
+     else if (o_evict)
+       printf("   Evicted Pages: %" PRId64 " (%s)\n", total_pages, pretty_print_size(total_pages*pagesize));
+     else {
+-      printf("  Resident Pages: %" PRId64 "/%" PRId64 "  ", total_pages_in_core, total_pages);
++      printf("  Resident Pages: %" PRId64 "/%" PRId64 "  %" PRId64 "KB  ", total_pages_in_core, total_pages, total_pages_in_core * 4);
+       printf("%s/", pretty_print_size(total_pages_in_core*pagesize));
+       printf("%s  ", pretty_print_size(total_pages*pagesize));
+       if (total_pages)

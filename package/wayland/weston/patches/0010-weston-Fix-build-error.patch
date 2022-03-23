@@ -1,0 +1,27 @@
+From 1407a3fbac6fa558160fd6f608b0e9a75e92feba Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 19:30:55 +0800
+Subject: [PATCH 9/9] weston: Fix build error
+
+---
+ libweston/compositor-drm.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 689e836..1ed66ea 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -447,8 +447,8 @@ drm_fb_get_from_bo(struct gbm_bo *bo,
+ 		if (format == DRM_FORMAT_NV21) {
+ 			handles[1] = fb->handle;
+ 			pitches[1] = fb->stride;
+-			offsets[1] = fb->stride * height;
+-			fb->size = fb->stride * height * 3 / 2;
++			offsets[1] = fb->stride * fb->height;
++			fb->size = fb->stride * fb->height * 3 / 2;
+ 		}
+ 
+ 		ret = drmModeAddFB2(backend->drm.fd, fb->width, fb->height,
+-- 
+1.9.1
+

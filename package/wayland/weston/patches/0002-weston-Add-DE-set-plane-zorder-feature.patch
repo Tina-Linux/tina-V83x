@@ -1,0 +1,177 @@
+From d2c98187f5a9c4e4e87539e168bb6e97b76dec6b Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 17:20:21 +0800
+Subject: [PATCH 1/8] weston: Add DE set plane zorder feature
+
+Weston deal with layers by from top layer to bottom layer, this code
+can set right zorder to real hardware layer in DE(Limit to UI layer);
+---
+ libweston/compositor-drm.c | 75 +++++++++++++++++++++++++++++++++++++++++++++-
+ libweston/compositor.c     |  1 +
+ libweston/compositor.h     |  2 ++
+ 3 files changed, 77 insertions(+), 1 deletion(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 1d38f05..7a1a092 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -200,6 +200,7 @@ struct drm_sprite {
+ 	uint32_t possible_crtcs;
+ 	uint32_t plane_id;
+ 	uint32_t count_formats;
++	uint64_t zorder;
+ 
+ 	int32_t src_x, src_y;
+ 	uint32_t src_w, src_h;
+@@ -707,6 +708,13 @@ drm_output_repaint(struct weston_output *output_base,
+ 	struct drm_mode *mode;
+ 	int ret = 0;
+ 
++	drmModeObjectPropertiesPtr plane_prop_ptr;
++	uint32_t i = 0;
++	drmModePropertyPtr prop_ptr;
++	uint32_t zorder_prop_id = 0x00;
++	uint32_t alpha_mode_prop_id = 0x00;
++	uint32_t alpha_value_prop_id = 0xff;
++
+ 	if (output->disable_pending || output->destroy_pending)
+ 		return -1;
+ 
+@@ -757,15 +765,67 @@ drm_output_repaint(struct weston_output *output_base,
+ 		if (s->next && !backend->sprites_hidden)
+ 			fb_id = s->next->fb_id;
+ 
++		plane_prop_ptr = drmModeObjectGetProperties(backend->drm.fd, s->plane_id,
++					DRM_MODE_OBJECT_PLANE);
++		if (!plane_prop_ptr) {
++			weston_log("get mode properties failed\n");
++			goto err_pageflip;
++		}
++		for (i = 0; i < plane_prop_ptr->count_props; i++) {
++			prop_ptr = drmModeGetProperty(backend->drm.fd, *(plane_prop_ptr->props + i));
++			if (!prop_ptr) {
++				weston_log("drmModeGetProperty failed\n");
++				drmModeFreeObjectProperties(plane_prop_ptr);
++				goto err_pageflip;
++			}
++			if (!strcmp(prop_ptr->name, "zpos")) {
++				zorder_prop_id = prop_ptr->prop_id;
++			}
++			else if (!strcmp(prop_ptr->name, "alpha_mode")) {
++				alpha_mode_prop_id = prop_ptr->prop_id;
++			}
++			else if (!strcmp(prop_ptr->name, "alpha_value")) {
++				alpha_value_prop_id = prop_ptr->prop_id;
++			}
++			drmModeFreeProperty(prop_ptr);
++		}
++		ret = drmModeObjectSetProperty(backend->drm.fd, s->plane_id,
++					DRM_MODE_OBJECT_PLANE, zorder_prop_id, s->zorder);
++		if (ret) {
++			weston_log("set property zorder failed: %"PRIu64"\n", s->zorder);
++			drmModeFreeObjectProperties(plane_prop_ptr);
++			goto err_pageflip;
++		}
++
++		ret = drmModeObjectSetProperty(backend->drm.fd, s->plane_id,
++					DRM_MODE_OBJECT_PLANE, alpha_mode_prop_id, 0x02);
++		if (ret) {
++			weston_log("set property alpha mode failed: %d: %s\n", ret, strerror(errno));
++			drmModeFreeObjectProperties(plane_prop_ptr);
++			goto err_pageflip;
++		}
++
++		ret = drmModeObjectSetProperty(backend->drm.fd, s->plane_id,
++					DRM_MODE_OBJECT_PLANE, alpha_value_prop_id, 0xff);
++		if (ret) {
++			weston_log("set property alpha value failed: %d: %s\n", ret, strerror(errno));
++			drmModeFreeObjectProperties(plane_prop_ptr);
++			goto err_pageflip;
++		}
++
+ 		ret = drmModeSetPlane(backend->drm.fd, s->plane_id,
+ 				      output->crtc_id, fb_id, flags,
+ 				      s->dest_x, s->dest_y,
+ 				      s->dest_w, s->dest_h,
+ 				      s->src_x, s->src_y,
+ 				      s->src_w, s->src_h);
+-		if (ret)
++		if (ret) {
+ 			weston_log("setplane failed: %d: %s\n",
+ 				ret, strerror(errno));
++			drmModeFreeObjectProperties(plane_prop_ptr);
++			goto err_pageflip;
++		}
++		drmModeFreeObjectProperties(plane_prop_ptr);
+ 
+ 		vbl.request.type |= drm_waitvblank_pipe(output);
+ 
+@@ -1024,6 +1084,10 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 	if (ev->alpha != 1.0f)
+ 		return NULL;
+ 
++	// DE only support 16 & 8 layer to display, limit it
++	if (ec->plane_zorder <= 1)
++		return NULL;
++
+ 	wl_list_for_each(s, &b->sprite_list, link) {
+ 		if (!drm_sprite_crtc_supported(output, s))
+ 			continue;
+@@ -1160,6 +1224,9 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 	s->src_h = (tbox.y2 - tbox.y1) << 8;
+ 	pixman_region32_fini(&src_rect);
+ 
++	s->zorder = ec->plane_zorder;
++	ec->plane_zorder -= 1;
++
+ 	return &s->plane;
+ }
+ 
+@@ -1312,6 +1379,11 @@ drm_assign_planes(struct weston_output *output_base)
+ 	struct weston_view *ev, *next;
+ 	pixman_region32_t overlap, surface_overlap;
+ 	struct weston_plane *primary, *next_plane;
++	struct weston_compositor *ec = output_base->compositor;
++	/*
++	* Temp to use de0 16 layers to display
++	*/
++	ec->plane_zorder = 15;
+ 
+ 	/*
+ 	 * Find a surface for each sprite in the output using some heuristics:
+@@ -2663,6 +2735,7 @@ create_sprites(struct drm_backend *b)
+ 		sprite->current = NULL;
+ 		sprite->next = NULL;
+ 		sprite->backend = b;
++		sprite->zorder = -1;
+ 		sprite->count_formats = plane->count_formats;
+ 		memcpy(sprite->formats, plane->formats,
+ 		       plane->count_formats * sizeof(plane->formats[0]));
+diff --git a/libweston/compositor.c b/libweston/compositor.c
+index 9ded23f..4a84761 100644
+--- a/libweston/compositor.c
++++ b/libweston/compositor.c
+@@ -5080,6 +5080,7 @@ weston_compositor_create(struct wl_display *display, void *user_data)
+ 	wl_signal_init(&ec->output_resized_signal);
+ 	wl_signal_init(&ec->session_signal);
+ 	ec->session_active = 1;
++	ec->plane_zorder = 1;
+ 
+ 	ec->output_id_pool = 0;
+ 	ec->repaint_msec = DEFAULT_REPAINT_WINDOW;
+diff --git a/libweston/compositor.h b/libweston/compositor.h
+index 08e728a..c9f7480 100644
+--- a/libweston/compositor.h
++++ b/libweston/compositor.h
+@@ -841,6 +841,8 @@ struct weston_compositor {
+ 	struct wl_list axis_binding_list;
+ 	struct wl_list debug_binding_list;
+ 
++	uint64_t plane_zorder;
++
+ 	uint32_t state;
+ 	struct wl_event_source *idle_source;
+ 	uint32_t idle_inhibit;
+-- 
+1.9.1
+

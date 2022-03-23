@@ -1,0 +1,62 @@
+#!/bin/sh
+
+lpsd_rrun=77
+lpsd_rstop=128
+lpsd_th=1200
+
+cd /sys/module/sunxi_mad/parameters/
+
+mad_para_usage() {
+    echo "mad-para set mad wakeup parameters."
+    echo "Usage:"
+    echo "mad-para [command] [value]"
+    echo "         defaule: set mad default value"
+    echo "         rrun:  set lpsd_rrun [value]"
+    echo "         rstop: set lpsd_rstop [value]"
+    echo "         th:    set lpsd_th [value]"
+    echo ""
+}
+
+mad_write_para() {
+    echo $lpsd_rrun > lpsd_rrun;
+    echo $lpsd_rstop > lpsd_rstop;
+    echo $lpsd_th > lpsd_th;
+    echo "################################"
+    echo "lpsd_rrun:`cat lpsd_rrun`"
+    echo "lpsd_rstop:`cat lpsd_rstop`"
+    echo "lpsd_th:`cat lpsd_th`"
+    echo "################################"
+}
+
+if [ $# = 1 ];then
+   [ $1 = "default" ] && {
+        echo "set mad default value."
+        mad_write_para
+        exit
+    }
+fi
+
+if [ $# = 2 ]; then
+    [ $1 = "rrun" ] && {
+        lpsd_rrun=$2
+        lpsd_rstop=`cat lpsd_rstop`
+        lpsd_th=`cat lpsd_th`
+        mad_write_para
+        exit
+    }
+    [ $1 = "rstop" ] && {
+        lpsd_rrun=`cat lpsd_rrun`
+        lpsd_rstop=$2
+        lpsd_th=`cat lpsd_th`
+        mad_write_para
+        exit
+    }
+    [ $1 = "th" ] && {
+        lpsd_rrun=`cat lpsd_rrun`
+        lpsd_rstop=`cat lpsd_rstop`
+        lpsd_th=$2
+        mad_write_para
+        exit
+    }
+fi
+mad_para_usage

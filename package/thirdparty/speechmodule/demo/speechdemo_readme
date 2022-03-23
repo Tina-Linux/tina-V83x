@@ -1,0 +1,14 @@
+
+for speechdemo (add by 926 @20190724)
+
+1. set libs env
+   $export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/mnt/app/libs/
+
+2. connect wifi:wifi_connect_ap_test ssid psk
+
+3. create debug file:
+   $cd /mnt/app/
+   $touch .asr_test
+   $touch .debug
+
+4. start app:/mnt/app/demo/speechdemo &

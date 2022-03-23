@@ -1,0 +1,12 @@
+diff --git a/omx/gstomxvideodec.c b/omx/gstomxvideodec.c
+index 79b4daa..bbd123c 100644
+--- a/omx/gstomxvideodec.c
++++ b/omx/gstomxvideodec.c
+@@ -476,6 +476,7 @@ gst_omx_video_dec_fill_buffer (GstOMXVideoDec * self,
+         dst_width[0] = GST_VIDEO_INFO_WIDTH (vinfo);
+         break;
+       case GST_VIDEO_FORMAT_I420:
++      case GST_VIDEO_FORMAT_YV12:
+         dst_width[0] = GST_VIDEO_INFO_WIDTH (vinfo);
+         src_stride[1] = nstride / 2;
+         src_size[1] = (src_stride[1] * nslice) / 2;

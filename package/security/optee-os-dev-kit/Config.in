@@ -1,0 +1,22 @@
+if PACKAGE_optee-os-dev-kit
+
+config OPTEE_ENCRYPT_TA
+        bool "whether encrypt ta"
+        depends on PLATFORM_r328s2 || PLATFORM_r328s3
+        default n
+
+choice
+	prompt "encrypt ta with which key"
+	default OPTEE_ENCRYPT_TA_SSK_KEY
+	depends on OPTEE_ENCRYPT_TA
+	help
+	  Select the block size of the root filesystem.
+
+	config OPTEE_ENCRYPT_TA_SSK_KEY
+	        bool "ssk"
+
+	config OPTEE_ENCRYPT_TA_RTOPK_DERIVE_KEY
+	        bool "key derive from rotpk"
+endchoice
+
+endif

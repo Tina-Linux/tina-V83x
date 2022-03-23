@@ -1,0 +1,53 @@
+Index: source/block.c
+===================================================================
+--- source.orig/block.c	2016-08-11 16:39:07.000000000 +0800
++++ source/block.c	2016-08-11 17:11:16.071548800 +0800
+@@ -1253,9 +1253,11 @@
+ {
+ 	int i;
+ 	struct blkid_struct_probe *pr;
++    int gl_flags = GLOB_NOESCAPE | GLOB_MARK;
++    glob_t gl;
+ 
+-	cache_load(1);
+ 	if (argc == 2) {
++        cache_load(1);
+ 		list_for_each_entry(pr, &devices, list)
+ 			print_block_info(pr);
+ 
+@@ -1263,21 +1265,23 @@
+ 	};
+ 
+ 	for (i = 2; i < argc; i++) {
+-		struct stat s;
++        int j;
+ 
+-		if (stat(argv[i], &s)) {
+-			ULOG_ERR("failed to stat %s\n", argv[i]);
+-			continue;
+-		}
+-		if (!S_ISBLK(s.st_mode)) {
+-			ULOG_ERR("%s is not a block device\n", argv[i]);
+-			continue;
+-		}
+-		pr = find_block_info(NULL, NULL, argv[i]);
+-		if (pr)
+-			print_block_info(pr);
++        if (glob(argv[i], gl_flags, NULL, &gl) != 0) {
++			ULOG_ERR("(block info) there is no %s\n", argv[i]);
++            if (i+1 >= argc)
++                return -1;
++            continue;
++        }
++        for (j = 0; j < gl.gl_pathc; j++) {
++            struct blkid_struct_probe *pr = _probe_path(gl.gl_pathv[j]);
++            if (pr)
++                print_block_info(pr);
++        }
+ 	}
+ 
++    globfree(&gl);
++
+ 	return 0;
+ }
+ 

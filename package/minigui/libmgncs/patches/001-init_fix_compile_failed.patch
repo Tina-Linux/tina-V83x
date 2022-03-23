@@ -1,0 +1,14 @@
+--- a/etc/Makefile.am
++++ b/etc/Makefile.am
+@@ -2,9 +2,9 @@
+ # The directory where the data files will be installed
+ 
+ install-data-local:
+-	if [ ! -d $(prefix)/etc ]; then $(INSTALL) -d $(prefix)/etc; fi
++	if [ ! -d $(DESTDIR)/$(prefix)/etc ]; then $(INSTALL) -d $(DESTDIR)/$(prefix)/etc; fi
+ 
+-	$(INSTALL_DATA) mgncs.cfg $(prefix)/etc/mgncs.cfg
++	$(INSTALL_DATA) mgncs.cfg $(DESTDIR)/$(prefix)/etc/mgncs.cfg
+ 
+ EXTRA_DIST = mgncs.cfg
+ 

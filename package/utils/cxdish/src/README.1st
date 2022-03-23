@@ -1,0 +1,87 @@
+-------------------------------------------------------------------------------
+This folder contains a sample Linux application that allows command line
+interact with CAPE devices through public I2S and GPIO interface.(This tool
+also can run in Windows. When it runs in Windows, it communicate with CAPE
+device through Siena interface instead ).
+
+-------------------------------------------------------------------------------
+USAGE
+-------------------------------------------------------------------------------
+Usage: cxdish <options> [command]
+
+Available options:
+  -h, --help                this help
+  -D, --device STR          specifies the i2c device path, default is '/dev/i2c-0'
+  -r, --reset GPIO_NUM      specifies the RESET GPIO pin number, default is '184'
+  -a, --address I2C_ADDRESS specifies i2c address, default is '0x41'
+  -d, --debug LEVEL         specifies device level from 0 to 2
+  -W, --max_write           specifies max writing lenght,default is , max= 4000
+  -R, --max_read            specifies max writing lenght,default is , max= 4000
+  -L, --legacy              enables legacy mode flash for legacy device
+  -H, --hot_flash           download image during firmware is running
+  -d, --debug               enables i2c dump
+  -v, --version             prints cxdish version
+  -q, --quiet               enables quiet mode
+
+Available commands:
+  sendcmd STREAM_ID COMMAND [arg]
+  flash SFS_FILE [BOOTLOADER]
+  set-mode MODE
+  get-mode
+  fw-version
+
+# Examples #
+
+1. Read tool version.
+ ./cxdish -v
+
+2. Read firmware version.
+./cxdish fw-version
+
+3. enable i2c dump. likes
+./cxdish fw-version -d 1
+
+4. send command to tool.
+./cxdish -d 2sendcmd 0xB32D2300 0x00000004 0xd74c2d00
+
+5. upgrade the firmware.
+./cxdish -r 148 -D /dev/i2c-1 flash oem_image.sfs iflash.bin
+
+6. get current mode.
+./cxdish -r 148 -D /dev/i2c-1 get-mode
+
+7. set mode.
+./cxdish -r 148 -D /dev/i2c-1 set-mode CONF
+
+8. change max writing length to 60 bytes during flashing
+./cxdish -r 148 -D /dev/i2c-1 -W 60 flash oem_image.sfs iflash.bin
+
+
+-------------------------------------------------------------------------------
+BUILDING THE SAMPLE
+-------------------------------------------------------------------------------
+It requires Compiler toolchain or GNU G++ to build the code.
+To compile this, simply type 'make' to build the code.
+
+ $make
+
+-------------------------------------------------------------------------------
+RUNNING THE SAMPLE
+-------------------------------------------------------------------------------
+
+Linux platfrom:
+
+Usually, i2c devices are controlled by a kernel driver. can't be controlled by
+usermode application. Please make sure kernel enable the following options.
+
+CONFIG_I2C_CHARDEV=y
+CONFIG_GPIO_SYSFS=y
+CONFIG_SYSFS=y
+
+
+Windows platfrom:
+
+It communicate with communicate with CAPE devices through Siena interface. Please
+connect Siena to PC and make sure the Siena driver is installed properly before
+running the tool.
+

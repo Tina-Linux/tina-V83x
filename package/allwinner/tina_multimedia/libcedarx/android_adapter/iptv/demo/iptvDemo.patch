@@ -1,0 +1,71 @@
+diff --git a/LIBRARY/CODEC/AUDIO/DECODER/include/adecoder.h b/LIBRARY/CODEC/AUDIO/DECODER/include/adecoder.h
+old mode 100644
+new mode 100755
+index 62d2dd4..0ad5bf4
+--- a/LIBRARY/CODEC/AUDIO/DECODER/include/adecoder.h
++++ b/LIBRARY/CODEC/AUDIO/DECODER/include/adecoder.h
+@@ -301,6 +301,7 @@ typedef struct AUDIOSTREAMINFO
+     int                     nFlags;
+     int                     nBlockAlign;
+	cedar_raw_data          raw_data;
++	unsigned int			pid;
+ }AudioStreamInfo;
+
+ typedef	struct __BsInFor
+diff --git a/LIBRARY/CODEC/SUBTITLE/DECODER/include/sdecoder.h b/LIBRARY/CODEC/SUBTITLE/DECODER/include/sdecoder.h
+old mode 100644
+new mode 100755
+index 107a057..2383e3c
+--- a/LIBRARY/CODEC/SUBTITLE/DECODER/include/sdecoder.h
++++ b/LIBRARY/CODEC/SUBTITLE/DECODER/include/sdecoder.h
+@@ -107,6 +107,7 @@ typedef struct SUBTITLESTREAMINFO
+
+     int                 nCodecSpecificDataLen;
+     char*               pCodecSpecificData;
++	unsigned int		pid;
+ }SubtitleStreamInfo;
+
+
+diff --git a/LIBRARY/CODEC/VIDEO/DECODER/include/vdecoder.h b/LIBRARY/CODEC/VIDEO/DECODER/include/vdecoder.h
+old mode 100644
+new mode 100755
+index e6ec9ff..33eb7ea
+--- a/LIBRARY/CODEC/VIDEO/DECODER/include/vdecoder.h
++++ b/LIBRARY/CODEC/VIDEO/DECODER/include/vdecoder.h
+@@ -142,6 +142,7 @@ typedef struct VIDEOSTREAMINFO
+     int   bSecureStreamFlagLevel1;
+	int   bIsFramePackage; /* 1: frame package;  0: stream package */
+	int   h265ReferencePictureNum;
++	unsigned int pid;
+ }VideoStreamInfo;
+
+ typedef struct VCONFIG
+diff --git a/LIBRARY/DEMUX/PARSER/ts/CdxTsParser.c b/LIBRARY/DEMUX/PARSER/ts/CdxTsParser.c
+index a6234e4..fd944fe 100755
+--- a/LIBRARY/DEMUX/PARSER/ts/CdxTsParser.c
++++ b/LIBRARY/DEMUX/PARSER/ts/CdxTsParser.c
+@@ -3847,6 +3847,8 @@ static int SetMediaInfo(TSParser *mTSParser, CdxMediaInfoT *pmediainfo)
+             memcpy(video, &mTSParser->tempVideoInfo, sizeof(VideoStreamInfo));
+
+         }
++
++		video->pid = streamVideo->mElementaryPID;
+         video->bIs3DStream = SeemToBeMvc(program);
+         video->eCodecFormat = mTSParser->curVideo->codec_id;
+		/*
+@@ -3906,6 +3908,7 @@ static int SetMediaInfo(TSParser *mTSParser, CdxMediaInfoT *pmediainfo)
+                 cdxProgram->audio[i].eSubCodecFormat = WAVE_FORMAT_EXTENSIBLE - 1;
+                 cdxProgram->audio[i].eSubCodecFormat |= ABS_EDIAN_FLAG_BIG;
+             }
++			cdxProgram->audio[i].pid = stream->mElementaryPID;
+             stream->streamIndex = i;
+             i++;
+         }
+@@ -3915,6 +3918,7 @@ static int SetMediaInfo(TSParser *mTSParser, CdxMediaInfoT *pmediainfo)
+             cdxProgram->subtitle[j].eCodecFormat = stream->codec_id;
+             //cdxProgram->subtitle[j].sub_codec_type = stream->codec_sub_id;
+             memcpy(cdxProgram->subtitle[j].strLang, stream->lang, 4);
++			cdxProgram->subtitle[j].pid = stream->mElementaryPID;
+             stream->streamIndex = j;
+             j++;
+         }

@@ -1,0 +1,110 @@
+--- a/initd/init.c
++++ b/initd/init.c
+@@ -34,6 +34,7 @@
+ #include "../watchdog.h"
+
+ unsigned int debug = 0;
++pid_t gKmodLoaderPid;
+
+ static void
+ signal_shutdown(int signal, siginfo_t *siginfo, void *data)
+@@ -104,15 +105,9 @@ main(int argc, char **argv)
+	if (pid <= 0) {
+		ERROR("Failed to start kmodloader instance\n");
+	} else {
+-		int i;
+-
+-		for (i = 0; i < 120; i++) {
+-			if (waitpid(pid, NULL, WNOHANG) > 0)
+-				break;
+-			sleep(1);
+-			watchdog_ping();
+-		}
++		gKmodLoaderPid = pid;
+	}
++
+	uloop_init();
+	preinit();
+	uloop_run();
+--- a/initd/preinit.c
++++ b/initd/preinit.c
+@@ -15,6 +15,7 @@
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <sys/mount.h>
++#include <sys/wait.h>
+
+ #include <libubox/uloop.h>
+ #include <libubox/utils.h>
+@@ -29,6 +30,7 @@
+
+ static struct uloop_process preinit_proc;
+ static struct uloop_process plugd_proc;
++extern pid_t gKmodLoaderPid;
+
+ static void
+ check_dbglvl(void)
+@@ -62,6 +64,15 @@ spawn_procd(struct uloop_process *proc,
+		while (true)
+			sleep(1);
+
++	if(gKmodLoaderPid != 0) {
++		int i;
++		for (i = 0; i < 120; i++) {
++			if (waitpid(gKmodLoaderPid, NULL, WNOHANG) > 0)
++				break;
++			usleep(10000);
++			watchdog_ping();
++		}
++	}
+	unsetenv("INITRAMFS");
+	unsetenv("PREINIT");
+	DEBUG(2, "Exec to real procd now\n");
+--- a/plug/hotplug.c
++++ b/plug/hotplug.c
+@@ -33,7 +33,7 @@
+
+ #include "hotplug.h"
+
+-#define HOTPLUG_WAIT	500
++#define HOTPLUG_WAIT	50
+
+ struct cmd_handler;
+ struct cmd_queue {
+--- a/state.c
++++ b/state.c
+@@ -166,14 +166,14 @@ static void state_enter(void)
+		LOG("- SIGKILL processes -\n");
+		kill(-1, SIGKILL);
+		sync();
+-		sleep(1);
++		usleep(500000);
+		if (reboot_event == RB_POWER_OFF)
+			LOG("- power down -\n");
+		else
+			LOG("- reboot -\n");
+
+		/* Allow time for last message to reach serial console, etc */
+-		sleep(1);
++		//sleep(1);
+
+		/* We have to fork here, since the kernel calls do_exit(EXIT_SUCCESS)
+		 * in linux/kernel/sys.c, which can cause the machine to panic when
+--- a/ubus.c
++++ b/ubus.c
+@@ -46,7 +46,7 @@ ubus_connect_cb(struct uloop_timeout *ti
+
+	if (!ctx) {
+		DEBUG(4, "Connection to ubus failed\n");
+-		uloop_timeout_set(&ubus_timer, 1000);
++		uloop_timeout_set(&ubus_timer, 50);
+		return;
+	}
+
+@@ -64,5 +64,5 @@ void
+ procd_connect_ubus(void)
+ {
+	ubus_timer.cb = ubus_connect_cb;
+-	uloop_timeout_set(&ubus_timer, 1000);
++	uloop_timeout_set(&ubus_timer, 50);
+ }

@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt	2017-11-13 12:15:54.000000000 +0800
++++ b/CMakeLists.txt	2019-11-17 12:45:14.000000000 +0800
+@@ -54,7 +54,7 @@
+   @ONLY
+ )
+ 
+-include(PreventInSourceBuilds)
++#include(PreventInSourceBuilds)
+ include(PreventInBuildInstalls)
+ 
+ if(UNIX)

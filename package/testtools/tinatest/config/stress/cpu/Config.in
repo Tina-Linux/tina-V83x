@@ -1,0 +1,8 @@
+menuconfig TINATEST_STRESS_CPU
+    bool "cpu"
+
+if TINATEST_STRESS_CPU
+    source cpucalc/Config.in
+    source cpufreq/Config.in
+    source cpuhotplug/Config.in
+endif

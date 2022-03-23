@@ -1,0 +1,73 @@
+/*
+ * Copyright (c) 2008-2017 Chengkan@allwinnertech.com
+ * All rights reserved.
+ *
+ * File : main.c
+ * Description : patch wav header unitest
+ * History :
+ *
+ */
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "wavheader.h"
+
+#define RATE     8000
+#define CHAN     1
+#define BPS 8
+#define PCM      0x0001
+#define WAVE_FORMAT_ALAW        0x0006 /* ALAW */
+#define WAVE_FORMAT_MULAW        0x0007 /* MULAW */
+
+#define EPCMMODE PCM
+void main(int argc, char ** argv)
+{
+    FILE* wav = NULL,*input = NULL;
+    char wavhead[64] = {0};
+    char pcmbuf[128*1024 + 10];
+    int  filelen = 0;
+    int readlen = 0;
+    char test[124] = {0};
+    char *p = test;
+    input = fopen("E:\\CK-DS5-WORK\\tmp\\audio2.pcm","rb");
+    wav   = fopen("E:\\CK-DS5-WORK\\tmp\\test_alaw.wav","wb");
+
+    memcpy(p, "abc", sizeof("abc"));
+    printf("test:%s  size of test:%d\n",test,sizeof(p));
+    p += (sizeof(p));
+    memcpy(p, "etia1", sizeof("etia1"));
+    printf("test:%s  size of test:%d\n",test,sizeof(p));
+
+    if(!input || !wav)
+    {
+        printf("%s,%s\n",input?"input ok!":"input fail!",wav?"wav ok!":"wav fail!");
+        return ;
+    }
+
+    if(fseek(input,0,SEEK_END))
+    {
+        printf("unknown error in seek end inputfile!");
+        return ;
+    }
+    filelen = (int)(ftell(input));
+    if(fseek(input,0,SEEK_SET))
+    {
+        printf("unknown error in seek set inputfile!");
+        return ;
+    }
+    filelen = 0x7fffffff;
+    Setaudiobs_pcm(wavhead,CHAN,RATE,BPS,EPCMMODE,filelen);
+    fwrite(wavhead,1,0x2c,wav);
+
+    while(readlen = fread(pcmbuf,1,128*1024,input))
+        fwrite(pcmbuf,1,readlen,wav);
+
+    fclose(wav);
+    fclose(input);
+
+    return;
+
+
+}

@@ -1,0 +1,35 @@
+#!/bin/sh
+
+do_initramfs_config() {
+
+	local root_dev="$(readlink /dev/by-name/rootfs)"
+
+	mkdir -p /overlay
+
+	case "${root_dev}" in
+		/dev/mtdblock*)
+			/bin/mount -t jffs2 /dev/by-name/rootfs_data /overlay || {
+				/bin/echo "Mount Failed: formating /dev/by-name/rootfs_data to jffs2 ..."
+				mkfs_jffs2 "/dev/by-name/rootfs_data" || return 1
+				mount -t jffs2 /dev/by-name/rootfs_data /overlay
+			}
+			;;
+		*)
+			/usr/sbin/fsck.ext4 -y /dev/by-name/rootfs_data &>/dev/null
+			/bin/mount -t ext4 /dev/by-name/rootfs_data /overlay || {
+				/bin/echo "Mount Failed: formating /dev/by-name/rootfs_data to ext4 ..."
+				mkfs.ext4 -m 0 /dev/by-name/rootfs_data >/dev/null || return 1
+				/bin/mount -t ext4 /dev/by-name/rootfs_data /overlay
+			}
+			;;
+	esac
+
+	local OVERLAYFS_UPPER_DIR="/overlay/upper"
+	# overlayfs in linux-3.4 and  linux-3.10 is v22 and before, should mount without a workdir
+	fgrep -sq 'Linux version 3' /proc/version && OVERLAYFS_UPPER_DIR="/overlay"
+
+	# sync wifi config from overlayfs(rootfs_data partition)
+	[ -e $OVERLAYFS_UPPER_DIR/etc/wifi/wpa_supplicant.conf ] && cp -fpr $OVERLAYFS_UPPER_DIR/etc/wifi/* /etc/wifi/
+}
+
+[ "$INITRAMFS" = "1" ] && boot_hook_add initramfs do_initramfs_config

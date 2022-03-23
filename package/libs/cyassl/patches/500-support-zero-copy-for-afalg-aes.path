@@ -1,0 +1,305 @@
+--- a/wolfcrypt/src/port/af_alg/afalg_aes.c
++++ b/wolfcrypt/src/port/af_alg/afalg_aes.c
+@@ -20,6 +20,10 @@
+  */
+
+
++/* Required for vmsplice */
++#ifndef _GNU_SOURCE
++# define _GNU_SOURCE
++#endif
+
+ #ifdef HAVE_CONFIG_H
+     #include <config.h>
+@@ -35,6 +39,7 @@
+ #include <wolfssl/wolfcrypt/logging.h>
+ #include <wolfssl/wolfcrypt/port/af_alg/wc_afalg.h>
+
++#include <fcntl.h>
+ #include <sys/uio.h> /* for readv */
+
+ #ifdef NO_INLINE
+@@ -58,6 +63,23 @@ static int wc_AesSetup(Aes* aes, const c
+     byte* key = (byte*)aes->key;
+ #endif
+
++#ifdef WOLFSSL_AFALG_ZERO_COPY
++    int sndlen = 0;
++    int ret = 0;
++    socklen_t optlen = sizeof(sndlen);
++
++    if (getsockopt(aes->alFd, SOL_SOCKET, SO_SNDBUF, &sndlen, &optlen)) {
++	    WOLFSSL_MSG("Get the buffer length failed!");
++	    sndlen = 4096;
++    }
++
++    ret = fcntl(aes->zc_pipe[1], F_SETPIPE_SZ, 2*sndlen);
++    if (ret < 0) {
++	    WOLFSSL_MSG("fcntl pipe failed : ");
++	    return 0;
++    }
++#endif
++
+     aes->rdFd = wc_Afalg_CreateRead(aes->alFd, type, name);
+     if (aes->rdFd < 0) {
+         WOLFSSL_MSG("Unable to accept and get AF_ALG read socket");
+@@ -126,6 +148,7 @@ int wc_AesSetKey(Aes* aes, const byte* u
+ #ifdef WOLFSSL_AES_COUNTER
+     aes->left = 0;
+ #endif
++    wc_AesFree(aes);
+
+     aes->rdFd = WC_SOCK_NOTSET;
+     aes->alFd = wc_Afalg_Socket();
+@@ -133,6 +156,9 @@ int wc_AesSetKey(Aes* aes, const byte* u
+          WOLFSSL_MSG("Unable to open an AF_ALG socket");
+          return WC_AFALG_SOCK_E;
+     }
++#ifdef WOLFSSL_AFALG_ZERO_COPY
++    pipe(aes->zc_pipe);
++#endif
+
+     /* save key until type is known i.e. CBC, ECB, ... */
+     XMEMCPY((byte*)(aes->key), userKey, keylen);
+@@ -146,11 +172,13 @@ int wc_AesSetKey(Aes* aes, const byte* u
+ #if defined(HAVE_AES_CBC) && defined(WOLFSSL_AFALG)
+     static const char WC_NAME_AESCBC[] = "cbc(aes)";
+
+-    int wc_AesCbcEncrypt(Aes* aes, byte* out, const byte* in, word32 sz)
++    static int wc_AesCbc_Do(Aes* aes, byte* out, const byte* in, word32 sz)
+     {
+         struct cmsghdr* cmsg;
+         struct iovec    iov;
+         int ret;
++	int sndlen = 0;
++	socklen_t optlen = sizeof(sndlen);
+
+         if (aes == NULL || out == NULL || in == NULL) {
+             return BAD_FUNC_ARG;
+@@ -164,8 +192,18 @@ int wc_AesSetKey(Aes* aes, const byte* u
+             }
+         }
+
++	if (getsockopt(aes->alFd, SOL_SOCKET, SO_SNDBUF, &sndlen, &optlen)) {
++		WOLFSSL_MSG("Get the buffer length failed!");
++		sndlen = 4096;
++	}
++
+         sz = sz - (sz % AES_BLOCK_SIZE);
+-        if ((sz / AES_BLOCK_SIZE) > 0) {
++        if ((sz / AES_BLOCK_SIZE) <= 0)
++		goto out;
++
++	while (sz > 0) {
++	    int plen = (((int)sz > sndlen) ? sndlen : (int)sz);
++
+             /* update IV */
+             cmsg = CMSG_FIRSTHDR(&(aes->msg));
+             ret = wc_Afalg_SetIv(CMSG_NXTHDR(&(aes->msg), cmsg),
+@@ -177,77 +215,70 @@ int wc_AesSetKey(Aes* aes, const byte* u
+
+             /* set data to be encrypted */
+             iov.iov_base = (byte*)in;
+-            iov.iov_len  = sz;
++            iov.iov_len  = plen;
++
++#ifdef WOLFSSL_AFALG_ZERO_COPY
++	    /* Input data is not sent as part of call to sendmsg() */
++	    aes->msg.msg_iovlen = 0;
++	    aes->msg.msg_iov = NULL;
++#else
+
+             aes->msg.msg_iov    = &iov;
+             aes->msg.msg_iovlen = 1; /* # of iov structures */
++#endif
+
+             ret = (int)sendmsg(aes->rdFd, &(aes->msg), 0);
+             if (ret < 0) {
+                 return ret;
+             }
+-            ret = (int)read(aes->rdFd, out, sz);
+-            if (ret < 0) {
+-                return ret;
+-            }
+
+-            /* set IV for next CBC call */
+-            XMEMCPY(aes->reg, out + sz - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
+-        }
++#ifdef WOLFSSL_AFALG_ZERO_COPY
++	    ret = vmsplice(aes->zc_pipe[1], &iov, 1, SPLICE_F_GIFT);
++	    if (ret < 0) {
++		    return ret;
++	    }
++
++	    ret = splice(aes->zc_pipe[0], NULL, aes->rdFd, NULL, sz, 0);
++	    if (ret < 0) {
++		    return ret;
++	    }
++#endif
+
++	    while (plen) {
++		    ret = (int)read(aes->rdFd, out, plen);
++		    if (ret < 0) {
++			    return ret;
++		    }
++
++		    in += ret;
++		    out += ret;
++		    sz -= ret;
++
++		    plen -= ret;
++	    }
++
++	    if (aes->dir != AES_DECRYPTION) {
++		    /* set IV for next CBC call */
++		    XMEMCPY(aes->reg, out - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
++	    } else {
++		    /* set IV for next CBC call */
++		    XMEMCPY(aes->reg, in - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
++	    }
++	}
++out:
+         return 0;
+     }
+
+-    #ifdef HAVE_AES_DECRYPT
+-    int wc_AesCbcDecrypt(Aes* aes, byte* out, const byte* in, word32 sz)
++    int wc_AesCbcEncrypt(Aes* aes, byte* out, const byte* in, word32 sz)
+     {
+-        struct cmsghdr* cmsg;
+-        struct iovec    iov;
+-        int ret;
+-
+-        if (aes == NULL || out == NULL || in == NULL
+-                                       || sz % AES_BLOCK_SIZE != 0) {
+-            return BAD_FUNC_ARG;
+-        }
+-
+-        if (aes->rdFd == WC_SOCK_NOTSET) {
+-            if ((ret = wc_AesSetup(aes, WC_TYPE_SYMKEY, WC_NAME_AESCBC,
+-                                AES_IV_SIZE, 0)) != 0) {
+-                return ret;
+-            }
+-        }
+-
+-        if ((sz / AES_BLOCK_SIZE) > 0) {
+-            /* update IV */
+-            cmsg = CMSG_FIRSTHDR(&(aes->msg));
+-            ret = wc_Afalg_SetIv(CMSG_NXTHDR(&(aes->msg), cmsg),
+-                    (byte*)(aes->reg), AES_IV_SIZE);
+-            if (ret != 0) {
+-                return ret;
+-            }
+-
+-            /* set data to be decrypted */
+-            iov.iov_base = (byte*)in;
+-            iov.iov_len  = sz;
+-
+-            aes->msg.msg_iov    = &iov;
+-            aes->msg.msg_iovlen = 1; /* # of iov structures */
+-
+-            /* set IV for next CBC call */
+-            XMEMCPY(aes->reg, in + sz - AES_BLOCK_SIZE, AES_BLOCK_SIZE);
+-
+-            ret = (int)sendmsg(aes->rdFd, &(aes->msg), 0);
+-            if (ret < 0) {
+-                return ret;
+-            }
+-            ret = (int)read(aes->rdFd, out, sz);
+-            if (ret < 0) {
+-                return ret;
+-            }
++	    return wc_AesCbc_Do(aes, out, in, sz);
++    }
+
+-        }
+
+-        return 0;
++    #ifdef HAVE_AES_DECRYPT
++    int wc_AesCbcDecrypt(Aes* aes, byte* out, const byte* in, word32 sz)
++    {
++	    return wc_AesCbc_Do(aes, out, in, sz);
+     }
+     #endif
+
+--- a/wolfssl/wolfcrypt/aes.h
++++ b/wolfssl/wolfcrypt/aes.h
+@@ -184,6 +184,11 @@ typedef struct Aes {
+     word32 msgBuf[CMSG_SPACE(4) + CMSG_SPACE(sizeof(struct af_alg_iv) +
+                   GCM_NONCE_MID_SZ)];
+ #endif
++
++#ifdef WOLFSSL_AFALG_ZERO_COPY
++    int zc_pipe[2];
++#endif
++
+ #endif
+ #if defined(WOLF_CRYPTO_CB) || (defined(WOLFSSL_DEVCRYPTO) && \
+     (defined(WOLFSSL_DEVCRYPTO_AES) || defined(WOLFSSL_DEVCRYPTO_CBC)))
+--- a/wolfcrypt/src/aes.c
++++ b/wolfcrypt/src/aes.c
+@@ -6744,6 +6744,17 @@ void wc_AesFree(Aes* aes)
+     if (aes->alFd > 0) {
+         close(aes->alFd);
+     }
++
++#ifdef WOLFSSL_AFALG_ZERO_COPY
++    if (aes->zc_pipe[0] > 0) {
++	    close(aes->zc_pipe[0]);
++    }
++
++    if (aes->zc_pipe[1] > 0) {
++	    close(aes->zc_pipe[1]);
++    }
++#endif
++
+ #endif /* WOLFSSL_AFALG */
+ #if defined(WOLFSSL_DEVCRYPTO) && \
+     (defined(WOLFSSL_DEVCRYPTO_AES) || defined(WOLFSSL_DEVCRYPTO_CBC))
+--- a/src/ssl.c
++++ b/src/ssl.c
+@@ -13616,6 +13616,10 @@ int wolfSSL_EVP_MD_type(const WOLFSSL_EV
+     void wolfSSL_EVP_CIPHER_CTX_init(WOLFSSL_EVP_CIPHER_CTX* ctx)
+     {
+         WOLFSSL_ENTER("EVP_CIPHER_CTX_init");
++	if (ctx && ctx->cipherType != WOLFSSL_EVP_CIPH_TYPE_INIT) {
++		wolfSSL_EVP_CIPHER_CTX_cleanup(ctx);
++	}
++
+         if (ctx) {
+             ctx->cipherType = WOLFSSL_EVP_CIPH_TYPE_INIT;   /* not yet initialized */
+             ctx->keyLen     = 0;
+@@ -13628,7 +13632,9 @@ int wolfSSL_EVP_MD_type(const WOLFSSL_EV
+     int wolfSSL_EVP_CIPHER_CTX_cleanup(WOLFSSL_EVP_CIPHER_CTX* ctx)
+     {
+         WOLFSSL_ENTER("EVP_CIPHER_CTX_cleanup");
++
+         if (ctx) {
++	    wc_AesFree(&ctx->cipher.aes);
+             ctx->cipherType = WOLFSSL_EVP_CIPH_TYPE_INIT;  /* not yet initialized  */
+             ctx->keyLen     = 0;
+         }
+@@ -13668,10 +13674,14 @@ int wolfSSL_EVP_MD_type(const WOLFSSL_EV
+             return 0;   /* failure */
+         }
+
++	if (type)
++		wolfSSL_EVP_CIPHER_CTX_init(ctx);
++
+         if (type == NULL && ctx->cipherType == WOLFSSL_EVP_CIPH_TYPE_INIT) {
+             WOLFSSL_MSG("no type set");
+             return 0;   /* failure */
+         }
++
+         if (ctx->cipherType == WOLFSSL_EVP_CIPH_TYPE_INIT){
+             /* only first EVP_CipherInit invoke. ctx->cipherType is set below */
+             XMEMSET(&ctx->cipher, 0, sizeof(ctx->cipher));
+@@ -22940,7 +22950,7 @@ int wolfSSL_RAND_bytes(unsigned char* bu
+         rng = tmpRNG;
+         initTmpRng = 1;
+     }
+-
++
+     if (rng) {
+         if (wc_RNG_GenerateBlock(rng, buf, num) != 0)
+             WOLFSSL_MSG("Bad wc_RNG_GenerateBlock");

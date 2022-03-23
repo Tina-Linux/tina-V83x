@@ -1,0 +1,605 @@
+diff --git a/mgncs4touch-1.2.0/include/Makefile.am b/mgncs4touch-1.2.0/include/Makefile.am
+index eac9e63..39a6b6e 100644
+--- a/include/Makefile.am
++++ b/include/Makefile.am
+@@ -23,7 +23,8 @@ libmgncs4touchinclude_HEADERS = ../mgncs4touchconfig.h \
+     mpicker.h mcombopicker.h mtimepicker.h mdatepicker.h \
+     mbtnnavbar.h mimgnavbar.h mexlist.h mitembar.h balloon_tip_maker.h \
+     mpieceitem.h mitemiterator.h mcenterhbox.h mlayout_manager.h mlinevbox.h \
+-    mcontainerctrl.h miconflow.h mfillboxex.h picture-preview.h highlight.h
++    mcontainerctrl.h miconflow.h mfillboxex.h picture-preview.h highlight.h \
++    listbox_view.h item_set_view.h
+ 
+ EXTRA_DIST =
+ 
+diff --git a/mgncs4touch-1.2.0/include/item_set_view.h b/mgncs4touch-1.2.0/include/item_set_view.h
+new file mode 100644
+index 0000000..56e4444
+--- /dev/null
++++ b/include/item_set_view.h
+@@ -0,0 +1,42 @@
++#ifndef _ITEM_SET_VIEW_H_
++#define _ITEM_SET_VIEW_H_
++
++#include <minigui/common.h>
++#include <minigui/minigui.h>
++#include <minigui/gdi.h>
++#include <minigui/window.h>
++#include <minigui/control.h>
++
++#define MAX_ITEM_SIZE 10
++#define ITEM_MAX_NAME 64
++
++typedef struct
++{
++	int x;
++	int y;
++	int w;
++	int h;
++
++	char hdText[ITEM_MAX_NAME];
++	int hth;
++	PLOGFONT hdFont;
++	gal_pixel hTextColor;
++
++	PLOGFONT itemFont;
++	gal_pixel iTextColor;
++	gal_pixel lineColor;
++	BITMAP itemBmp;
++	char item[MAX_ITEM_SIZE][ITEM_MAX_NAME];
++	int iy;
++	int iSz;
++	int iIndex;
++	int iGap;
++
++	BOOL isSlidText;
++	int moveNum;
++}ItemSetInfo;
++
++int ShowItemSetDialog(HWND hParent, ItemSetInfo *info);
++
++#endif
++
+diff --git a/mgncs4touch-1.2.0/include/listbox_view.h b/mgncs4touch-1.2.0/include/listbox_view.h
+new file mode 100644
+index 0000000..327f476
+--- /dev/null
++++ b/include/listbox_view.h
+@@ -0,0 +1,86 @@
++#ifndef LISTBOX_VIEW_H_
++#define LISTBOX_VIEW_H_
++
++#include <minigui/common.h>
++#include <minigui/minigui.h>
++#include <minigui/gdi.h>
++#include <minigui/window.h>
++#include <minigui/control.h>
++#include <string.h>
++#include <unistd.h>
++
++#define LIST_MAX_SIZE 15
++#define NAME_MAX_SIZE 64
++#define LISTBOX_VIEW "ListboxView"
++
++#define RITEM_NONE		0x0
++#define RITEM_TEXT		0x01
++#define RITEM_BMP		0x02
++#define RITEM_BUTTON	0x04
++
++#define ITEM_NONE		0x0
++#define ITEM_LINE		0x01
++#define ITEM_BMP		0x02
++
++typedef void (*pButtonFun)(int index, DWORD param);
++
++typedef struct {
++	BITMAP onBmp;
++	BITMAP offBmp;
++	int onStus;
++	int sltItem;
++	char text[NAME_MAX_SIZE];
++	pButtonFun fun;
++}ButtonData;
++
++typedef struct {
++	int rType;
++	char lT[NAME_MAX_SIZE];
++	char rT[NAME_MAX_SIZE];
++	BITMAP rB;
++	ButtonData *btn;
++
++}ItemData;
++
++typedef struct {
++	HWND sfHwnd;
++	HWND parentHwnd;
++	PLOGFONT lTextFt;
++	gal_pixel lTextColor;
++	PLOGFONT rTextFt;
++	gal_pixel rTextColor;
++	BITMAP winBg;
++
++	int ht;
++	int hfp;
++	int ix;
++	int hbp;
++
++	int vt;
++	int iy;
++	int vfp;
++	int vbp;
++	int vgap;
++
++	int itType;
++	gal_pixel lineColor;
++	BITMAP ltbBg;
++	ItemData *itDt;
++	int itSz;
++	int Index;
++	int showSz;
++	int lthGap;
++	int ltvGap;
++
++	int moveGap;
++	BOOL isSlidText;
++	int oldY;
++	int moveNum;
++	int moveFlag;
++}ListboxView;
++
++BOOL RegisterListboxView(void);
++void UnregisterListboxView(void);
++
++#endif
++
+diff --git a/mgncs4touch-1.2.0/include/mgncs4touch.h b/mgncs4touch-1.2.0/include/mgncs4touch.h
+index 65200e0..4a60b10 100644
+--- a/include/mgncs4touch.h
++++ b/include/mgncs4touch.h
+@@ -109,6 +109,8 @@
+ #include "mcontainerctrl.h"
+ #include "highlight.h"
+ //#include "picture-preview.h"
++#include "listbox_view.h"
++#include "item_set_view.h"
+ 
+ #ifdef __cplusplus
+ extern "C" {
+diff --git a/mgncs4touch-1.2.0/src/Makefile.am b/mgncs4touch-1.2.0/src/Makefile.am
+index e0c3e90..7ace3cf 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -10,7 +10,8 @@ COMMON_SRCS = mgncs4touch.c mtouchcomm.c lf_touch.c mtouchrdr.c touch_pieces.c \
+     mexlist.c mbtnnavbar.c mimgnavbar.c mitembar.c balloon_tip_maker.c \
+     mpieceitem.c mitemiterator.c \
+     mcenterhbox.c mfillboxex.c mlayout_manager.c mlinevbox.c \
+-    miconflow.c mcontainerctrl.c picture-preview.c highlight.c
++    miconflow.c mcontainerctrl.c picture-preview.c highlight.c \
++    listbox_view.c item_set_view.c
+ 
+ SUBLIBS = pieces/libpieces.la \
+     physics-animation/libphysics-animation.la 
+diff --git a/mgncs4touch-1.2.0/src/item_set_view.c b/mgncs4touch-1.2.0/src/item_set_view.c
+new file mode 100644
+index 0000000..c559b86
+--- /dev/null
++++ b/src/item_set_view.c
+@@ -0,0 +1,147 @@
++#include "item_set_view.h"
++
++static int ItemSetDialogProc(HWND hDlg, int message, WPARAM wParam, LPARAM lParam)
++{
++	int i;
++	int newX = 0;
++	int newY = 0;
++	SIZE size;
++	int selectIndex = -1;
++	ItemSetInfo *info = NULL;
++
++	switch(message)
++	{
++	case MSG_INITDIALOG:
++	{
++		ItemSetInfo *itemInfo;
++		itemInfo = (ItemSetInfo*)lParam;
++		if(!itemInfo)
++		{
++			printf("invalid tipLabelData\n");
++			return -1;
++		}
++		SetWindowAdditionalData(hDlg, (DWORD)itemInfo);
++
++		break;
++	}
++
++	case MSG_PAINT:
++	{
++		HDC hdc;
++
++		hdc = BeginPaint(hDlg);
++		info = (ItemSetInfo*)GetWindowAdditionalData(hDlg);
++		SetBkMode(hdc, BM_TRANSPARENT);
++
++		SelectFont(hdc, info->hdFont);
++		SetTextColor(hdc, info->hTextColor);
++		GetTextExtent(hdc, info->hdText, -1, &size);
++		TextOut(hdc, info->iGap, (info->hth-size.cy) / 2, info->hdText);
++
++		for(i=0; i<info->iSz; i++)
++		{
++			SetPenColor(hdc, info->lineColor);
++			MoveTo(hdc, info->iGap, info->hth + info->iy * i);
++			LineTo(hdc, info->w - info->iGap, info->hth + info->iy*i);
++
++			SelectFont(hdc, info->itemFont);
++			SetTextColor(hdc, info->iTextColor);
++			GetTextExtent(hdc, info->item[i], -1, &size);
++			TextOut(hdc, info->iGap, info->hth + info->iy * i + (info->iy-size.cy) / 2, info->item[i]);
++		}
++
++		FillBoxWithBitmap(hdc, info->w-info->iGap-info->itemBmp.bmWidth,
++			info->hth + info->iy * info->iIndex + (info->iy-info->itemBmp.bmHeight) / 2,
++			info->itemBmp.bmWidth, info->itemBmp.bmHeight, &info->itemBmp);
++
++		EndPaint(hDlg, hdc);
++		break;
++	}
++
++	case MSG_LBUTTONDOWN:
++	{
++		newX = LOWORD(lParam);
++		newY = HIWORD(lParam);
++		info = (ItemSetInfo*)GetWindowAdditionalData(hDlg);
++
++		info->isSlidText = TRUE;
++		info->moveNum = 0;
++		break;
++	}
++
++	case MSG_MOUSEMOVE:
++	{
++		newX = LOWORD(lParam);
++		newY = HIWORD(lParam);
++		info = (ItemSetInfo*)GetWindowAdditionalData(hDlg);
++
++		if (info->isSlidText) {
++			info->moveNum++;
++			if (info->moveNum >= 2) {
++				info->moveNum = 0;
++			}
++		}
++		break;
++	}
++
++	case MSG_LBUTTONUP:
++	{
++		newX = LOWORD(lParam);
++		newY = HIWORD(lParam);
++		info = (ItemSetInfo*)GetWindowAdditionalData(hDlg);
++		printf("newX=%d, newY=%d\n", newX, newY);
++		info->isSlidText = FALSE;
++
++
++		for(i=0; i<info->iSz; i++)
++		{
++			if((newY > info->hth + info->iy * i) && (newY < (info->hth + info->iy * (i+1))))
++			{
++				selectIndex = i;
++			}
++
++		}
++		printf("selectIndex=%d\n", selectIndex);
++
++		if(selectIndex>=0)
++		{
++			InvalidateRect(hDlg, NULL, TRUE);
++			info->iIndex = selectIndex;
++			selectIndex = -1;
++
++
++			EndDialog(hDlg, info->iIndex);
++		}
++		break;
++	}
++
++	default:
++	{
++		break;
++	}
++
++	}
++
++	return DefaultDialogProc(hDlg, message, wParam, lParam);
++}
++
++int ShowItemSetDialog(HWND hParent, ItemSetInfo *info)
++{
++	DLGTEMPLATE dlg;
++	dlg.dwStyle = WS_CHILD | WS_VISIBLE | SS_NOTIFY;
++	dlg.dwExStyle = WS_EX_TRANSPARENT;
++	dlg.x = info->x;
++	dlg.y = info->y;
++	dlg.w = info->w;
++	dlg.h =	info->h;
++	dlg.caption = "";
++	dlg.hIcon = 0;
++	dlg.hMenu = 0;
++	dlg.controlnr = 0;
++	dlg.controls = NULL;
++	dlg.dwAddData = 0;
++
++	return DialogBoxIndirectParam(&dlg, hParent, ItemSetDialogProc, (LPARAM)info);
++}
++
++
+diff --git a/mgncs4touch-1.2.0/src/listbox_view.c b/mgncs4touch-1.2.0/src/listbox_view.c
+new file mode 100644
+index 0000000..1f226ee
+--- /dev/null
++++ b/src/listbox_view.c
+@@ -0,0 +1,265 @@
++#include "listbox_view.h"
++
++static int ListboxViewProc(HWND hwnd, int message, WPARAM wParam,LPARAM lParam)
++{
++	int i;
++	int newX = 0;
++	int newY = 0;
++	int newItem;
++	int selectIndex = -1;
++	ListboxView *list = NULL;
++	list = (ListboxView*)GetWindowAdditionalData(hwnd);
++
++	switch (message)
++	{
++	case MSG_CREATE:
++	{
++		return 0;
++	}
++	case MSG_PAINT:
++	{
++		int res;
++		int a, b;
++		SIZE size;
++		HDC hdc = BeginPaint(hwnd);
++
++		a = list->moveGap / (list->iy+ list->vgap);
++		b = list->moveGap % (list->iy+ list->vgap);
++		list->moveGap = b;
++		list->Index = list->Index - a;
++		if(list->Index <= 0)
++		{
++			list->Index = 0;
++			if(list->moveGap>=0)
++			{
++				list->moveGap = 0;
++			}
++		}
++		else if(list->Index >= list->itSz-list->showSz)
++		{
++			list->Index = list->itSz-list->showSz;
++			if(list->moveGap<0)
++			{
++				list->moveGap = 0;
++			}
++		}
++
++		printf("oldGap=%d, Index=%d, showSz=%d\n", list->moveGap, list->Index, list->showSz);
++		SetBkMode(hdc, BM_TRANSPARENT);
++
++		if(list->Index > 0)
++		{
++			newItem=-1;
++		}
++		else
++		{
++			newItem=0;
++		}
++		for(; newItem<=list->showSz; newItem++)
++		{
++			if((newItem + list->Index) >= list->itSz)
++			{
++				break;
++			}
++
++			SetTextColor(hdc, list->lTextColor);
++			SelectFont(hdc, list->lTextFt);
++
++			if((list->itType & ITEM_BMP) && (list->itType & ITEM_LINE))
++			{
++				FillBoxWithBitmap(hdc, list->hfp, (list->iy+ list->vgap) * newItem + list->moveGap, list->ix, list->iy, &list->ltbBg);
++
++				SetPenColor(hdc, list->lineColor);
++				MoveTo(hdc, list->hfp, (list->iy + list->vgap) * newItem - (list->vgap/2) + list->moveGap);
++				LineTo(hdc, list->hfp + list->ix, (list->iy + list->vgap) * newItem - (list->vgap/2) + list->moveGap);
++			}
++			else if(list->itType & ITEM_BMP)
++			{
++				FillBoxWithBitmap(hdc, list->hfp, (list->iy+ list->vgap) * newItem + list->moveGap, list->ix, list->iy, &list->ltbBg);
++			}
++			else if(list->itType & ITEM_LINE)
++			{
++				SetPenColor(hdc, list->lineColor);
++				MoveTo(hdc, list->hfp, (list->iy + list->vgap) * newItem - (list->vgap/2) + list->moveGap);
++				LineTo(hdc, list->hfp + list->ix, (list->iy + list->vgap) * newItem - (list->vgap/2) + list->moveGap);
++			}
++
++			GetTextExtent(hdc, list->itDt[list->Index+newItem].lT, -1, &size);
++			TextOut(hdc, list->hfp + list->lthGap,
++				(list->iy-size.cy) / 2 + (list->iy+ list->vgap) * newItem + list->moveGap, list->itDt[list->Index+newItem].lT);
++
++			if(list->itDt[list->Index+newItem].rType & RITEM_TEXT)
++			{
++				GetTextExtent(hdc, list->itDt[list->Index+newItem].rT, -1, &size);
++				TextOut(hdc, list->hfp + list->ix - list->lthGap - size.cx,
++					(list->iy-size.cy) / 2 + (list->iy+ list->vgap) * newItem + list->moveGap, list->itDt[list->Index+newItem].rT);
++			}
++			else if(list->itDt[list->Index+newItem].rType & RITEM_BMP)
++			{
++				FillBoxWithBitmap(hdc, list->hfp + list->ix - list->lthGap - list->itDt[list->Index+newItem].rB.bmWidth,
++					(list->iy-list->itDt[list->Index+newItem].rB.bmHeight) / 2 + (list->iy+ list->vgap) * newItem + list->moveGap,
++					list->itDt[list->Index+newItem].rB.bmWidth,
++					list->itDt[list->Index+newItem].rB.bmHeight, &list->itDt[list->Index+newItem].rB);
++			}
++			else if(list->itDt[list->Index+newItem].rType & RITEM_BUTTON)
++			{
++				if(list->itDt[list->Index+newItem].btn->onStus)
++				{
++					FillBoxWithBitmap(hdc, list->hfp + list->ix - list->lthGap - list->itDt[list->Index+newItem].btn->onBmp.bmWidth,
++					(list->iy-list->itDt[list->Index+newItem].btn->onBmp.bmHeight) / 2 + (list->iy+ list->vgap) * newItem + list->moveGap,
++					list->itDt[list->Index+newItem].btn->onBmp.bmWidth,
++					list->itDt[list->Index+newItem].btn->onBmp.bmHeight, &list->itDt[list->Index+newItem].btn->onBmp);
++				}
++				else
++				{
++					FillBoxWithBitmap(hdc, list->hfp + list->ix - list->lthGap - list->itDt[list->Index+newItem].btn->offBmp.bmWidth,
++					(list->iy-list->itDt[list->Index+newItem].btn->offBmp.bmHeight) / 2 + (list->iy+ list->vgap) * newItem + list->moveGap,
++					list->itDt[list->Index+newItem].btn->offBmp.bmWidth,
++					list->itDt[list->Index+newItem].btn->offBmp.bmHeight, &list->itDt[list->Index+newItem].btn->offBmp);
++				}
++
++				if(list->itDt[list->Index+newItem].btn->sltItem >= 0)
++				{
++					SelectFont(hdc, list->rTextFt);
++					SetTextColor(hdc, list->rTextColor);
++					GetTextExtent(hdc, list->itDt[list->Index+newItem].btn->text, -1, &size);
++					TextOut(hdc, list->hfp + list->ix - list->lthGap - size.cx - list->itDt[list->Index+newItem].btn->onBmp.bmWidth,
++						(list->iy-size.cy) / 2 + (list->iy+ list->vgap) * newItem + list->moveGap,
++						list->itDt[list->Index+newItem].btn->text);
++				}
++			}
++		}
++		EndPaint(hwnd, hdc);
++
++		return 0;
++	}
++
++	case MSG_LBUTTONDOWN:
++	{
++		newX = LOWORD(lParam);
++		newY = HIWORD(lParam);
++		printf("newX=%d, newY=%d\n", newX, newY);
++		list->isSlidText = TRUE;
++		list->oldY = newY;
++		list->moveNum = 0;
++
++		InvalidateRect(hwnd, NULL, TRUE);
++		break;
++	}
++
++	case MSG_LBUTTONUP:
++	{
++		newX = LOWORD(lParam);
++		newY = HIWORD(lParam);
++		list->isSlidText = FALSE;
++
++		if(list->Index <= 0)
++		{
++			list->moveGap = 0;
++		}
++		if(list->Index >= list->itSz-list->showSz)
++		{
++			list->moveGap = 0;
++		}
++
++		if(list->Index > 0)
++		{
++			newItem=-1;
++		}
++		else
++		{
++			newItem=0;
++		}
++		for(; newItem<=list->showSz; newItem++)
++		{
++			if(newY > ((list->iy+ list->vgap) * newItem + list->moveGap)
++				&& newY < ((list->iy+ list->vgap) * newItem + list->moveGap + list->iy))
++			{
++				selectIndex = list->Index + newItem;
++			}
++		}
++
++		if(list->moveFlag == 1)
++		{
++			list->moveFlag = 0;
++			selectIndex = -1;
++		}
++		printf("index=%d, selectIndex=%d\n", list->Index, selectIndex);
++
++		if(selectIndex >= 0)
++		{
++			if(list->itDt[selectIndex].rType & RITEM_BUTTON)
++			{
++				if(list->itDt[selectIndex].btn->onStus)
++				{
++					list->itDt[selectIndex].btn->onStus = 0;
++				}
++				else
++				{
++					list->itDt[selectIndex].btn->onStus = 1;
++				}
++				list->itDt[selectIndex].btn->fun(selectIndex, list);
++
++				selectIndex = -1;
++			}
++		}
++
++		InvalidateRect(hwnd, NULL, TRUE);
++
++		break;
++	}
++
++	case MSG_MOUSEMOVE:
++	{
++		newX = LOWORD(lParam);
++		newY = HIWORD(lParam);
++
++		if (list->isSlidText) {
++			list->moveNum++;
++			if (list->moveNum >= 2) {
++				list->moveNum = 0;
++				printf("newX=%d, newY=%d\n", newX, newY);
++				int gap = newY - list->oldY;
++				int newGap = list->moveGap + gap;
++				list->moveFlag = 1;
++
++				if ((list->Index <= 0 && gap > 0) || (list->Index >= list->itSz-list->showSz && gap < 0))
++				{
++					break;
++				}
++
++				list->oldY = newY;
++				list->moveGap = newGap;
++				InvalidateRect(hwnd, NULL, TRUE);
++				printf("moveinfo: (%d, %d, %d, %d, %d, %d)\n", newX, newY, list->oldY, gap, list->moveGap, newGap);
++			}
++		}
++		break;
++	}
++
++	default:
++		break;
++	}
++
++	return DefaultControlProc(hwnd, message, wParam, lParam);
++}
++
++
++BOOL RegisterListboxView(void)
++{
++	WNDCLASS MyClass;
++	MyClass.spClassName = LISTBOX_VIEW;
++	MyClass.dwStyle = WS_NONE;
++	MyClass.dwExStyle = WS_EX_NONE;
++	MyClass.hCursor = 0;
++	MyClass.iBkColor = PIXEL_lightgray;
++	MyClass.WinProc = ListboxViewProc;
++
++	return RegisterWindowClass(&MyClass);
++}
++
++void UnregisterListboxView(void)
++{
++	UnregisterWindowClass(LISTBOX_VIEW);
++}
++

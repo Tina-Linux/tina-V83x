@@ -1,0 +1,214 @@
+diff --git a/Source/JavaScriptCore/wtf/mg/MainThreadMg.cpp b/Source/JavaScriptCore/wtf/mg/MainThreadMg.cpp
+index 4da6344..4df06f4 100644
+--- a/Source/JavaScriptCore/wtf/mg/MainThreadMg.cpp
++++ b/Source/JavaScriptCore/wtf/mg/MainThreadMg.cpp
+@@ -43,7 +43,7 @@ void initializeMainThreadPlatform()
+ {
+     if (!isInitialized) {
+         oldDefWndProc = __mg_def_proc[0];
+-        __mg_def_proc[0] = ThreadingWindowWndProc;
++        __mg_def_proc[0] = (WNDPROC)ThreadingWindowWndProc;
+         isInitialized = TRUE;
+     }
+ }
+diff --git a/Source/WebCore/platform/Cursor.h b/Source/WebCore/platform/Cursor.h
+index 10dccf4..560d6eb 100644
+--- a/Source/WebCore/platform/Cursor.h
++++ b/Source/WebCore/platform/Cursor.h
+@@ -46,7 +46,7 @@ typedef HICON HCURSOR;
+ #elif PLATFORM(HAIKU)
+ #include <app/Cursor.h>
+ #elif PLATFORM(MG)
+-typedef unsigned int HCURSOR;
++typedef void * HCURSOR;
+ #endif
+ 
+ #if PLATFORM(MAC)
+diff --git a/Source/WebCore/platform/PlatformKeyboardEvent.h b/Source/WebCore/platform/PlatformKeyboardEvent.h
+index 5b7336d..bfe03b4 100644
+--- a/Source/WebCore/platform/PlatformKeyboardEvent.h
++++ b/Source/WebCore/platform/PlatformKeyboardEvent.h
+@@ -74,8 +74,8 @@ typedef unsigned long int uint32;
+ #endif
+ 
+ #if PLATFORM(MG)
+-typedef unsigned int HWND;
+-typedef unsigned int WPARAM;
++typedef void *HWND;
++typedef unsigned long WPARAM;
+ typedef unsigned long LPARAM;
+ #endif
+ 
+diff --git a/Source/WebCore/platform/PlatformMouseEvent.h b/Source/WebCore/platform/PlatformMouseEvent.h
+index 4bd88c5..2aea794 100644
+--- a/Source/WebCore/platform/PlatformMouseEvent.h
++++ b/Source/WebCore/platform/PlatformMouseEvent.h
+@@ -68,8 +68,8 @@ typedef unsigned long int uint32;
+ #endif
+ 
+ #if PLATFORM(MG)
+-typedef unsigned int HWND;
+-typedef unsigned int WPARAM;
++typedef void *HWND;
++typedef unsigned long WPARAM;
+ typedef unsigned long LPARAM;
+ #endif
+ 
+diff --git a/Source/WebCore/platform/PlatformWheelEvent.h b/Source/WebCore/platform/PlatformWheelEvent.h
+index 9fc29aa..0bdfe5b 100644
+--- a/Source/WebCore/platform/PlatformWheelEvent.h
++++ b/Source/WebCore/platform/PlatformWheelEvent.h
+@@ -59,8 +59,8 @@ class BMessage;
+ #endif
+ 
+ #if PLATFORM(MG)
+-typedef unsigned int HWND;
+-typedef unsigned int WPARAM;
++typedef void *HWND;
++typedef unsigned long WPARAM;
+ typedef unsigned long LPARAM;
+ #endif
+ 
+diff --git a/Source/WebCore/platform/Widget.h b/Source/WebCore/platform/Widget.h
+index f1c9962..843a77b 100644
+--- a/Source/WebCore/platform/Widget.h
++++ b/Source/WebCore/platform/Widget.h
+@@ -74,7 +74,7 @@ typedef QWidget* PlatformWidget;
+ #endif
+ 
+ #if PLATFORM(MG)
+-typedef unsigned int HWND;
++typedef void *HWND;
+ typedef HWND PlatformWidget;
+ typedef PlatformWidget PlatformPageClient;
+ #endif
+@@ -85,7 +85,7 @@ typedef wxWindow* PlatformWidget;
+ #endif
+ 
+ #if PLATFORM(MG)
+-typedef unsigned int HWND;
++typedef void *HWND;
+ typedef HWND PlatformWidget;
+ typedef PlatformWidget PlatformPageClient;
+ #endif
+diff --git a/Source/WebCore/platform/graphics/GraphicsContext.h b/Source/WebCore/platform/graphics/GraphicsContext.h
+index eb42a06..7773fac 100644
+--- a/Source/WebCore/platform/graphics/GraphicsContext.h
++++ b/Source/WebCore/platform/graphics/GraphicsContext.h
+@@ -87,7 +87,7 @@ struct pattern;
+ #elif OS(WINCE)
+ typedef struct HDC__ PlatformGraphicsContext;
+ #elif PLATFORM(MG) 
+-typedef unsigned int HDC;
++typedef void *HDC;
+ typedef HDC PlatformGraphicsContext;
+ 
+ #if ENABLE(CAIRO_MG)
+diff --git a/Source/WebCore/platform/graphics/Icon.h b/Source/WebCore/platform/graphics/Icon.h
+index 9118ea9..70b911c 100644
+--- a/Source/WebCore/platform/graphics/Icon.h
++++ b/Source/WebCore/platform/graphics/Icon.h
+@@ -45,7 +45,7 @@ typedef struct _Evas_Object Evas_Object;
+ #include "Image.h"
+ #include "PlatformIcon.h"
+ #elif PLATFORM(MG)
+-typedef unsigned int HICON;
++typedef void *HICON;
+ #endif
+ 
+ namespace WebCore {
+diff --git a/Source/WebCore/platform/mg/PopupMenuMg.cpp b/Source/WebCore/platform/mg/PopupMenuMg.cpp
+index 67b5a10..ef6602b 100644
+--- a/Source/WebCore/platform/mg/PopupMenuMg.cpp
++++ b/Source/WebCore/platform/mg/PopupMenuMg.cpp
+@@ -630,7 +630,7 @@ void PopupMenuMg::disconnectClient()
+ }
+ 
+ 
+-static int PopupCtrlProc(HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
++static long PopupCtrlProc(HWND hwnd, unsigned int message, WPARAM wParam, LPARAM lParam)
+ {
+ 	PopupMenuMg * popup;
+ 
+@@ -871,7 +871,6 @@ bool RegisterPopmenu(void)
+     MenuClass.hCursor = GetSystemCursor (IDC_ARROW);
+     MenuClass.iBkColor = COLOR_lightwhite;
+     MenuClass.WinProc = PopupCtrlProc;
+-
+     return RegisterWindowClass (&MenuClass);
+ }
+ 
+diff --git a/Source/WebCore/platform/mg/PopupMenuMg.h b/Source/WebCore/platform/mg/PopupMenuMg.h
+index a5d383d..5c71429 100644
+--- a/Source/WebCore/platform/mg/PopupMenuMg.h
++++ b/Source/WebCore/platform/mg/PopupMenuMg.h
+@@ -31,8 +31,8 @@
+ #include "Scrollbar.h"
+ #include <wtf/RefPtr.h>
+ 
+-typedef unsigned int HWND;
+-typedef unsigned int  HDC;
++typedef void * HWND;
++typedef void *  HDC;
+ 
+ namespace WebCore {
+ 
+diff --git a/Source/WebCore/platform/mg/ScrollbarThemeMg.cpp b/Source/WebCore/platform/mg/ScrollbarThemeMg.cpp
+index 4438db7..9757319 100644
+--- a/Source/WebCore/platform/mg/ScrollbarThemeMg.cpp
++++ b/Source/WebCore/platform/mg/ScrollbarThemeMg.cpp
+@@ -106,13 +106,13 @@ static void paintScrollTrack (SCROLLPART part, HDC hdc, const IntRect &rect, boo
+     {
+         case HScrollTrackPart:
+             {
+-                SetBrushColor (hdc, DWORD2PIXEL(hdc, GetWindowElementAttr(HWND_DESKTOP, WE_MAINC_THREED_BODY)));
++                SetBrushColor (hdc, DWORD2Pixel(hdc, GetWindowElementAttr(HWND_DESKTOP, WE_MAINC_THREED_BODY)));
+                 FillBox (hdc, rect.x(), rect.y(), rect.width(), rect.height());
+             }
+             break;
+         case VScrollTrackPart:
+             {
+-                SetBrushColor (hdc, DWORD2PIXEL(hdc, GetWindowElementAttr(HWND_DESKTOP, WE_MAINC_THREED_BODY)));
++                SetBrushColor (hdc, DWORD2Pixel(hdc, GetWindowElementAttr(HWND_DESKTOP, WE_MAINC_THREED_BODY)));
+                 FillBox (hdc, rect.x(), rect.y(), rect.width(), rect.height());
+             }
+             break;
+diff --git a/Source/WebCore/platform/mg/SharedTimerMg.cpp b/Source/WebCore/platform/mg/SharedTimerMg.cpp
+index 34fe502..ebf8ac2 100644
+--- a/Source/WebCore/platform/mg/SharedTimerMg.cpp
++++ b/Source/WebCore/platform/mg/SharedTimerMg.cpp
+@@ -68,7 +68,7 @@ void setSharedTimerFireTime(double fireTime)
+     }
+ 
+     //printf("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  %d\n", intervalInMS);
+-    if (SetTimerEx(HWND_NULL, t_id, intervalInMS, timerFired)){
++    if (SetTimerEx(HWND_NULL, t_id, intervalInMS, (TIMERPROC)timerFired)){
+         timerID = t_id;
+         t_id++;
+     }else
+diff --git a/Source/WebKit/mg/control/MDWebView.cpp b/Source/WebKit/mg/control/MDWebView.cpp
+index 6db354c..ebb7dab 100644
+--- a/Source/WebKit/mg/control/MDWebView.cpp
++++ b/Source/WebKit/mg/control/MDWebView.cpp
+@@ -1850,7 +1850,7 @@ void MDWebView::dealWithMDMessages(HWND hwnd, WPARAM wParam, LPARAM lParam)
+     }
+ }
+ 
+-int MDWebView::WebViewWndProc(HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
++long MDWebView::WebViewWndProc(HWND hwnd, unsigned int message, WPARAM wParam, LPARAM lParam)
+ {
+     MDWebView* view = reinterpret_cast<MDWebView*>(GetWindowAdditionalData2(hwnd));
+     switch (message){
+diff --git a/Source/WebKit/mg/control/MDWebView.h b/Source/WebKit/mg/control/MDWebView.h
+index 6ae0ce8..07a9628 100644
+--- a/Source/WebKit/mg/control/MDWebView.h
++++ b/Source/WebKit/mg/control/MDWebView.h
+@@ -45,7 +45,7 @@ public:
+     static bool registerWebViewWindowClass();
+     static bool unregisterWebViewWindowClass();
+     static bool m_haveRegisteredWindowClass;
+-    static int WebViewWndProc(HWND hwnd, int message, WPARAM wParam, LPARAM lParam);
++    static long WebViewWndProc(HWND hwnd, unsigned int message, WPARAM wParam, LPARAM lParam);
+     void init(HWND hwnd);
+     virtual HWND viewWindow();
+     //END_MDWEBVIEW_INITWINDOW

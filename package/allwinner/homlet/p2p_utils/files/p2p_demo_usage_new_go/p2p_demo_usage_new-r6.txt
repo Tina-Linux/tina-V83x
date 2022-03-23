@@ -1,0 +1,15 @@
+说明：
+  p2pManager.h是p2p设备发现组件的头文件，使用方法文件中有详细的说明
+  同时也可以参见编写的demo源码了解使用；
+
+p2p_demo_usage_new-r6/文件夹下是R6平台上的测试资料，测试方法如下：
+
+1. p2p_supplicant.conf 放到/etc 目录下添加可读权限
+   go_wfd_start.sh  p2p_action.sh r6_gc 放到/tmp/ 目录下添加执行权限
+2. ./go_wfd_start.sh  即可
+      程序将扫描，并打印出扫描到的p2p设备，程序中对名称为wfdtest设备感兴趣并进行连接， 出当打印出IP表明成功
+      样例: DEBUG  : WFD_LOG <onProcessThread:103>: peerIP: 192.168.49.2, mac: 90:85:dc:c6:92:78, port: 0
+	  
+注意：R6固件需要进行wpa-supplicant-p2p 配置起来； 配置方法， make menuconfig --> network --> wpa-supplicant-p2p
+
+

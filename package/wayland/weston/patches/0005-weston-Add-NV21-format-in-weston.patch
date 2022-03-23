@@ -1,0 +1,40 @@
+From b705263029e9b638302d80832c17d5d5a9b3319e Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 18:37:12 +0800
+Subject: [PATCH 4/8] weston: Add NV21 format in weston
+
+Let weston compose the NV21 format layer by GPU;
+---
+ libweston/gl-renderer.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/libweston/gl-renderer.c b/libweston/gl-renderer.c
+index c6091af..691b837 100644
+--- a/libweston/gl-renderer.c
++++ b/libweston/gl-renderer.c
+@@ -1673,6 +1673,22 @@ struct yuv_format_descriptor yuv_formats[] = {
+ 			.plane_index = 1
+ 		}}
+ 	}, {
++		.format = DRM_FORMAT_NV21,
++		.input_planes = 2,
++		.output_planes = 2,
++		.texture_type = EGL_TEXTURE_Y_UV_WL,
++		{{
++			.width_divisor = 1,
++			.height_divisor = 1,
++			.format = DRM_FORMAT_R8,
++			.plane_index = 0
++		}, {
++			.width_divisor = 2,
++			.height_divisor = 2,
++			.format = DRM_FORMAT_GR88,
++			.plane_index = 1
++		}}
++	}, {
+ 		.format = DRM_FORMAT_YUV420,
+ 		.input_planes = 3,
+ 		.output_planes = 3,
+-- 
+1.9.1
+

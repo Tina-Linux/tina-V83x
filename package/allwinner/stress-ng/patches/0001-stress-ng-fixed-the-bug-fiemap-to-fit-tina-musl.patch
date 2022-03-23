@@ -1,0 +1,180 @@
+From 81035be46483baa2cb45f931569f0adc6b08bcc5 Mon Sep 17 00:00:00 2001
+From: flyranchao <flyranchao@allwinnertech.com>
+Date: Fri, 7 Dec 2018 09:14:48 +0800
+Subject: [PATCH 1/3] stress-ng: fixed the bug 'fiemap' to fit tina musl
+
+Signed-off-by: flyranchao <flyranchao@allwinnertech.com>
+---
+ helper.c           |  2 +-
+ stress-fiemap.c    |  2 +-
+ stress-malloc.c    |  4 ++--
+ stress-ng.c        |  8 ++++----
+ stress-pty.c       |  8 ++++----
+ stress-resources.c |  2 +-
+ stress-stackmmap.c | 10 +++++-----
+ 7 files changed, 18 insertions(+), 18 deletions(-)
+
+diff --git a/helper.c b/helper.c
+index 2a8b5e0..96152f2 100644
+--- a/helper.c
++++ b/helper.c
+@@ -694,7 +694,7 @@ void pr_yaml_runinfo(FILE *yaml)
+ 	if (time(&t) != ((time_t)-1))
+ 		tm = localtime(&t);
+ 
+-	pr_yaml(yaml, "      stress-ng-version: " VERSION "\n");
++	//pr_yaml(yaml, "      stress-ng-version: " VERSION "\n");
+ 	pr_yaml(yaml, "      run-by: %s\n", user ? user : "unknown");
+ 	if (tm) {
+ 		pr_yaml(yaml, "      date-yyyy-mm-dd: %4.4d:%2.2d:%2.2d\n",
+diff --git a/stress-fiemap.c b/stress-fiemap.c
+index 1f00829..d1dbeae 100644
+--- a/stress-fiemap.c
++++ b/stress-fiemap.c
+@@ -23,7 +23,7 @@
+  *
+  */
+ #include "stress-ng.h"
+-#if defined(__linux__) && defined(FS_IOC_FIEMAP) && defined(HAVE_LINUX_FIEMAP_H)
++#if defined(__linux__) && defined(FS_IOC_FIEMAP)
+ #include <linux/fs.h>
+ #include <linux/fiemap.h>
+ #endif
+diff --git a/stress-malloc.c b/stress-malloc.c
+index a46b8c6..ce672e7 100644
+--- a/stress-malloc.c
++++ b/stress-malloc.c
+@@ -99,10 +99,10 @@ int stress_malloc(const args_t *args)
+ 			malloc_max = MIN_MALLOC_MAX;
+ 	}
+ 
+-#if defined(__GNUC__) && defined(__linux__)
++/*#if defined(__GNUC__) && defined(__linux__)
+ 	if (get_setting("malloc-threshold", &malloc_threshold))
+ 		(void)mallopt(M_MMAP_THRESHOLD, (int)malloc_threshold);
+-#endif
++#endif*/
+ 
+ again:
+ 	pid = fork();
+diff --git a/stress-ng.c b/stress-ng.c
+index 72a792e..5cc6081 100644
+--- a/stress-ng.c
++++ b/stress-ng.c
+@@ -1872,7 +1872,7 @@ static int stress_set_handler(const char *stress, const bool child)
+  */
+ static void version(void)
+ {
+-	(void)printf("%s, version " VERSION "\n", g_app_name);
++	//(void)printf("%s, version " VERSION "\n", g_app_name);
+ }
+ 
+ /*
+@@ -3895,11 +3895,11 @@ int main(int argc, char **argv)
+ 	{
+ 		extern void *__start_mlocked_text;
+ 		extern void *__stop_mlocked_text;
+-		extern void *__start_mlocked_data;
+-		extern void *__stop_mlocked_data;
++		//extern void *__start_mlocked_data;
++		//extern void *__stop_mlocked_data;
+ 
+ 		stress_mlock_region(&__start_mlocked_text, &__stop_mlocked_text);
+-		stress_mlock_region(&__start_mlocked_data, &__stop_mlocked_data);
++		//stress_mlock_region(&__start_mlocked_data, &__stop_mlocked_data);
+ 	}
+ #endif
+ 
+diff --git a/stress-pty.c b/stress-pty.c
+index 1bd1fbd..f414315 100644
+--- a/stress-pty.c
++++ b/stress-pty.c
+@@ -26,7 +26,7 @@
+ 
+ #if defined(__linux__)
+ 
+-#include <termio.h>
++//#include <termio.h>
+ #include <termios.h>
+ 
+ typedef struct {
+@@ -108,7 +108,7 @@ int stress_pty(const args_t *args)
+ 		 */
+ 		for (i = 0; i < n; i++) {
+ 			struct termios ios;
+-			struct termio io;
++			//struct termio io;
+ 			struct winsize ws;
+ 			int arg;
+ 
+@@ -130,7 +130,7 @@ int stress_pty(const args_t *args)
+ 			if (ioctl(ptys[i].slave, TCSETSF, &ios) < 0)
+ 				pr_fail_err("ioctl TCSETSF on slave pty");
+ #endif
+-#if defined(TCGETA)
++/*#if defined(TCGETA)
+ 			if (ioctl(ptys[i].slave, TCGETA, &io) < 0)
+ 				pr_fail_err("ioctl TCGETA on slave pty");
+ #endif
+@@ -145,7 +145,7 @@ int stress_pty(const args_t *args)
+ #if defined(TCSETAF)
+ 			if (ioctl(ptys[i].slave, TCSETAF, &io) < 0)
+ 				pr_fail_err("ioctl TCSETAF on slave pty");
+-#endif
++#endif*/
+ #if defined(TIOCGLCKTRMIOS)
+ 			if (ioctl(ptys[i].slave, TIOCGLCKTRMIOS, &ios) < 0)
+ 				pr_fail_err("ioctl TIOCGLCKTRMIOS on slave pty");
+diff --git a/stress-resources.c b/stress-resources.c
+index 84f7e39..84e06f6 100644
+--- a/stress-resources.c
++++ b/stress-resources.c
+@@ -31,7 +31,7 @@
+ #include <sys/inotify.h>
+ #endif
+ #if defined(__linux__)
+-#include <termio.h>
++//#include <termio.h>
+ #include <termios.h>
+ #endif
+ #if defined(HAVE_LIB_PTHREAD) && defined(__linux__)
+diff --git a/stress-stackmmap.c b/stress-stackmmap.c
+index 9c83a69..c373078 100644
+--- a/stress-stackmmap.c
++++ b/stress-stackmmap.c
+@@ -75,7 +75,7 @@ static void stress_stackmmap_push_start(void)
+ 	if (!ret)
+ 		stress_stackmmap_push_msync();
+ 
+-	swapcontext(&c_test, &c_main);
++	//swapcontext(&c_test, &c_main);
+ }
+ 
+ /*
+@@ -152,10 +152,10 @@ int stress_stackmmap(const args_t *args)
+ 	(void)memset(stack_mmap, 0, MMAPSTACK_SIZE);
+ 
+ 	(void)memset(&c_test, 0, sizeof(c_test));
+-	if (getcontext(&c_test) < 0) {
++	/*if (getcontext(&c_test) < 0) {
+ 		pr_fail_err("getcontext");
+ 		goto tidy_mmap;
+-	}
++	}*/
+ 	c_test.uc_stack.ss_sp = stack_mmap;
+ 	c_test.uc_stack.ss_size = MMAPSTACK_SIZE;
+ 	c_test.uc_link = &c_main;
+@@ -166,8 +166,8 @@ int stress_stackmmap(const args_t *args)
+ 	 *  new context using the new mmap'd stack
+ 	 */
+ 	do {
+-		makecontext(&c_test, stress_stackmmap_push_start, 0);
+-		(void)swapcontext(&c_main, &c_test);
++		//makecontext(&c_test, stress_stackmmap_push_start, 0);
++		//(void)swapcontext(&c_main, &c_test);
+ 		inc_counter(args);
+ 	} while (keep_stressing());
+ 
+-- 
+1.9.1
+

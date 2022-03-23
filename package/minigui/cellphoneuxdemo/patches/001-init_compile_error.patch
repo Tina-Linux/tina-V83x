@@ -1,0 +1,57 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -78,14 +78,14 @@
+ PKG_CHECK_MODULES([MGEFF], [mgeff >= 1.2.0])
+ PKG_CHECK_MODULES([MGNCS], [mgncs >= 1.2.0])
+ PKG_CHECK_MODULES([MGNCS4TOUCH], [mgncs4touch >= 1.2.0])
+-PKG_CHECK_MODULES([CHIPMUNK], [chipmunk >= 5.3.1])
++#PKG_CHECK_MODULES([CHIPMUNK], [chipmunk >= 5.3.1])
+ 
+ DEP_LIBS="$DEP_LIBS $MINIGUI_LIBS"
+ DEP_LIBS="$DEP_LIBS $MGPLUS_LIBS"
+ DEP_LIBS="$DEP_LIBS $MGEFF_LIBS"
+ DEP_LIBS="$DEP_LIBS $MGNCS_LIBS"
+ DEP_LIBS="$DEP_LIBS $MGNCS4TOUCH_LIBS"
+-DEP_LIBS="$DEP_LIBS $CHIPMUNK_LIBS"
++#DEP_LIBS="$DEP_LIBS $CHIPMUNK_LIBS"
+ 
+ AC_CHECK_LIB(sqlite3, sqlite3_open_v2, DEP_LIBS="$DEP_LIBS -lsqlite3", sqlite3_installed=no)
+ if test "x$sqlite3_installed" = "xno"; then
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -16,14 +16,14 @@
+     inner-res/libinner-res.la
+ 
+ mguxdemo_SOURCES = main.cc
+-mguxdemo_LDADD = $(APP_LIBS) @DEP_LIBS@
++mguxdemo_LDADD = $(APP_LIBS) -lminigui_ths -lmgeff -lmgncs -lsqlite3 -lxml2 -lmgplus -lmgutils -lchipmunk -lmgncs4touch -lpng -ljpeg -lts -lfreetype
+ 
+ activity_loader_SOURCES = test/apps/activity-loader.cc
+-activity_loader_LDADD = $(APP_LIBS) @DEP_LIBS@
++activity_loader_LDADD = $(APP_LIBS) -lminigui_ths -lmgeff -lmgncs -lsqlite3 -lxml2 -lmgplus -lmgutils -lchipmunk -lmgncs4touch -lpng -ljpeg -lts -lfreetype
+ 
+ EXTRA_DIST = LICENSE README.md
+ 
+ install-data-local:
+-	$(INSTALL_DATA) MiniGUI.cfg $(prefix)/bin/MiniGUI.cfg
+-	$(INSTALL_DATA) mgncs.cfg $(prefix)/bin/mgncs.cfg
+-	$(INSTALL_DATA) mgncs4touch.cfg $(prefix)/bin/mgncs4touch.cfg
++	$(INSTALL_DATA) MiniGUI.cfg $(DESTDIR)/$(prefix)/bin/MiniGUI.cfg
++	$(INSTALL_DATA) mgncs.cfg $(DESTDIR)/$(prefix)/bin/mgncs.cfg
++	$(INSTALL_DATA) mgncs4touch.cfg $(DESTDIR)/$(prefix)/bin/mgncs4touch.cfg
+--- a/etc/Makefile.am
++++ b/etc/Makefile.am
+@@ -1,8 +1,8 @@
+ install-data-local:
+-	if [ ! -d $(prefix)/bin/etc ]; then $(INSTALL) -d $(prefix)/bin/etc; fi
+-	$(INSTALL_DATA) system.db $(prefix)/bin/etc/system.db
+-	$(INSTALL_DATA) cellphone.xml $(prefix)/bin/etc/cellphone.xml
+-	$(INSTALL_DATA) dial.skin $(prefix)/bin/etc/dial.skin
+-	$(INSTALL_DATA) gvfb.skin $(prefix)/bin/etc/gvfb.skin
++	if [ ! -d $(DESTDIR)/$(prefix)/bin/etc ]; then $(INSTALL) -d $(DESTDIR)/$(prefix)/bin/etc; fi
++	$(INSTALL_DATA) system.db $(DESTDIR)/$(prefix)/bin/etc/system.db
++	$(INSTALL_DATA) cellphone.xml $(DESTDIR)/$(prefix)/bin/etc/cellphone.xml
++	$(INSTALL_DATA) dial.skin $(DESTDIR)/$(prefix)/bin/etc/dial.skin
++	$(INSTALL_DATA) gvfb.skin $(DESTDIR)/$(prefix)/bin/etc/gvfb.skin
+ 
+ EXTRA_DIST = cellphone.xml dial.skin gvfb.skin system.db 

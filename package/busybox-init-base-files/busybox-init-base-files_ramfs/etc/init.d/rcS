@@ -1,0 +1,60 @@
+#!/bin/sh
+
+################################################################################
+# differen platforms will have their own configuration.
+# In the path "tina/package/busybox-init-base-files/files/etc/init.d",
+# there is a default "rc_platform_init.sh" file,you can override it to meet
+# the needs of your platforms.
+#
+# if you create a file called "rc_platform_init.sh" under the path
+# "tina/target/allwinner/'platforms_name'/busybox-init-base-files/etc/init.d/",
+# default "rc_platform_init.sh" will be overrided.The system will run under your
+# platform to create the file,not the default file.
+################################################################################
+
+rc_init()
+{
+	# hostname
+	[ -z "$HOSTNAME" -o "$HOSTNAME" == "(none)" ] && HOSTNAME=TinaLinux
+	`/bin/hostname $HOSTNAME`
+
+	mdev -s
+}
+
+rc_log()
+{
+	# logging junk
+	mkdir -p /var/log
+	if [ -d /var/log ]
+	then
+		touch /var/log/messages
+		/sbin/syslogd -n -m 0 &
+		/sbin/klogd -n &
+	fi
+}
+
+rc_load_modules()
+{
+	# kernel moodule self loading
+	[ -d /etc/modules.d ] && /sbin/kmodloader "/etc/modules.d/" &
+	[ -d /etc/modules-boot.d ] && /sbin/kmodloader "/etc/modules-boot.d/" &
+}
+
+rc_load_boot_scripts()
+{
+	for script in /etc/rc.d/S[0-9]*;do
+		$script "$1" 2>/dev/null &
+	done
+}
+
+rc_monitor()
+{
+	# monitor some applications,If it crash unexpectedly, they can be reloaded
+	usr/bin/monitor-selfboot.sh &
+}
+
+rc_init
+rc_log
+rc_load_modules
+[ x$1 = "xboot" ] && rc_load_boot_scripts "$1"
+#rc_monitor

@@ -1,0 +1,4 @@
+libad_audio.so
+libnormal_audio.so
+libpostprocess.so
+是在armv5te指令集编译的

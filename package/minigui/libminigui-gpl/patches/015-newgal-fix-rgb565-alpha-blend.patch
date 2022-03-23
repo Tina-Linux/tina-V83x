@@ -1,0 +1,25 @@
+diff --git a/src/newgal/blit.h b/src/newgal/blit.h
+index 04db443..c3f7d72 100644
+--- a/src/newgal/blit.h
++++ b/src/newgal/blit.h
+@@ -415,10 +415,16 @@ do {                                                            \
+ /* Blend the RGB values of two pixels based on a source alpha value */
+ #define ALPHA_BLEND(sR, sG, sB, A, dR, dG, dB)                  \
+ do {                                                            \
+-    dR = (((sR-dR)*(A))>>8)+dR;                                 \
+-    dG = (((sG-dG)*(A))>>8)+dG;                                 \
+-    dB = (((sB-dB)*(A))>>8)+dB;                                 \
+-} while(0)
++	if (A == 255) {												\
++		dR = sR;												\
++		dG = sG;												\
++		dB = sB;												\
++	} else {													\
++		dR = (((sR-dR)*(A))>>8)+dR;                             \
++		dG = (((sG-dG)*(A))>>8)+dG;                             \
++		dB = (((sB-dB)*(A))>>8)+dB;                             \
++	}															\
++} while(0)														\
+ 
+ /* This is a very useful loop for optimizing blitters */
+ #define USE_DUFFS_LOOP

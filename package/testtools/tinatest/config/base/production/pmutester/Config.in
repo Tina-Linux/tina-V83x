@@ -1,0 +1,159 @@
+menuconfig TINATEST_BASE_PRODUCTION_PMUTESTER_ENABLE
+    bool "pmutester"
+    default y
+    ---help---
+        Settings for /base/production/pmutester
+        It safe to leave a blank for any settings.
+        If not setted, TinaTest will use global settings or default settings instead.
+
+if TINATEST_BASE_PRODUCTION_PMUTESTER_ENABLE
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_COMMAND
+        default "pmutester.sh"
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_STDIN
+        default ""
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_FSTDIN
+        default ""
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_DATE
+        default y if TINATEST_SYS_LOCAL_INFO_DATE
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_RESOURCE
+        default y if TINATEST_SYS_LOCAL_INFO_RESOURCE
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_REAL_TIME_LOG
+        default y if TINATEST_SYS_LOCAL_INFO_REAL_TIME_LOG
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_RUN_TIMES
+        default 1
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_RUN_ALONE
+        default y if TINATEST_SYS_LOCAL_LIMIT_RUN_ALONE
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_RUN_PARALLEL
+        default y if TINATEST_SYS_LOCAL_LIMIT_RUN_PARALLEN
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_MAY_REBOOT
+        default y if TINATEST_SYS_LOCAL_LIMIT_MAY_REBOOT
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_TESTCASE_RUN_ONCE_TIME
+        default ""
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_TESTCASE_RUN_TIME
+        default ""
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_TIMEOUT_AS_FAILED
+        default n
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_EXIT_ONCE_FAILED
+        default n
+
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_AXP_NAME
+        string "axp_name"
+        default "axp803"
+
+    comment "Advanced Customized"
+    config TINATEST_BASE_PRODUCTION_PMUTESTER_ADVANCED
+        bool "Advanced"
+
+    if TINATEST_BASE_PRODUCTION_PMUTESTER_ADVANCED
+        config TINATEST_BASE_PRODUCTION_PMUTESTER_COMMAND
+            string "command"
+            ---help---
+                TinaTest will run this command to start testcase.
+                It is the same as shell command which followed by argumemts.
+                This setting is a mark of any testcase.
+
+        config TINATEST_BASE_PRODUCTION_PMUTESTER_STDIN
+            string "stdin"
+            ---help---
+                Redirect a string array, which is setted in this configure, to standard input.
+                For example,
+                "one two three four" is equivalent to enter 4 times to testcase every run_time.
+                The first time, enter "one" with new line,
+                the second time, enter "two" with new line, and so on.
+
+        config TINATEST_BASE_PRODUCTION_PMUTESTER_FSTDIN
+            string "fstdin"
+            ---help---
+                Redirect a file, which is setted in this configure, to standard input.
+
+        config TINATEST_BASE_PRODUCTION_PMUTESTER_INFO
+            bool "INFO"
+            default y
+
+        if TINATEST_BASE_PRODUCTION_PMUTESTER_INFO
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_DATE
+                bool "date"
+                ---help---
+                    Save running date and time.
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_RESOURCE
+                bool "resource"
+                ---help---
+                    Save resources for each testcase.
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_REAL_TIME_LOG
+                bool "real_time_log"
+                ---help---
+                    Print log of testcase real time.
+                    In default, tinatest just collect all log, and print them when testcase end.
+        endif
+
+        config TINATEST_BASE_PRODUCTION_PMUTESTER_LIMIT
+            bool "LIMIT"
+            default y
+
+        if TINATEST_BASE_PRODUCTION_PMUTESTER_LIMIT
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_RUN_TIMES
+                int "run_times"
+                ---help---
+                    The times to run testcase.
+                    For example:
+                    To run this testcase for 3 times, we can set this value as 3.
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_RUN_ALONE
+                bool "run_alone"
+                ---help---
+                    Wait for finishing all previous testcase and run alone before do next.
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_RUN_PARALLEL
+                bool "run_parallel"
+                ---help---
+                    Run parallel for all run_times.
+                    For example:
+                    Testcae will run for 3 times one by one if run_times=3.
+                    However, if run_parallel is setted, tinatest will creates 3 processers
+                    in one time.
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_MAY_REBOOT
+                bool "may_reboot"
+                ---help---
+                    It means that device will be rebooted while running testcase.
+                    All states of testcase will be saved in flash, and loaded after rebooting.
+                    Notices that, if may_reboot is setted, run_alone will be setted alway.
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_TESTCASE_RUN_ONCE_TIME
+                string "testcase_run_once_time"
+                ---help---
+                    Time limit for testcase to run once.
+                    It is in format:
+                        <sec> <min> <hour> <day>
+                    For example,
+                    100s : 100
+                    1m20s : 20 1 (or 80)
+                    1d3h : 0 0 3 1 (or 0 0 28 or other)
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_TESTCASE_RUN_TIME
+                string "testcase_run_time"
+                ---help---
+                    Time limit for testcase to run.
+                    It is in format:
+                        <sec> <min> <hour> <day>
+                    For example,
+                    100s : 100
+                    1m20s : 20 1 (or 80)
+                    1d3h : 0 0 3 1 (or 0 0 28 or other)
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_TIMEOUT_AS_FAILED
+                bool "timeout_as_failed"
+                ---help---
+                    Seem to failed when testcase exit for timeout.
+                    If not set, default as pass.
+
+            config TINATEST_BASE_PRODUCTION_PMUTESTER_EXIT_ONCE_FAILED
+                bool "exit_once_failed"
+                ---help---
+                    Stop running testcase and exit once failed,
+                    even if runned times less than run_times.
+        endif
+    endif
+endif

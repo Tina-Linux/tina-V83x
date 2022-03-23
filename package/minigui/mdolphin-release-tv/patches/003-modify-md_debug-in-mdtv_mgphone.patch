@@ -1,0 +1,488 @@
+--- a/src/mdtv_mgphone.cpp
++++ b/src/mdtv_mgphone_new.cpp
+@@ -11,7 +11,7 @@
+ #include "mdtv_ime.h"
+ #include "ime_res.h"
+ #include "mdtv_keyboard.h"
+-
++#include <mdolphin/mdolphin_debug.h>
+ #include <mgplus/mgplus.h>
+ 
+ #define NDEBUG  1
+@@ -180,22 +180,23 @@
+ #ifdef MDTV_MGPHONE_DEBUG 
+     switch (status) {
+         case PHONE_NO_INPUT_STATUS:
+-            md_debug ("the phone_input_status is: PHONE_NO_INPUT_STATUS\n");
++            //md_debug ("the phone_input_status is: PHONE_NO_INPUT_STATUS\n");
+             break;
+         case PHONE_SYMBOL_INPUT_STATUS:
+-            md_debug ("the phone_input_status is: PHONE_SYMBOL_INPUT_STATUS\n");
++            //md_debug ("the phone_input_status is: PHONE_SYMBOL_INPUT_STATUS\n");
+             break;
+         case PHONE_PRED_INPUT_STATUS:
+-            md_debug ("the phone_input_status is: PHONE_PRED_INPUT_STATUS\n");
++            //md_debug ("the phone_input_status is: PHONE_PRED_INPUT_STATUS\n");
+             break;
+         case PHONE_ERROR_INPUT_STATUS:
+-            md_debug ("the phone_input_status is: PHONE_ERROR_INPUT_STATUS\n");
++            //md_debug ("the phone_input_status is: PHONE_ERROR_INPUT_STATUS\n");
+             break;
+         case PHONE_CHAR_INPUT_STATUS:
+-            md_debug ("the phone_input_status is: PHONE_CHAR_INPUT_STATUS\n");
++            //md_debug ("the phone_input_status is: PHONE_CHAR_INPUT_STATUS\n");
+             break;
+         default :
+-            md_debug ("the phone_input_status is: error\n");
++		break;
++            //md_debug ("the phone_input_status is: error\n");
+     }
+     return ;
+ 
+@@ -265,7 +266,7 @@
+ #ifdef _MGRM_PROCESSES
+ static void socketProcess(HWND hWnd, char *buf)
+ {
+-    md_debug("socket msg is %s\n", buf);
++    //md_debug("socket msg is %s\n", buf);
+     
+     //buff: X=111Y=111R=111B=111\t\t...\t
+     int xsize;
+@@ -293,7 +294,7 @@
+ 
+     RECT rect;
+     get_window_rect(hWnd, &rect);
+-    md_debug("rect is [%d, %d, %d, %d]\n", rect.left, rect.top, rect.right, rect.bottom);
++    //md_debug("rect is [%d, %d, %d, %d]\n", rect.left, rect.top, rect.right, rect.bottom);
+ 
+     ysize = bottom - rect.top + Y_OFFSIZE;
+     
+@@ -592,7 +593,7 @@
+             pdata->is_focus_up = is_up;
+     }
+ 
+-    md_debug ("str_down_num=%d\n", wordnum);
++    //md_debug ("str_down_num=%d\n", wordnum);
+     for (int j = 0; j < wordnum; j++)
+     {
+         curstr = strchr (prevstr, ' '); 
+@@ -603,7 +604,7 @@
+ 
+ 
+         GetTextExtent(hdc, tmp, curstrlen, &cur_size);
+-        md_debug ("j = %d, curstrlen=%d, cur_size.cx=%d, xpos=%d\n", j, curstrlen, cur_size.cx, xpos);
++        //md_debug ("j = %d, curstrlen=%d, cur_size.cx=%d, xpos=%d\n", j, curstrlen, cur_size.cx, xpos);
+         if (offset+cur_size.cx >= xpos)
+         {
+             char cur_word[64];
+@@ -634,11 +635,11 @@
+     // process   pageup/pagedown when clicking arrow
+     if (pdata->ptim_case >= PHONE_DEFAULT_CASE_MAX  && !is_up) {
+        if (PtInRect (&ime_arrow_pos[0],  xpos, ypos) && (pdata->cur_cursor_down > pdata->prev_cursor_down)) {
+-           md_debug ("click left arrow\n");
++           //md_debug ("click left arrow\n");
+            show_prev_page(hwnd);
+        }
+        else if (PtInRect (&ime_arrow_pos[1],  xpos, ypos) &&(pdata->next_cursor_down > pdata->cur_cursor_down)) {
+-           md_debug ("click right arrow\n");
++           //md_debug ("click right arrow\n");
+            show_next_page(hwnd);
+        }
+     }
+@@ -702,7 +703,7 @@
+ 
+         /* maybe string have same word, so need ensure by word length  */
+         t = strstr(p, pdata->cur_word);
+-        md_debug("p is %s pdata->cur_word is %s\n", p, pdata->cur_word);
++        //md_debug("p is %s pdata->cur_word is %s\n", p, pdata->cur_word);
+         while(t) {
+             n = get_words_num(t);
+             if (pdata->is_focus_up) {
+@@ -717,7 +718,7 @@
+                 }
+             }
+             else {
+-                md_debug("index_down %d down_num %d\n", pdata->cur_index_down, pdata->str_down_num);
++                //md_debug("index_down %d down_num %d\n", pdata->cur_index_down, pdata->str_down_num);
+                 if (pdata->cur_index_down == pdata->str_down_num-n) {
+                     strncpy(tmp, p, t-p);
+                     tmp[t-p] = '\0';
+@@ -732,7 +733,7 @@
+ 
+         GetTextExtent(hdc, pdata->cur_word, strlen(pdata->cur_word), &cur_size);
+         GetTextExtent(hdc, tmp, strlen(tmp), &textsize);
+-        md_debug("tmp %s strlen %d\n", tmp, strlen(tmp));
++        //md_debug("tmp %s strlen %d\n", tmp, strlen(tmp));
+         
+         SetRect(&pdata->cur_rect, 
+                 textsize.cx, 
+@@ -866,7 +867,7 @@
+     }
+ 
+     if (pdata->cur_word) {
+-        md_debug("begin get cur word\n");
++        //md_debug("begin get cur word\n");
+         strcpy (pdata->cur_word, cur_word);
+         get_cur_word_rect(hwnd);
+     }
+@@ -877,7 +878,7 @@
+     MGI_PHONE_IME_DATA pdata = (MGI_PHONE_IME_DATA) GetWindowAdditionalData(hwnd);
+ 
+     if (pdata->phone_input_status == PHONE_SYMBOL_INPUT_STATUS){
+-        md_debug("symbol input status\n");
++        //md_debug("symbol input status\n");
+         if (pdata->is_focus_up) {
+             if (pdata->cur_index == 0)
+                 pdata->is_left = FALSE;
+@@ -1035,7 +1036,7 @@
+ 
+ static void handle_translate_word(HWND hwnd, int index, int cursor)
+ {
+-    md_debug("handle translate word \n");
++    //md_debug("handle translate word \n");
+     char buff[PHONE_RESULT_BUFF_LONG+1]={0};
+     char buff_translate[PHONE_RESULT_BUFF_LONG+1]={0};
+     MGI_PHONE_IME_DATA pdata = (MGI_PHONE_IME_DATA) GetWindowAdditionalData(hwnd);
+@@ -1185,7 +1186,7 @@
+            break;
+     }
+ #ifdef MDTV_MGPHONE_DEBUG
+-    md_debug ("input symbol: %s\n", tmp);
++    //md_debug ("input symbol: %s\n", tmp);
+ #endif
+     return i;
+ }
+@@ -1255,7 +1256,7 @@
+  * */
+ void handle_symbol_data(MGI_PHONE_IME_DATA pdata, int cursor)
+ {
+-    md_debug("handle symbol data\n");
++    //md_debug("handle symbol data\n");
+     char *pstr=NULL, *cur, *prev;
+     char tmp[2][PHONE_RESULT_BUFF_LONG+1];
+     int len, up_len;
+@@ -1388,12 +1389,12 @@
+     if (message == MSG_KEYDOWN) {
+         /* Handle the key 1 for punctuation marks and special characters*/
+         if (index == MGI_PHONE_KEY_1){
+-                md_debug ("switch symbol status 3333333\n");
++                //md_debug ("switch symbol status 3333333\n");
+                 output_phone_input_status (pdata->phone_input_status);
+             if (pdata->phone_input_status == PHONE_NO_INPUT_STATUS ||
+                  pdata->phone_input_status == PHONE_PRED_INPUT_STATUS) 
+             {
+-                md_debug ("switch symbol status\n");
++                //md_debug ("switch symbol status\n");
+                 phone_adddata_init(pdata);
+                 pdata->phone_input_status = PHONE_SYMBOL_INPUT_STATUS;
+                 pdata->cur_cursor = 0;
+@@ -1476,7 +1477,7 @@
+ 
+ static void process_left_key(HWND hwnd, MGI_PHONE_IME_DATA pdata)
+ {
+-    md_debug("left key entered\n");
++    //md_debug("left key entered\n");
+     char cur_word[64];
+ 
+     if (pdata->is_focus_up) {
+@@ -1498,7 +1499,7 @@
+     else {
+         if (pdata->cur_index_down <= 0 && pdata->phone_input_status != PHONE_SYMBOL_INPUT_STATUS)
+             return;
+-        md_debug ("3321232323 %d\n", pdata->cur_index_down);
++       // md_debug ("3321232323 %d\n", pdata->cur_index_down);
+         if (pdata->phone_input_status == PHONE_SYMBOL_INPUT_STATUS && pdata->cur_index_down <= 0) {
+             pdata->is_focus_up = TRUE;
+             if ( strlen(pdata->str) <= 0) {
+@@ -1624,7 +1625,7 @@
+ /* handle down key */
+ static void process_down_key(HWND hwnd, MGI_PHONE_IME_DATA pdata)
+ {
+-    md_debug("down key\n");
++    //md_debug("down key\n");
+     if (pdata->is_focus_up) {
+         pdata->is_focus_up = FALSE;
+ 
+@@ -1656,7 +1657,7 @@
+ static int 
+ process_navigator_key (HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
+ {
+-    md_debug("navigator key\n");
++    //md_debug("navigator key\n");
+     MGI_PHONE_IME_DATA pdata = (MGI_PHONE_IME_DATA) GetWindowAdditionalData(hwnd);
+ 
+     if ( pdata->phone_input_status == PHONE_NO_INPUT_STATUS) {
+@@ -1666,7 +1667,7 @@
+ #elif defined(_MGRM_THREADS) && !defined(_STAND_ALONE)
+         PostMessage(pdata->sg_target_hwnd, message, wParam, lParam);
+ #endif
+-    md_debug("PHONE_NO_INPUT_STATUS\n");
++    //md_debug("PHONE_NO_INPUT_STATUS\n");
+         return 0;
+     }
+     else if (message == MSG_KEYDOWN) {
+@@ -1745,7 +1746,7 @@
+ 
+ static int process_quit_key (HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
+ {
+-    md_debug(" process_quit_key() \n");
++    //md_debug(" process_quit_key() \n");
+     MGI_PHONE_IME_DATA pdata = (MGI_PHONE_IME_DATA)GetWindowAdditionalData(hwnd);
+     if( !pdata || pdata->sg_target_hwnd == HWND_INVALID ){
+         return -1;
+@@ -1755,7 +1756,7 @@
+ }
+ static int process_clear_key (HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
+ {
+-    md_debug("clear key entered\n");
++    //md_debug("clear key entered\n");
+     MGI_PHONE_IME_DATA pdata = (MGI_PHONE_IME_DATA)GetWindowAdditionalData(hwnd);
+     if( !pdata ){
+         return -1;
+@@ -1807,7 +1808,7 @@
+         int method_id;
+         if (pdata->ptim_case < PHONE_DEFAULT_CASE_MAX){
+             method_id = pdata->ptim_case;                    
+-            md_debug("---- process_sharp_key(): method_id = pdata->ptim_case=%d\n", method_id);
++            //md_debug("---- process_sharp_key(): method_id = pdata->ptim_case=%d\n", method_id);
+         }
+         else {
+             if (pdata->cur_method)
+@@ -1816,7 +1817,7 @@
+                 fprintf(stderr, "process_sharp_key error\n");
+                 return -1;
+             }
+-            md_debug("---- process_sharp_key(): method_id = pdata->cur_method->method_id=%d\n", method_id);
++            //md_debug("---- process_sharp_key(): method_id = pdata->cur_method->method_id=%d\n", method_id);
+         }
+         pdata->cb_notify((void *)pdata, method_id);
+     }
+@@ -1845,7 +1846,7 @@
+     }
+ #else
+     if (message == MSG_KEYDOWN) {
+-        md_debug ("enter star \n");
++       // md_debug ("enter star \n");
+         if (pdata->phone_input_status != PHONE_SYMBOL_INPUT_STATUS){
+             phone_adddata_init(pdata);
+             sf_sym_index = 0;
+@@ -1959,7 +1960,7 @@
+ /* internal functions */
+ static void refresh_input_method_area (HWND hwnd, HDC hdc)
+ {
+-    md_debug("refresh_input_method_area\n");
++    //md_debug("refresh_input_method_area\n");
+     static RECT rc;
+     RECT clientrc, tmprc;
+     Uint32 prev_color=0;
+@@ -1967,7 +1968,7 @@
+     MGI_PHONE_IME_DATA pdata = (MGI_PHONE_IME_DATA) GetWindowAdditionalData(hwnd);
+     if ( pdata->str[0] == 0)
+     {
+-        md_debug("empty rect\n");
++        //md_debug("empty rect\n");
+         //ShowWindow(hwnd, SW_HIDE);
+         //return;
+         SetRectEmpty (&rc);
+@@ -2032,9 +2033,9 @@
+     //draw_nav_bmp (hwnd, hdc, pdata);
+     if (!IsRectEmpty (&pdata->cur_rect)) {
+ 
+-        md_debug("cur rect is not empty\n");
+-        md_debug("cur-rc: [%d, %d, %d, %d]\n", pdata->cur_rect.left, pdata->cur_rect.top, 
+-                pdata->cur_rect.right, pdata->cur_rect.bottom);
++        //md_debug("cur rect is not empty\n");
++        //md_debug("cur-rc: [%d, %d, %d, %d]\n", pdata->cur_rect.left, pdata->cur_rect.top, 
++        //        pdata->cur_rect.right, pdata->cur_rect.bottom);
+         CopyRect (&rc, &pdata->cur_rect);
+         {
+             off_x = ime_nav_bkg.bmWidth/30;
+@@ -2042,7 +2043,7 @@
+         }
+         /*offset current rect*/
+         //if (pdata->is_left || pdata->is_top)
+-        md_debug("pdata->cur_index_down %d\n", pdata->cur_index_down);
++        //md_debug("pdata->cur_index_down %d\n", pdata->cur_index_down);
+     }
+ #if 0
+     if (!IsRectEmpty (&pdata->cur_rect)) {
+@@ -2116,7 +2117,7 @@
+         if (pdata->text_color)
+             SetTextColor(hdc, prev_color);
+     }
+-    md_debug("cur word:%s\n", pdata->cur_word);
++    //md_debug("cur word:%s\n", pdata->cur_word);
+     if (pdata->cur_word == NULL || (pdata->cur_index_down <0 && pdata->cur_index <0) )
+         return;
+ 
+@@ -2262,7 +2263,7 @@
+                     FONT_WEIGHT_BOLD, FONT_SLANT_ROMAN, FONT_FLIP_NIL, FONT_OTHER_NIL,
+                     FONT_UNDERLINE_NONE, FONT_STRUCKOUT_NONE, 24, 0);
+             SetWindowFont(hwnd, font_cn);
+-            md_debug("font name %s\n", font_cn->mbc_devfont->name);
++            //md_debug("font name %s\n", font_cn->mbc_devfont->name);
+             pdata->ptim_case = PHONE_DEFAULT_CASE_num;
+             pdata->next_cursor = -1;
+             pdata->next_cursor_down = -1;
+@@ -2272,7 +2273,7 @@
+             else{
+                 pdata->is_opened = 0;
+             }
+-            md_debug ("init window ime is_opend %d\n", pdata->is_opened);
++            //md_debug ("init window ime is_opend %d\n", pdata->is_opened);
+             pdata->phone_input_status = PHONE_NO_INPUT_STATUS;
+             pdata->hgs = MGPlusGraphicCreate(RECTW(rc_client), RECTH(rc_client));
+             DrawBackgroundWithMGPlus (pdata->hgs, RECTW(rc_client), RECTH(rc_client));
+@@ -2312,12 +2313,12 @@
+                          break;
+         case MSG_IME_CMD_OPEN:
+         {
+-            md_debug("---- MSG_IME_CMD_OPEN\n");
++            //md_debug("---- MSG_IME_CMD_OPEN\n");
+             show_ime_window(hwnd, LOWORD (wParam), HIWORD (lParam));
+             break;
+         }
+         case MSG_IME_CMD_CLOSE:{
+-            md_debug("---- MSG_IME_CMD_CLOSE\n");
++            //md_debug("---- MSG_IME_CMD_CLOSE\n");
+             pthread_mutex_lock (&mgphone_lock);
+             pdata = (MGI_PHONE_IME_DATA)GetWindowAdditionalData(hwnd);
+             if (pdata->is_opened)
+@@ -2337,7 +2338,7 @@
+             pdata = (MGI_PHONE_IME_DATA)GetWindowAdditionalData(hwnd);
+             return (int)(pdata->is_opened);
+         case MSG_IME_SETTARGET:{
+-            md_debug("---- ime proc:MSG_IME_SETTARGET:  set target hwdn 0x%x\n", (wParam));
++            //md_debug("---- ime proc:MSG_IME_SETTARGET:  set target hwdn 0x%x\n", (wParam));
+             pdata = (MGI_PHONE_IME_DATA)GetWindowAdditionalData(hwnd);
+             if (pdata->sg_target_hwnd!= hwnd)
+                 pdata->sg_target_hwnd = (HWND)wParam;
+@@ -2350,10 +2351,10 @@
+         }
+ 
+         case MSG_SETFOCUS:
+-            md_debug("----- MSG_SETFOCUS\n");
++            //md_debug("----- MSG_SETFOCUS\n");
+             break;
+         case MSG_KILLFOCUS:
+-            md_debug("----- MSG_KILLFOCUS\n");
++            //md_debug("----- MSG_KILLFOCUS\n");
+             break;
+ 
+         case MSG_KEYUP:
+@@ -2365,7 +2366,7 @@
+ #endif
+             return 0;
+         case MSG_KEYDOWN: {
+-            md_debug(" MSG_KEYDOWN!\n");
++            //md_debug(" MSG_KEYDOWN!\n");
+             int scancode_index;
+             // for bug: not show window when set focus to input box through press mouse 
+             show_ime_window(hwnd, LOWORD (wParam), HIWORD (lParam));
+@@ -2384,7 +2385,7 @@
+ 
+             /*swith ime mode*/
+             if ( scancode_index == MGI_PHONE_KEY_SHARP && message == MSG_KEYDOWN) {
+-                md_debug(" scancode_index == MGI_PHONE_KEY_SHARP && message == MSG_KEYDOWN!\n");
++                //md_debug(" scancode_index == MGI_PHONE_KEY_SHARP && message == MSG_KEYDOWN!\n");
+                 process_sharp_key (hwnd, message, wParam, lParam);
+                 phone_adddata_init(pdata);
+                 InvalidateRect(hwnd, NULL, FALSE);
+@@ -2408,7 +2409,7 @@
+                 case MGI_PHONE_KEY_7:
+                 case MGI_PHONE_KEY_8:
+                 case MGI_PHONE_KEY_9:
+-                md_debug(" MGI_PHONE_KEY_num = %d\n", scancode_index-MGI_PHONE_KEY_0);
++                //md_debug(" MGI_PHONE_KEY_num = %d\n", scancode_index-MGI_PHONE_KEY_0);
+                     /*===================process ime num mode=======================*/
+                     if (pdata->ptim_case == PHONE_DEFAULT_CASE_num) {
+                         if (pdata->phone_input_status != PHONE_SYMBOL_INPUT_STATUS) {
+@@ -2448,7 +2449,7 @@
+                     process_confirm_key (hwnd, message, wParam, lParam);
+                     break;
+                 case MGI_PHONE_KEY_QUIT:
+-                md_debug(" MGI_PHONE_KEY_num = %d\n", scancode_index-MGI_PHONE_KEY_0);
++                //md_debug(" MGI_PHONE_KEY_num = %d\n", scancode_index-MGI_PHONE_KEY_0);
+                     process_quit_key (hwnd, message, wParam, lParam);
+                     break;
+                 default:
+@@ -2472,7 +2473,7 @@
+            }
+            break;
+         case MSG_CLOSE:
+-            md_debug("close message\n");
++            //md_debug("close message\n");
+             SendMessage(HWND_DESKTOP, MSG_IME_UNREGISTER, (WPARAM) hwnd, 0);
+ #if MDTV_ENABLE_SOFTIME 
+             if (g_kbwnd) {
+@@ -2485,7 +2486,7 @@
+             UnloadBitmap(&ime_en_bkg);
+             UnloadBitmap(&ime_ch_bkg);
+             UnloadBitmap(&ime_nav_bkg);
+-            md_debug("close message 2\n");
++            //md_debug("close message 2\n");
+             return 0;
+ #ifdef _MGRM_THREADS
+         case MSG_IME_CMD_SETPOS:
+@@ -2502,7 +2503,7 @@
+                 ysize = pos_rc->bottom  + Y_OFFSIZE;
+                 get_window_rect(hwnd, &hwnd_rc);
+                 if (ysize + RECTH(hwnd_rc) > max_y) {
+-                    md_debug("The ime window will display on the rect \n");
++                    //md_debug("The ime window will display on the rect \n");
+                     ysize = pos_rc->top -RECTH(hwnd_rc) ; 
+                 }
+ 
+@@ -2517,9 +2518,9 @@
+ #endif
+ #ifdef _MGRM_PROCESSES
+         case MSG_FDEVENT:
+-            md_debug("socket message\n");
++            //md_debug("socket message\n");
+             if (LOWORD (wParam) == listen_fd) {
+-                md_debug("begin\n");
++                //md_debug("begin\n");
+                 /* This message comes from the listen socket fd. */
+                 pid_t pid;
+                 uid_t uid;
+@@ -2532,7 +2533,7 @@
+                 }
+             }
+             else {
+-                md_debug("receive\n");
++                //md_debug("receive\n");
+                 /* Client send a request. */
+                 /* Handle the request from client. */
+ 
+@@ -2541,11 +2542,11 @@
+                 int ret = sock_read_t (conn_fd_read, buf, BODY_LEN, timeout);
+                 if (ret != BODY_LEN)
+                 {
+-                    md_debug("err receive\n");
++                    //md_debug("err receive\n");
+                     UnregisterListenFD(conn_fd_read);
+                     return -1;
+                 }
+-                md_debug("received: %s\n", buf);
++                //md_debug("received: %s\n", buf);
+                 socketProcess(hwnd, buf);
+                 //UnregisterListenFD(fd);
+             }
+@@ -2675,7 +2676,7 @@
+ 
+ static void* start_phone_ime (void* data)
+ {
+-    md_debug("----------- start_phone_ime()\n");
++    //md_debug("----------- start_phone_ime()\n");
+     MSG Msg;
+     PHONE_IME_INFO* phone_ime_info = (PHONE_IME_INFO*)data;
+     HWND phone_hwnd;
+@@ -3068,7 +3069,7 @@
+             break;
+         }
+         case OPID_SET_CUR_METHOD:
+-            md_debug("mgphone_handler():  data->cursor: %d\n",data->cursor);
++            //md_debug("mgphone_handler():  data->cursor: %d\n",data->cursor);
+             mgi_phone_ime_set_currmethod(data->cursor);
+             break;
+         default:

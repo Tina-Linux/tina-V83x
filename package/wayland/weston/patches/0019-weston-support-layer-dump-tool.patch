@@ -1,0 +1,156 @@
+diff --git a/clients/layer-dump.c b/clients/layer-dump.c
+new file mode 100755
+index 0000000..489c620
+--- /dev/null
++++ b/clients/layer-dump.c
+@@ -0,0 +1,150 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <string.h>
++#include <errno.h>
++#include <signal.h>
++#include <fcntl.h>
++#include <ctype.h>
++#include <termios.h>
++#include <sys/types.h>
++#include <sys/mman.h>
++#include <stdbool.h>
++
++#define MAP_SIZE (4096*4096)
++#define MAP_MASK (MAP_SIZE - 1)
++
++
++typedef unsigned char BYTE;
++typedef unsigned int DWORD;
++typedef unsigned short WORD;
++
++
++struct BMPFILEHEADER_S{
++	BYTE    bfType[2];
++	BYTE    bfSize[4];
++	BYTE    bfReserved[4];
++	BYTE    bfOffBits[4];
++};
++
++struct BMPINFOHEADER_S{
++	DWORD      biSize;
++	DWORD      biWidth;
++	DWORD      biHeight;
++	WORD       biPlanes;
++	WORD       biBitCount;
++	DWORD      biCompression;
++	DWORD      biSizeImage;
++	DWORD      biXPelsPerMeter;
++	DWORD      biYPelsPerMeter;
++	DWORD      biClrUsed;
++	DWORD      biClrImportant;
++};
++
++
++void Snapshot( BYTE * pData, int width, int height, int bpp, char * filename )
++{
++	int i = 0;
++	int size = width*height*bpp; // 每个像素点3个字节
++	// 位图第一部分，文件信息
++	struct BMPFILEHEADER_S bfh;
++	memset(&bfh,0,sizeof(bfh));
++	bfh.bfType[0] = 0x42;  //bm
++	bfh.bfType[1] = 0x4d;
++
++	*(DWORD*)(bfh.bfSize) = size  // data size
++		+ 14 // first section size
++		+ 40 // second section size
++		;
++  
++	*(DWORD*)bfh.bfOffBits = 54;
++ 
++	// 位图第二部分，数据信息
++	struct BMPINFOHEADER_S bih;
++	memset(&bih,0,sizeof(bih));
++	bih.biSize = sizeof(struct BMPINFOHEADER_S);
++	bih.biWidth = width;
++	bih.biHeight = -height;
++	bih.biPlanes = 1;
++	bih.biBitCount = 8*bpp;
++	bih.biCompression = 0;
++	bih.biSizeImage = size;
++	bih.biXPelsPerMeter = 0;
++	bih.biYPelsPerMeter = 0;
++	bih.biClrUsed = 0;
++	bih.biClrImportant = 0;    
++  
++	printf("dump layer to bmp file:addr(0x%x),w*h(%dx%d),bpp(%d),filename(%s)\n",pData, width, height, bpp, filename);
++	
++	FILE * fp = fopen( filename,"wb" );
++	if( !fp ){
++		printf("open %s fail\n",filename);
++		return;
++	}
++	fwrite( &bfh, 1, 14, fp );
++	fwrite( &bih, 1, 40, fp );
++	for(i = 0; i <= size/bpp; i++){
++	 fwrite( (pData+size-i*bpp), 1, 4, fp );
++	}
++	fclose( fp );
++}
++
++int main(int argc, char **argv) 
++{	
++	int fd;
++	void *map_base, *virt_addr;
++	unsigned long read_result, writeval;
++	unsigned long phy_addr;
++	unsigned int width, height;
++	unsigned int bpp = 3;
++	
++	 if(argc < 5) {
++	  printf("\nUsage:\t%s { address } { width } { height } { format }\n"
++		 "\taddress : image phy addr \n"
++		   "\twidth    : image width\n"
++		   "\theight   : image height\n"
++		   "\theight   : image format\n\n",
++			argv[0]);
++	  exit(1);
++	 }
++
++
++	 phy_addr = strtoul(argv[1], 0, 0);
++	 width = strtoul(argv[2], 0, 0);
++	 height = strtoul(argv[3], 0, 0);
++
++	 if (strcmp("ARGB8888", argv[4])){
++		bpp = 4;
++	 }
++	 else if (strcmp("RGB888", argv[4])){
++		 bpp = 3;
++	 }
++	 else if (strcmp("RGB565", argv[4])){
++		 bpp = 2;
++	 }	 
++	 
++	 if((fd = open("/dev/mem", O_RDWR | O_SYNC)) == -1) 
++		printf("open /dev/mem fail\n");
++
++
++	 //将内核空间映射到用户空间
++	 map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, phy_addr & ~MAP_MASK);
++	 if(map_base == (void *) -1)
++		printf("Memory mapped fail,at address %p.\n", map_base); 
++
++
++	 virt_addr = map_base + (phy_addr & MAP_MASK);
++
++
++	Snapshot(( BYTE*)virt_addr,width,height, bpp, "/tmp/snapshot.bmp");
++
++
++
++	if(munmap(map_base, MAP_SIZE) == -1) printf("munmap fail\n");	
++	
++	close(fd);	  
++
++	return 0;
++
++}
++

@@ -1,0 +1,12 @@
+menuconfig TINATEST_BASE_PRODUCTION_DISPLAYTESTER
+    bool "displaytester"
+
+if TINATEST_BASE_PRODUCTION_DISPLAYTESTER
+    source hdmitester/Config.in
+    source brightnesstester/Config.in
+    source smartbacklighttester/Config.in
+    source fbviewertester/Config.in
+    source fbtester/Config.in
+    source yuviewtester/Config.in
+    source smartcolortester/Config.in
+endif

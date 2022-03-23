@@ -1,0 +1,176 @@
+diff --git a/ubi-utils/ubiupdatevol.c b/ubi-utils/ubiupdatevol.c
+index 5096791..5b29929 100644
+--- a/ubi-utils/ubiupdatevol.c
++++ b/ubi-utils/ubiupdatevol.c
+@@ -48,6 +48,7 @@ struct args {
+ 	long long size;
+ 	long long skip;
+ 	int use_stdin;
++	int fifo;
+ };
+ 
+ static struct args args;
+@@ -59,14 +60,16 @@ static const char optionsstr[] =
+ "-t, --truncate             truncate volume (wipe it out)\n"
+ "-s, --size=<bytes>         bytes to read from input\n"
+ "    --skip=<bytes>         leading bytes to skip from input\n"
++"-f, --fifo                 use fifo to update\n"
+ "-h, --help                 print help message\n"
+ "-V, --version              print program version";
+ 
+ static const char usage[] =
+-"Usage: " PROGRAM_NAME " <UBI volume node file name> [-t] [-s <size>] [-h] [-V] [--truncate]\n"
+-"\t\t\t[--size=<size>] [--help] [--version] <image file>\n\n"
++"Usage: " PROGRAM_NAME " <UBI volume node file name> [-t] [-s <size>] [-f] [-h] [-V] [--truncate]\n"
++"\t\t\t[--size=<size>] [--fifo] [--help] [--version] <image file>\n\n"
+ "Example 1: " PROGRAM_NAME " /dev/ubi0_1 fs.img - write file \"fs.img\" to UBI volume /dev/ubi0_1\n"
+-"Example 2: " PROGRAM_NAME " /dev/ubi0_1 -t - wipe out UBI volume /dev/ubi0_1";
++"Example 2: " PROGRAM_NAME " /dev/ubi0_1 -t - wipe out UBI volume /dev/ubi0_1\n"
++"Example 3: " PROGRAM_NAME " /dev/ubi0_1 -f - make fifo /dev/ubi0_1_fifo to update UBI volume /dev/ubi0_1";
+ 
+ static const struct option long_options[] = {
+ 	/* Order matters for opts w/val=0; see option_index below. */
+@@ -75,6 +78,7 @@ static const struct option long_options[] = {
+ 	{ .name = "help",     .has_arg = 0, .flag = NULL, .val = 'h' },
+ 	{ .name = "version",  .has_arg = 0, .flag = NULL, .val = 'V' },
+ 	{ .name = "size",     .has_arg = 1, .flag = NULL, .val = 's' },
++	{ .name = "fifo",     .has_arg = 0, .flag = NULL, .val = 'f' },
+ 	{ NULL, 0, NULL, 0}
+ };
+ 
+@@ -83,7 +87,7 @@ static int parse_opt(int argc, char * const argv[])
+ 	while (1) {
+ 		int option_index, key, error = 0;
+ 
+-		key = getopt_long(argc, argv, "ts:h?V", long_options, &option_index);
++		key = getopt_long(argc, argv, "tfs:h?V", long_options, &option_index);
+ 		if (key == -1)
+ 			break;
+ 
+@@ -102,6 +106,10 @@ static int parse_opt(int argc, char * const argv[])
+ 			args.truncate = 1;
+ 			break;
+ 
++		case 'f':
++			args.fifo = 1;
++			break;
++
+ 		case 's':
+ 			args.size = simple_strtoull(optarg, &error);
+ 			if (error || args.size < 0)
+@@ -130,7 +138,7 @@ static int parse_opt(int argc, char * const argv[])
+ 
+ 	if (optind == argc)
+ 		return errmsg("UBI device name was not specified (use -h for help)");
+-	else if (optind != argc - 2 && !args.truncate)
++	else if (optind != argc - 2 && !args.truncate && !args.fifo)
+ 		return errmsg("specify UBI device name and image file name as first 2 "
+ 			      "parameters (use -h for help)");
+ 
+@@ -196,23 +204,33 @@ static int ubi_write(int fd, const void *buf, int len)
+ 
+ static int update_volume(libubi_t libubi, struct ubi_vol_info *vol_info)
+ {
+-	int err, fd, ifd;
++	int err, fd, ifd, w_ifd;
+ 	long long bytes;
+ 	char *buf;
++	char *fifo_name;
++	int ret;
+ 
+ 	buf = malloc(vol_info->leb_size);
+ 	if (!buf)
+ 		return errmsg("cannot allocate %d bytes of memory", vol_info->leb_size);
+ 
++	fifo_name = malloc(50);
++	if (!fifo_name)
++		return errmsg("cannot allocate %d bytes of memory for fifo_name", 50);
++
+ 	if (!args.size) {
+-		struct stat st;
+-		err = stat(args.img, &st);
+-		if (err < 0) {
+-			errmsg("stat failed on \"%s\"", args.img);
+-			goto out_free;
+-		}
++		if (args.fifo) {
++			bytes = vol_info->data_bytes;
++		} else {
++			struct stat st;
++			err = stat(args.img, &st);
++			if (err < 0) {
++				errmsg("stat failed on \"%s\"", args.img);
++				goto out_free;
++			}
+ 
+-		bytes = st.st_size - args.skip;
++			bytes = st.st_size - args.skip;
++		}
+ 	} else
+ 		bytes = args.size;
+ 
+@@ -234,6 +252,34 @@ static int update_volume(libubi_t libubi, struct ubi_vol_info *vol_info)
+ 			errmsg("seeking stdin not supported");
+ 			goto out_close1;
+ 		}
++	} else if (args.fifo) {
++		sprintf(fifo_name, "%s_fifo", args.node);
++		if ((access(fifo_name, F_OK)) != -1)
++			unlink(fifo_name);
++		ret = mkfifo(fifo_name, 0666);
++		if (ret != 0) {
++			sys_errmsg("FIFO \"%s\" create fail\n", fifo_name);
++			goto out_close1;
++		}
++		args.img = fifo_name;
++
++		ifd = open(args.img, O_RDONLY);
++		if (ifd == -1) {
++			sys_errmsg("cannot open \"%s\"", args.img);
++			goto out_close1;
++		}
++
++		/* open fifo in write side, then read ifd will block when no data */
++		w_ifd = open(args.img, O_RDWR);
++		if (w_ifd == -1) {
++			sys_errmsg("cannot open \"%s\" for write", args.img);
++			goto out_close2;
++		}
++
++		if (args.skip) {
++			errmsg("seeking fifo not supported");
++			goto out_close;
++		}
+ 	} else {
+ 		ifd = open(args.img, O_RDONLY);
+ 		if (ifd == -1) {
+@@ -275,17 +321,29 @@ static int update_volume(libubi_t libubi, struct ubi_vol_info *vol_info)
+ 		bytes -= ret;
+ 	}
+ 
++	unlink(fifo_name);
++	if (w_ifd)
++		close(w_ifd);
+ 	close(ifd);
+ 	close(fd);
+ 	free(buf);
++	if (fifo_name)
++		free(fifo_name);
+ 	return 0;
+ 
+ out_close:
++	if (w_ifd)
++		close(w_ifd);
++out_close2:
+ 	close(ifd);
++	if (args.fifo)
++		unlink(fifo_name);
+ out_close1:
+ 	close(fd);
+ out_free:
+ 	free(buf);
++	if (fifo_name)
++		free(fifo_name);
+ 	return -1;
+ }
+ 

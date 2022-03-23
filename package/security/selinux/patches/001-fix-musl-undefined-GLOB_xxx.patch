@@ -1,0 +1,16 @@
+--- a/policycoreutils/setfiles/restore.c	2017-08-04 21:31:00.000000000 +0800
++++ b/policycoreutils/setfiles/restore.c	2017-11-21 14:32:58.061249072 +0800
+@@ -6,6 +6,14 @@
+ #include "restore.h"
+ #include <glob.h>
+
++#ifndef GLOB_BRACE
++#define GLOB_BRACE 0
++#endif
++
++#ifndef GLOB_TILDE
++#define GLOB_TILDE 0
++#endif
++
+ char **exclude_list;
+ int exclude_count;

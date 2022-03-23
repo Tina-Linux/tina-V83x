@@ -1,0 +1,15 @@
+SUBDIRS =
+
+if AAC_MUXER_ENABLE
+SUBDIRS += aac
+endif
+
+if TS_MUXER_ENABLE
+SUBDIRS += ts
+endif
+
+if MP4_MUXER_ENABLE
+SUBDIRS += mp4
+endif
+
+SUBDIRS += base

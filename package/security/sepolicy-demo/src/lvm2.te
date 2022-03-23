@@ -1,0 +1,39 @@
+type lvm2, domain, mlstrustedsubject;
+type lvm2_exec, exec_type, file_type;
+# permissive lvm2;
+#domain_auto_trans(shell,lvm2_exec,lvm2)
+
+domain_auto_trans(init,lvm2_exec,lvm2)
+# domain_auto_trans(lvm2,busybox_exec,busybox)
+# allow lvm2 lvm2_exec:file rwx_file_perms;
+allow lvm2 init:fifo_file { read write ioctl };
+
+# tmpfs_domain(lvm2)
+# allow lvm2 tmpfs:dir create_dir_perms;
+# allow lvm2 lvm2_tmpfs:file create_file_perms;
+
+# allow lvm2 self:capability { dac_override dac_read_search sys_admin sys_rawio };
+
+# allow lvm2 functionfs:dir r_dir_perms;
+# allow lvm2 functionfs:file r_file_perms;
+
+# allow lvm2 device:dir r_dir_perms;
+# allow lvm2 device:file getattr;
+# allow lvm2 device:chr_file getattr;
+# allow lvm2 {mmc_device nand_device dm_device}:blk_file r_file_perms;
+allow lvm2 console_device:chr_file { read write };
+
+# allow lvm2 { dev_type - device }:chr_file rw_file_perms;
+
+# allow lvm2 dev_type:dir r_dir_perms;
+# allow lvm2 device:blk_file r_file_perms;
+# allow lvm2 device:sock_file r_file_perms;
+# allow lvm2 devpts:dir r_dir_perms;
+# allow lvm2 devpts:file r_file_perms;
+
+# allow lvm2 system_file:file { execute execute_no_trans open execmod };
+# allow lvm2 temp_exec:file {read getattr execute execute_no_trans open execmod};
+# allow lvm2 temp_exec:lnk_file { getattr open read execute };
+
+# allow lvm2 { etc_selinux etc_initd }:dir { search open read getattr };
+

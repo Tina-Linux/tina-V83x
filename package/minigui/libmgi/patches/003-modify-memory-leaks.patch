@@ -1,0 +1,59 @@
+--- a/include/mgi.h	2018-07-06 15:20:12.791328117 +0800
++++ b/include/mgi.h	2018-07-06 14:49:23.467381468 +0800
+@@ -278,7 +278,7 @@
+  */
+ BOOL mgiDestroyIMEContainer (GHANDLE ime);
+ 
+-
++HWND getSoftKeyWnd();
+     /** @} end of ime_container_fns */
+ 
+ #define LEFT    0
+--- a/src/softkeyboard/softkeywindow.c	2018-07-06 15:20:13.227328104 +0800
++++ b/src/softkeyboard/softkeywindow.c	2018-07-06 15:09:10.367347227 +0800
+@@ -1,3 +1,4 @@
++
+ /*
+ ** $Id$
+ **
+@@ -287,8 +288,9 @@
+     } else {
+         if (wParam == 0) {
+             // use animates
+-            RunJumpWindow(hWnd, x, y - SKB_WIN_H, x, y,
+-                    SKB_WIN_W, SKB_WIN_H, on_imewnd_jmp_finished, pdata);
++		ShowWindow(hWnd, SW_HIDE);
++            	/*RunJumpWindow(hWnd, x, y - SKB_WIN_H, x, y,
++                    SKB_WIN_W, SKB_WIN_H, on_imewnd_jmp_finished, pdata);*/
+         } else {
+             ShowWindow(hWnd, SW_HIDE);
+         }
+@@ -396,11 +398,16 @@
+     return DefaultMainWinProc(hWnd, message, wParam, lParam);
+ }
+ 
++HWND SoftKeyWND;
++HWND getSoftKeyWnd()
++{
++	return SoftKeyWND;
++}
+ static int SoftKeyWinProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
+ {
+      
+-
+-    SOFTKBD_DATA* pdata = NULL;
++	SoftKeyWND = hWnd;
++   SOFTKBD_DATA* pdata = NULL;
+ 
+     if (message != MSG_CREATE)
+ 	{
+@@ -551,7 +551,8 @@
+             //SendMessage(HWND_DESKTOP, MSG_IME_UNREGISTER, (WPARAM) hWnd, 0);
+             destroy_key_win();
+ #ifdef KBD_TOOLTIP
+-            DestroyMainWindow(pdata->tooltip_win);
++		SendMessage(pdata->tooltip_win, MSG_CLOSE, NULL, NULL);
++//            DestroyMainWindow(pdata->tooltip_win);
+ #endif
+             free(pdata);
+             DestroyMainWindow(hWnd);

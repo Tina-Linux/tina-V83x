@@ -1,0 +1,134 @@
+#libbta
+GLOBALPATH := ../../../../../..
+customer := bsa_examples
+project := linux
+application := app_bluetooth
+os_name := linux
+BLUETOOTH_3RD_DIR := $(GLOBALPATH)/3rdparty
+
+# include common makefile rules
+include $(BLUETOOTH_3RD_DIR)/embedded/$(customer)/$(project)/app_common/build/make.common
+
+# extra source list list
+srcdirs :=
+appsources :=
+
+GLOBAL_DEFINE += -DCUSTOM_MAC_ENABLE
+
+# add ENABLE_ALSA=TRUE at the command line to enable
+ENABLE_ALSA ?= FALSE
+ifeq ($(strip $(ENABLE_ALSA)), TRUE)
+  GLOBAL_DEFINE += -DPCM_ALSA
+	LINKLIBS += -lasound
+endif
+
+# include variable definitions for each component
+include $(BLUETOOTH_APPLICATION_DIR)/build/def/*.def
+
+# incdirs uses srcdirs
+incdirs := $(incdirs) $(srcdirs)
+
+# When not specified, search the files in the source directories
+vpath %.c $(srcdirs)
+vpath %.s $(srcdirs)
+vpath %.cpp $(srcdirs)
+
+# Sample applications also need to include the exported BSA headers
+incdirs += $(bsalibincdir)
+
+#######################################
+#
+# BSA client library
+#
+#######################################
+ifeq ($(BSASHAREDLIB), TRUE)
+bsalib := $(bsasharedlib)
+else
+bsalib := $(bsastaticlib)
+endif
+
+srcsourcedir := ./../source/
+btastaticblddir := ./$(CPU)
+btastaticobjdir := $(btastaticblddir)/obj
+btasharedblddir := ./$(CPU)/sharedlib
+btasharedobjdir := $(btasharedblddir)/obj
+
+btastaticlib := $(btastaticblddir)/libbtapp.a
+btasharedlib := $(btasharedblddir)/libbtapp.so
+
+# When not specified, search the files in the source directories
+vpath %.c $(srcsourcedir)
+vpath %.cpp $(srcsourcedir)
+
+staticobjlist := $(btastaticobjdir)/bluetooth_socket.o $(btastaticobjdir)/bluetooth_interface.o $(btastaticobjdir)/bta_conf.o
+sharedobjlist := $(btasharedobjdir)/bluetooth_socket.o $(btasharedobjdir)/bluetooth_interface.o $(btastaticobjdir)/bta_conf.o
+
+# incdirs uses srcdirs
+incdirs := $(incdirs) $(srcdirs)
+
+# include variable definitions for each component
+include ./def/*.def
+
+.PHONY: all clean
+all:	$(btastaticlib) $(btasharedlib)
+
+###################
+#####bta static lib
+###################
+$(btastaticobjdir):
+	@$(ECHO) Creating static object directory '$(btastaticobjdir)'.
+	-@$(MKDIR) -p $(btastaticobjdir)
+
+$(btastaticobjdir)/bluetooth_interface.o: bluetooth_interface.c
+	@$(ECHO) Compiling [$(CC)] $<
+	$(CC) -c -MD -DBUILD_LIB $(CCFLAGS) $(GLOBAL_DEFINE) $(TARGET_DEF) $(CCINC) -o $@ $<
+
+$(btastaticobjdir)/bta_conf.o: bta_conf.c
+	@$(ECHO) Compiling [$(CC)] $<
+	$(CC) -c -MD -DBUILD_LIB $(CCFLAGS) $(GLOBAL_DEFINE) $(TARGET_DEF) $(CCINC) -o $@ $<
+
+$(btastaticobjdir)/bluetooth_socket.o: bluetooth_socket.cpp
+	@$(ECHO) Compiling [$(CC)] $<
+	$(CXX) -c -MD $(CCFLAGS) $(GLOBAL_DEFINE) $(TARGET_DEF) $(CCINC) -o $@ $<
+
+$(btastaticlib): $(btastaticobjdir) $(staticobjlist)
+	@$(ECHO) Creating [$(AR)] bt app static lib $(btastaticlib).
+	@$(AR) rcs $(btastaticlib) $(staticobjlist) $(bsastaticlib)
+	@$(RM) -rf $(btastaticobjdir)
+
+####################
+#####bta shared lib
+####################
+install:
+	-@$(MKDIR) -p $(CONFIG_PREFIX)/usr/lib
+	-@$(MKDIR) -p $(CONFIG_PREFIX)/usr/include
+	@$(CP) ./../include/bluetooth_socket.h $(CONFIG_PREFIX)/usr/include
+	@$(CP) ./../include/bluetooth_disc.h $(CONFIG_PREFIX)/usr/include
+
+$(btasharedobjdir):
+	@$(ECHO) Creating static object directory '$(btasharedobjdir)'.
+	-@$(MKDIR) -p $(btasharedobjdir)
+
+$(btasharedobjdir)/bluetooth_interface.o: bluetooth_interface.c
+	@$(ECHO) Compiling [$(CC)] $<
+	$(CC) -fPIC -c -MD -DBUILD_LIB $(CCFLAGS) $(GLOBAL_DEFINE) $(TARGET_DEF) $(CCINC) -o $@ $<
+
+$(btasharedobjdir)/bta_conf.o: bta_conf.c
+	@$(ECHO) Compiling [$(CC)] $<
+	$(CC) -fPIC -c -MD -DBUILD_LIB $(CCFLAGS) $(GLOBAL_DEFINE) $(TARGET_DEF) $(CCINC) -o $@ $<:w
+
+$(btasharedobjdir)/bluetooth_socket.o: bluetooth_socket.cpp
+	@$(ECHO) Compiling [$(CC)] $<
+	$(CXX) -fPIC -c -MD $(CCFLAGS) $(GLOBAL_DEFINE) $(TARGET_DEF) $(CCINC) -o $@ $<
+
+$(btasharedlib): install $(btasharedobjdir) $(sharedobjlist)
+	@$(ECHO) Linking [$(LINK)] bt app shared lib $(btasharedlib).
+	@$(LINK) $(LINKFLAGS) -shared $(sharedobjlist) -o $(btasharedlib)
+	@$(CP) $(btasharedlib) $(CONFIG_PREFIX)/usr/lib
+	@$(RM) -rf $(btasharedobjdir)
+
+############
+clean:
+	@$(ECHO) Cleaning up : $(btastaticobjdir) $(btastaticblddir) $(btasharedobjdir) $(btasharedblddir)
+	@$(RM) -rf $(btastaticobjdir) $(btastaticblddir) $(btasharedobjdir) $(btasharedblddir)
+	@$(ECHO) Finished cleaning up

@@ -1,0 +1,35 @@
+diff --git a/ext/smoothstreaming/gstmssdemux.c b/ext/smoothstreaming/gstmssdemux.c
+index 85f0ec8..55304ed 100644
+--- a/ext/smoothstreaming/gstmssdemux.c
++++ b/ext/smoothstreaming/gstmssdemux.c
+@@ -385,6 +385,7 @@ _create_pad (GstMssDemux * mssdemux, GstMssStream * manifeststream)
+   return srcpad;
+ }
+ 
++#define PLAYREADY_SYSTEM_ID "9A04F079-9840-4286-AB92-E65BE0885F95"
+ static void
+ gst_mss_demux_apply_protection_system (GstCaps * caps,
+     const gchar * selected_system)
+@@ -392,13 +393,16 @@ gst_mss_demux_apply_protection_system (GstCaps * caps,
+   GstStructure *s;
+ 
+   g_return_if_fail (selected_system);
+-  s = gst_caps_get_structure (caps, 0);
+-  gst_structure_set (s,
+-      "original-media-type", G_TYPE_STRING, gst_structure_get_name (s),
+-      GST_PROTECTION_SYSTEM_ID_CAPS_FIELD, G_TYPE_STRING, selected_system,
+-      NULL);
+-  gst_structure_set_name (s, "application/x-cenc");
+ 
++  /* if playready is encrypted, application/x-cenc is not set */
++  if (g_ascii_strcasecmp (selected_system, PLAYREADY_SYSTEM_ID) != 0) {
++    s = gst_caps_get_structure (caps, 0);
++    gst_structure_set (s,
++        "original-media-type", G_TYPE_STRING, gst_structure_get_name (s),
++        GST_PROTECTION_SYSTEM_ID_CAPS_FIELD, G_TYPE_STRING, selected_system,
++        NULL);
++    gst_structure_set_name (s, "application/x-cenc");
++  }
+ }
+ 
+ static gboolean

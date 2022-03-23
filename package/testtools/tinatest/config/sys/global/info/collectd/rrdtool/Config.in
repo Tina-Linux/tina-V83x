@@ -1,0 +1,10 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_RRDTOOL_ENABLE
+    bool "collectd_rrdtool"
+    select PACKAGE_collectd-mod-rrdtool
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_RRDTOOL_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_RRDTOOL_OUTDIR
+        string "outdir"
+        default "/mnt/UDISK/collectd"
+endif

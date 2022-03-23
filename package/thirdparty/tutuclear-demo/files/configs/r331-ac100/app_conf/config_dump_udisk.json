@@ -1,0 +1,247 @@
+{
+    "capture_pipeline" : {
+        "engine" : "alsa_src",
+        "elements" : {
+            "alsa_src" : {
+                "element_type" : "AlsaSrc",
+                "devices" : {
+                    "capture_both" : {
+                        "device" : "tutuclear_demo_capture",
+                        "loop_frames" : 160,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 16000,
+                        "channels" : 3,
+                        "period_frames" : 1024,
+                        "periods" : 4,
+                        "timestamp_type" : "GETTIMEOFDAY",
+                        "overrun_message" : "CaptureOverrun"
+                    }
+                },
+                "src_pads" : {
+                    "capture_both" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "from_alsa_src"
+                    }
+                }
+            },
+            "converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : {
+                    "from_alsa_src" : {}
+                },
+                "src_pads" : {
+                    "common_out" : {
+                        "channels" : 2,
+                        "storage" : "noninterleaved",
+                        "peer_element" : "tutuclear",
+                        "peer_pad" : "common"
+                    },
+                    "reference_out" : {
+                        "channels" : 1,
+                        "storage" : "noninterleaved",
+                        "peer_element" : "tutuclear",
+                        "peer_pad" : "reference"
+                    },
+                    "common_out_copy" : {
+                        "channels" : 2,
+                        "storage" : "interleaved",
+                        "peer_element" : "common_dump_queue",
+                        "peer_pad" : "from_converter_common_out_copy"
+                    },
+                    "reference_out_copy" : {
+                        "channels" : 1,
+                        "storage" : "interleaved",
+                        "peer_element" : "reference_dump_queue",
+                        "peer_pad" : "from_converter_reference_out_copy"
+                    }
+                },
+                "channel_map" : {
+                    "common_out.0" : "from_alsa_src.0",
+                    "common_out.1" : "from_alsa_src.1",
+                    "reference_out.0" : "from_alsa_src.2",
+                    "common_out_copy.0" : "from_alsa_src.0",
+                    "common_out_copy.1" : "from_alsa_src.1",
+                    "reference_out_copy.0" : "from_alsa_src.2"
+                }
+            },
+            "tutuclear" : {
+                "element_type" : "TutuclearElement",
+                "prm_file" : "/etc/tutuclear/tutuClearA1_ns4wakeup.prm",
+                "keyword_file" : "/etc/tutuclear/tutuKeyword.raw",
+                "format" : "S16_LE",
+                "rate" : 16000,
+                "loop_frames" : 160,
+                "storage" : "noninterleaved",
+                "keyword_detected_message" : "TutuclearKwd",
+                "sink_pads" : {
+                    "common" : {
+                        "channels" : 2
+                    },
+                    "reference" : {
+                        "channels" : 1
+                    }
+                },
+                "src_pads" : {
+                    "output" : {
+                        "channels" : 3,
+                        "peer_element" : "tutuclear_output_converter",
+                        "peer_pad" : "from_tutuclear"
+                    }
+                }
+            },
+            "tutuclear_output_converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : {
+                    "from_tutuclear" : {}
+                },
+                "src_pads" : {
+                    "output" : {
+                        "channels" : 1,
+                        "storage" : "interleaved",
+                        "peer_element" : "tutuclear_dump_queue",
+                        "peer_pad" : "from_tutuclear_output_converter"
+                    }
+                },
+                "channel_map" : {
+                    "output.0" : "from_tutuclear.0"
+                }
+            },
+            "common_dump_queue" : {
+                "element_type" : "DataQueue",
+                "max_buffers" : 20,
+                "sink_pads" : {
+                    "from_converter_common_out_copy" : {}
+                },
+                "src_pads" : {
+                    "to_common_dump" : {
+                        "peer_element" : "common_dump",
+                        "peer_pad" : "input"
+                    }
+                }
+            },
+            "reference_dump_queue" : {
+                "element_type" : "DataQueue",
+                "max_buffers" : 20,
+                "sink_pads" : {
+                    "from_converter_reference_out_copy" : {}
+                },
+                "src_pads" : {
+                    "to_reference_dump" : {
+                        "peer_element" : "reference_dump",
+                        "peer_pad" : "input"
+                    }
+                }
+            },
+            "tutuclear_dump_queue" : {
+                "element_type" : "DataQueue",
+                "max_buffers" : 20,
+                "sink_pads" : {
+                    "from_tutuclear_output_converter" : {}
+                },
+                "src_pads" : {
+                    "to_tutuclear_dump" : {
+                        "peer_element" : "tutuclear_dump",
+                        "peer_pad" : "input"
+                    }
+                }
+            },
+            "common_dump" : {
+                "element_type" : "FileSink",
+                "type" : "wav",
+                "path" : "/mnt/UDISK/common.wav",
+                "sink_pads" : {
+                    "input" : {}
+                }
+            },
+            "reference_dump" : {
+                "element_type" : "FileSink",
+                "type" : "wav",
+                "path" : "/mnt/UDISK/reference.wav",
+                "sink_pads" : {
+                    "input" : {}
+                }
+            },
+            "tutuclear_dump" : {
+                "element_type" : "FileSink",
+                "type" : "wav",
+                "path" : "/mnt/UDISK/tutu_out.wav",
+                "sink_pads" : {
+                    "input" : {}
+                }
+            }
+        }
+    },
+    "background_music_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/etc/tutuclear/background_music.wav",
+                "repeated" : true,
+                "src_pads" : {
+                    "default" : {
+                        "peer_element" : "alsa_sink",
+                        "peer_pad" : "default"
+                    }
+                }
+            },
+            "alsa_sink" : {
+                "element_type" : "AlsaSink",
+                "devices" : {
+                    "default" : {
+                        "device" : "tutuclear_demo_playback",
+                        "loop_frames" : 6000,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 48000,
+                        "channels" : 2,
+                        "period_frames" : 6000,
+                        "periods" : 4,
+                        "timestamp_type" : "GETTIMEOFDAY",
+                        "underrun_message" : "BgmUnderrun"
+                    }
+                },
+                "sink_pads" : {
+                    "default" : {}
+                }
+            }
+        }
+    },
+    "wakeup_hint_pipeline" : {
+        "engine" : "file_src",
+        "elements" : {
+            "file_src" : {
+                "element_type" : "FileSrc",
+                "type" : "wav",
+                "path" : "/etc/tutuclear/wakeup_hint.wav",
+                "repeated" : false,
+                "src_pads" : {
+                    "default" : {
+                        "peer_element" : "alsa_sink",
+                        "peer_pad" : "default"
+                    }
+                }
+            },
+            "alsa_sink" : {
+                "element_type" : "AlsaSink",
+                "devices" : {
+                    "default" : {
+                        "device" : "tutuclear_demo_playback",
+                        "loop_frames" : 2000,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 16000,
+                        "channels" : 2,
+                        "period_frames" : 2000,
+                        "periods" : 4
+                    }
+                },
+                "sink_pads" : {
+                    "default" : {}
+                }
+            }
+        }
+    }
+}

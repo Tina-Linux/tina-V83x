@@ -1,0 +1,28 @@
+# ubus daemon
+type ubusd, domain;
+
+type ubusd_exec, exec_type, file_type;
+# permissive ubusd;
+# init_daemon_domain(ubusd)
+domain_auto_trans(init,ubusd_exec,ubusd)
+# domain_auto_trans(ubusd,busybox_exec,busybox)
+
+allow ubusd init:fifo_file { write ioctl };
+# allow ubusd { network ntpd }:fifo_file { read write ioctl};
+# allow ubusd {ntpd gpio_switch cron logd network boot dbusd bluetoothd }:fd use;
+allow ubusd logd:fd use;
+allow ubusd logd:fifo_file read;
+
+allow ubusd tmpfs:sock_file create_file_perms;
+allow ubusd tmpfs:dir create_dir_perms;
+allow ubusd tmpfs:file create_file_perms;
+
+# allow init ubusd:unix_stream_socket { create_stream_socket_perms connectto };
+allow ubusd etc_passwd:file r_file_perms;
+
+allow ubusd { serial_device console_device }:chr_file r_file_perms;
+
+# allow ubusd { etc_selinux etc_initd }:dir { search open read getattr };
+# allow ubusd etc_selinux:{ file lnk_file } { open read getattr };
+
+# allow ubusd self:capability2 block_suspend;

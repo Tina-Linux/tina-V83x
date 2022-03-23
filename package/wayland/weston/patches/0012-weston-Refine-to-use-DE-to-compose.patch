@@ -1,0 +1,27 @@
+From 6b413735895cbaa6ab07396f494c0d89a973c824 Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 20:44:47 +0800
+Subject: [PATCH 11/11] weston: Refine to use DE to compose
+
+---
+ libweston/compositor-drm.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 4c9b223..8e278f1 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -1107,10 +1107,6 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 	if (ec->plane_zorder <= 1)
+ 		return NULL;
+ 
+-	/* No sprites available */
+-	if (!found)
+-		return NULL;
+-
+ 	if ((dmabuf = linux_dmabuf_buffer_get(buffer_resource))) {
+ #ifdef HAVE_GBM_FD_IMPORT
+ 		/* XXX: TODO:
+-- 
+1.9.1
+

@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+#Copyright (c) 2018-2020 Allwinner Technology Co. Ltd.
+
+START=99
+DEPEND=done
+
+PROG=/sbin/swupdate_cmd.sh
+PROG_PROGRESS=/sbin/progress
+
+start(){
+    $PROG_PROGRESS -w > /dev/console 2>&1 &
+    $PROG
+}

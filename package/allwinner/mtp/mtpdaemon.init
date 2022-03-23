@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=98
+STOP=99
+
+DEPEND=fstab,system
+
+USE_PROCD=1
+PROG=/usr/sbin/MtpDaemon
+OOM_ADJ=-17
+
+start_service() {
+	procd_open_instance
+	procd_set_param oom_score_adj $OOM_ADJ
+	procd_set_param command $PROG -D
+	procd_close_instance
+}
+
+shutdown() {
+	echo shutdown
+}

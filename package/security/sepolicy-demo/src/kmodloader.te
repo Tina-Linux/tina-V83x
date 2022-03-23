@@ -1,0 +1,51 @@
+# dbus daemon
+type kmodloader, domain, mlstrustedsubject;
+
+type kmodloader_exec, exec_type, file_type;
+# permissive kmodloader;
+# domain_auto_trans(shell,kmodloader_exec,kmodloader)
+domain_auto_trans(kernel,kmodloader_exec,kmodloader)
+init_daemon_domain(kmodloader)
+# domain_auto_trans(kmodloader,busybox_exec,busybox)
+# # domain_auto_trans(adbd,adbd_exec,adbd)
+# allow kmodloader kmodloader_exec:file rwx_file_perms;
+
+allow kmodloader kernel:system { module_request syslog_read };
+
+allow kmodloader self:system module_load;
+allow kmodloader self:capability { sys_module sys_admin net_admin net_raw };
+# allow kmodloader self:netlink_route_socket *;
+# allow kmodloader self:udp_socket *;
+
+allow kmodloader device:sock_file write;
+allow kmodloader console_device:chr_file rw_file_perms;
+# allow kmodloader serial_device:chr_file { read write ioctl };
+# allow kmodloader watchdog_device:chr_file { read write };
+allow kmodloader kmsg_device:chr_file rw_file_perms;
+
+# allow kmodloader { shell boot weston }:fd use;
+allow kmodloader shell:fd use;
+
+allow kmodloader init:fifo_file { read write };
+# allow kmodloader weston:fifo_file { write ioctl };
+
+# allow kmodloader system_file:file { execute execute_no_trans open execmod };
+# allow kmodloader shell_exec:file rx_file_perms;
+# allow kmodloader etc_initd:dir search;
+# allow kmodloader etc_initd:file r_file_perms;
+
+# allow kmodloader {mount_exec temp_exec}:file {read getattr execute execute_no_trans open execmod};
+# allow kmodloader {mount_exec temp_exec}:lnk_file { getattr open read execute };
+# allow kmodloader etc_selinux:dir { search open read getattr };
+# allow kmodloader etc_selinux:{ file lnk_file } { open read getattr };
+# allow kmodloader tmpfs:dir { create_dir_perms mounton };
+# allow kmodloader tmpfs:file create_file_perms;
+# allow kmodloader mmc_device:blk_file r_file_perms;
+
+# allow kmodloader sdcard_external:filesystem { mount unmount };
+# allow kmodloader sdcard_external:dir { r_dir_perms mounton };
+# allow kmodloader sdcard_external:file r_file_perms;
+
+allow kmodloader logd:unix_dgram_socket sendto;
+
+# allow kmodloader rootfs:chr_file rw_file_perms;

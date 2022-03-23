@@ -1,0 +1,300 @@
+--- a/wolfcrypt/src/wc_pkcs11.c
++++ b/wolfcrypt/src/wc_pkcs11.c
+@@ -422,18 +422,22 @@ static int Pkcs11CreateRsaPrivateKey(CK_
+     /* Set the modulus and private key data. */
+     keyTemplate[ 3].pValue     = rsaKey->n.raw.buf;
+     keyTemplate[ 3].ulValueLen = rsaKey->n.raw.len;
++#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+     keyTemplate[ 4].pValue     = rsaKey->d.raw.buf;
+     keyTemplate[ 4].ulValueLen = rsaKey->d.raw.len;
+     keyTemplate[ 5].pValue     = rsaKey->p.raw.buf;
+     keyTemplate[ 5].ulValueLen = rsaKey->p.raw.len;
+     keyTemplate[ 6].pValue     = rsaKey->q.raw.buf;
+     keyTemplate[ 6].ulValueLen = rsaKey->q.raw.len;
++#if defined(WOLFSSL_KEY_GEN) || defined(OPENSSL_EXTRA) || !defined(RSA_LOW_MEM)
+     keyTemplate[ 7].pValue     = rsaKey->dP.raw.buf;
+     keyTemplate[ 7].ulValueLen = rsaKey->dP.raw.len;
+     keyTemplate[ 8].pValue     = rsaKey->dQ.raw.buf;
+     keyTemplate[ 8].ulValueLen = rsaKey->dQ.raw.len;
+     keyTemplate[ 9].pValue     = rsaKey->u.raw.buf;
+     keyTemplate[ 9].ulValueLen = rsaKey->u.raw.len;
++#endif
++#endif
+     keyTemplate[10].pValue     = rsaKey->e.raw.buf;
+     keyTemplate[10].ulValueLen = rsaKey->e.raw.len;
+
+@@ -692,12 +696,16 @@ int wc_Pkcs11StoreKey(Pkcs11Token* token
+                 if (ret == 0)
+                     ret = Pkcs11CreateRsaPrivateKey(&privKey, &session, rsaKey);
+                 if (ret == 0 && clear) {
++#ifndef WOLFSSL_RSA_PUBLIC_ONLY
++#if defined(WOLFSSL_KEY_GEN) || defined(OPENSSL_EXTRA) || !defined(RSA_LOW_MEM)
+                     mp_forcezero(&rsaKey->u);
+                     mp_forcezero(&rsaKey->dQ);
+                     mp_forcezero(&rsaKey->dP);
++#endif
+                     mp_forcezero(&rsaKey->q);
+                     mp_forcezero(&rsaKey->p);
+                     mp_forcezero(&rsaKey->d);
++#endif
+                 }
+                 break;
+             }
+@@ -946,11 +954,14 @@ static int Pkcs11RsaPrivate(Pkcs11Sessio
+     }
+
+     if (ret == 0) {
++#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+         if ((sessionKey = !mp_iszero(&info->pk.rsa.key->d))) {
+             ret = Pkcs11CreateRsaPrivateKey(&privateKey, session,
+                                                               info->pk.rsa.key);
+         }
+-        else if (info->pk.rsa.key->idLen > 0) {
++	else
++#endif
++        if (info->pk.rsa.key->idLen > 0) {
+             ret = Pkcs11FindKeyById(&privateKey, CKO_PRIVATE_KEY, CKK_RSA,
+                                     session, info->pk.rsa.key->id,
+                                     info->pk.rsa.key->idLen);
+--- a/src/ssl.c
++++ b/src/ssl.c
+@@ -24925,6 +24925,7 @@ static int SetRsaExternal(WOLFSSL_RSA* r
+         return WOLFSSL_FATAL_ERROR;
+     }
+
++#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+     if (key->type == RSA_PRIVATE) {
+         if (SetIndividualExternal(&rsa->d, &key->d) != WOLFSSL_SUCCESS) {
+             WOLFSSL_MSG("rsa d key error");
+@@ -24958,6 +24959,7 @@ static int SetRsaExternal(WOLFSSL_RSA* r
+         }
+     #endif /* !RSA_LOW_MEM */
+     }
++#endif
+     rsa->exSet = 1;
+
+     return WOLFSSL_SUCCESS;
+@@ -24993,6 +24995,7 @@ static int SetRsaInternal(WOLFSSL_RSA* r
+     /* public key */
+     key->type = RSA_PUBLIC;
+
++#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+     if (rsa->d != NULL) {
+         if (SetIndividualInternal(rsa->d, &key->d) != WOLFSSL_SUCCESS) {
+             WOLFSSL_MSG("rsa d key error");
+@@ -25034,6 +25037,7 @@ static int SetRsaInternal(WOLFSSL_RSA* r
+         return WOLFSSL_FATAL_ERROR;
+     }
+ #endif /* !RSA_LOW_MEM */
++#endif /* WOLFSSL_RSA_PUBLIC_ONLY */
+
+     rsa->inSet = 1;
+
+@@ -25134,13 +25138,17 @@ int wolfSSL_RSA_public_encrypt(int len,
+
+     if (rng) {
+ #if !defined(HAVE_FIPS) && !defined(HAVE_USER_RSA) && !defined(HAVE_FAST_RSA)
++#if !defined(WC_NO_RSA_OAEP) || defined(WC_RSA_NO_PADDING)
+         ret = wc_RsaPublicEncrypt_ex(fr, len, to, outLen,
+                              (RsaKey*)rsa->internal, rng, padding,
+                              hash, mgf, NULL, 0);
++#endif
+ #else
++#ifndef WOLFSSL_RSA_VERIFY_ONLY
+         ret = wc_RsaPublicEncrypt(fr, len, to, outLen,
+                              (RsaKey*)rsa->internal, rng);
+ #endif
++#endif
+         if (ret <= 0) {
+             WOLFSSL_MSG("Bad Rsa Encrypt");
+         }
+@@ -25212,13 +25220,17 @@ int wolfSSL_RSA_private_decrypt(int len,
+
+     /* size of 'to' buffer must be size of RSA key */
+ #if !defined(HAVE_FIPS) && !defined(HAVE_USER_RSA) && !defined(HAVE_FAST_RSA)
++#if !defined(WC_NO_RSA_OAEP) || defined(WC_RSA_NO_PADDING)
+     ret = wc_RsaPrivateDecrypt_ex(fr, len, to, outLen,
+                             (RsaKey*)rsa->internal, padding,
+                             hash, mgf, NULL, 0);
++#endif
+ #else
++#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+     ret = wc_RsaPrivateDecrypt(fr, len, to, outLen,
+                             (RsaKey*)rsa->internal);
+ #endif
++#endif
+
+     if (len <= 0) {
+         WOLFSSL_MSG("Bad Rsa Decrypt");
+@@ -25286,8 +25298,10 @@ int wolfSSL_RSA_private_encrypt(int len,
+     }
+     #endif
+
++    #ifndef WOLFSSL_RSA_PUBLIC_ONLY
+     /* size of output buffer must be size of RSA key */
+     sz = wc_RsaSSL_Sign(in, (word32)len, out, wolfSSL_RSA_size(rsa), key, rng);
++    #endif
+     #if !defined(WC_RSA_BLINDING) || defined(HAVE_USER_RSA)
+     if (wc_FreeRng(rng) != 0) {
+         WOLFSSL_MSG("Error freeing random number generator");
+@@ -25832,8 +25846,10 @@ int wolfSSL_RSA_sign_ex(int type, const
+         else {
+             show("Encoded Message", encodedSig, signSz);
+             if (flag != 0) {
++		#ifndef WOLFSSL_RSA_PUBLIC_ONLY
+                 ret = wc_RsaSSL_Sign(encodedSig, signSz, sigRet, outLen,
+                                 (RsaKey*)rsa->internal, rng);
++		#endif
+                 if (ret <= 0) {
+                     WOLFSSL_MSG("Bad Rsa Sign");
+                     ret = 0;
+@@ -25905,9 +25921,11 @@ int wolfSSL_RSA_verify(int type, const u
+         return WOLFSSL_FAILURE;
+     }
+     show("Encoded Message", sigRet, len);
++    #ifndef WOLFSSL_RSA_PUBLIC_ONLY
+     /* decrypt signature */
+     ret = wc_RsaSSL_Verify(sig, sigLen, (unsigned char *)sigDec, sigLen,
+         (RsaKey*)rsa->internal);
++    #endif
+     if (ret <= 0) {
+         WOLFSSL_MSG("RSA Decrypt error");
+         XFREE(sigRet, NULL, DYNAMIC_TYPE_TMP_BUFFER);
+@@ -25957,9 +25975,11 @@ int wolfSSL_RSA_public_decrypt(int flen,
+         }
+     }
+
++    #ifndef WOLFSSL_RSA_PUBLIC_ONLY
+     /* size of 'to' buffer must be size of RSA key */
+     tlen = wc_RsaSSL_Verify(from, flen, to, wolfSSL_RSA_size(rsa),
+                             (RsaKey*)rsa->internal);
++    #endif
+     if (tlen <= 0)
+         WOLFSSL_MSG("wolfSSL_RSA_public_decrypt failed");
+     else {
+--- a/wolfcrypt/benchmark/benchmark.c
++++ b/wolfcrypt/benchmark/benchmark.c
+@@ -545,7 +545,6 @@ static const char* bench_result_words1[]
+     defined(HAVE_ECC) || !defined(NO_DH) || defined(HAVE_ECC_ENCRYPT) || \
+     defined(HAVE_CURVE25519) || defined(HAVE_CURVE25519_SHARED_SECRET)  || \
+     defined(HAVE_ED25519)
+-#if !defined(WOLFSSL_RSA_PUBLIC_ONLY) || defined(WOLFSSL_PUBLIC_MP)
+
+ static const char* bench_desc_words[][9] = {
+     /* 0           1          2         3        4        5         6            7            8 */
+@@ -556,7 +555,6 @@ static const char* bench_desc_words[][9]
+ };
+
+ #endif
+-#endif
+
+ #if defined(__GNUC__) && defined(__x86_64__) && !defined(NO_ASM) && !defined(WOLFSSL_SGX)
+     #define HAVE_GET_CYCLES
+@@ -666,7 +664,6 @@ static const char* bench_desc_words[][9]
+ #endif
+
+ #if defined(BENCH_ASYM)
+-#if !defined(WOLFSSL_RSA_PUBLIC_ONLY) || defined(WOLFSSL_PUBLIC_MP)
+ static const char* bench_result_words2[][5] = {
+     { "ops took", "sec"     , "avg" , "ops/sec", NULL },            /* 0 English  */
+ #ifndef NO_MULTIBYTE_PRINT
+@@ -674,7 +671,6 @@ static const char* bench_result_words2[]
+ #endif
+ };
+ #endif
+-#endif
+
+ /* Asynchronous helper macros */
+ static THREAD_LS_T int devId = INVALID_DEVID;
+@@ -1192,7 +1188,6 @@ static void bench_stats_sym_finish(const
+ }
+
+ #ifdef BENCH_ASYM
+-#if !defined(WOLFSSL_RSA_PUBLIC_ONLY) || defined(WOLFSSL_PUBLIC_MP)
+ static void bench_stats_asym_finish(const char* algo, int strength,
+     const char* desc, int doAsync, int count, double start, int ret)
+ {
+@@ -1234,7 +1229,6 @@ static void bench_stats_asym_finish(cons
+
+     TEST_SLEEP();
+ }
+-#endif
+ #endif /* BENCH_ASYM */
+
+ static WC_INLINE void bench_stats_free(void)
+--- a/wolfssl/wolfcrypt/port/af_alg/afalg_hash.h
++++ b/wolfssl/wolfcrypt/port/af_alg/afalg_hash.h
+@@ -35,6 +35,10 @@ typedef struct {
+     word32 len;
+     int    alFd;
+     int    rdFd;
++#ifdef WOLF_CRYPTO_CB
++    int    devId;
++    void*  devCtx; /* generic crypto callback context */
++#endif
+ } wolfssl_AFALG_Hash;
+
+
+@@ -46,5 +50,6 @@ typedef struct {
+     typedef wolfssl_AFALG_Hash wc_Sha3;
+ #endif
+
++
+ #endif /* WOLF_CRYPT_AFALG_HASH_H  */
+
+--- a/wolfcrypt/test/test.c
++++ b/wolfcrypt/test/test.c
+@@ -10428,7 +10428,7 @@ done:
+
+ #define RSA_TEST_BYTES 256
+
+-#ifdef WC_RSA_PSS
++#if defined(WC_RSA_PSS) && !defined(WOLFSSL_RSA_PUBLIC_ONLY)
+ static int rsa_pss_test(WC_RNG* rng, RsaKey* key)
+ {
+     byte             digest[WC_MAX_DIGEST_SIZE];
+@@ -11536,8 +11536,8 @@ int rsa_test(void)
+ #if defined(HAVE_NTRU)
+     RsaKey caKey;
+ #endif
+-#if !defined(WOLFSSL_RSA_PUBLIC_ONLY) || defined(WOLFSSL_MP_PUBLIC)
+     word32 idx = 0;
++#if !defined(WOLFSSL_RSA_PUBLIC_ONLY) || defined(WOLFSSL_MP_PUBLIC)
+     const char* inStr = "Everyone gets Friday off.";
+     word32      inLen = (word32)XSTRLEN((char*)inStr);
+     byte*  res;
+--- a/wolfssl/wolfcrypt/sha256.h
++++ b/wolfssl/wolfcrypt/sha256.h
+@@ -188,9 +188,20 @@ WOLFSSL_API int wc_Sha256Copy(wc_Sha256*
+ WOLFSSL_API void wc_Sha256SizeSet(wc_Sha256*, word32);
+ #endif
+
+-#if defined(WOLFSSL_HASH_FLAGS) || defined(WOLF_CRYPTO_CB)
++#if (defined(WOLFSSL_HASH_FLAGS) || defined(WOLF_CRYPTO_CB)) && !defined(WOLFSSL_AFALG_HASH)
+     WOLFSSL_LOCAL int wc_Sha256SetFlags(wc_Sha256* sha256, word32 flags);
+     WOLFSSL_LOCAL int wc_Sha256GetFlags(wc_Sha256* sha256, word32* flags);
++#else
++#if defined(WOLFSSL_AFALG_HASH)
++WOLFSSL_LOCAL inline int wc_Sha256SetFlags(__attribute__((unused)) wc_Sha256* sha256, __attribute__((unused)) word32 flags)
++{
++	return 0;
++}
++WOLFSSL_LOCAL inline int wc_Sha256GetFlags(__attribute__((unused)) wc_Sha256* sha256,  __attribute__((unused)) word32* flags)
++{
++	return 0;
++}
++#endif
+ #endif
+
+ #ifdef WOLFSSL_SHA224
+--- a/wolfssl/wolfcrypt/random.h
++++ b/wolfssl/wolfcrypt/random.h
+@@ -109,7 +109,7 @@
+ #elif defined(HAVE_INTEL_RDRAND)
+     /* Intel RDRAND or RDSEED */
+ #elif !defined(WC_NO_RNG)
+-    #error No RNG source defined!
++    /* #error No RNG source defined! */
+ #endif
+
+ #ifdef HAVE_WNR

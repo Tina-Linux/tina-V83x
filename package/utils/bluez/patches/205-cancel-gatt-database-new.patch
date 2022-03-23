@@ -1,0 +1,35 @@
+From 94a486f92dbe39f9100b2c8afbf909602d819fd1 Mon Sep 17 00:00:00 2001
+From: liumingyuan <liumingyuan@allwinnertech.com>
+Date: Wed, 24 Apr 2019 17:41:29 +0800
+Subject: [PATCH] cancel gatt database new
+
+Signed-off-by: liumingyuan <liumingyuan@allwinnertech.com>
+---
+ src/adapter.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/adapter.c b/src/adapter.c
+index f4fbf82..86967ef 100644
+--- a/src/adapter.c
++++ b/src/adapter.c
+@@ -7441,7 +7441,7 @@ static int adapter_register(struct btd_adapter *adapter)
+ 		adapter_set_io_capability(adapter, io_cap);
+ 		agent_unref(agent);
+ 	}
+-
++/*
+ 	adapter->database = btd_gatt_database_new(adapter);
+ 	if (!adapter->database) {
+ 		btd_error(adapter->dev_id,
+@@ -7449,7 +7449,7 @@ static int adapter_register(struct btd_adapter *adapter)
+ 		adapters = g_slist_remove(adapters, adapter);
+ 		return -EINVAL;
+ 	}
+-
++*/
+ 	if (g_dbus_get_flags() & G_DBUS_FLAG_ENABLE_EXPERIMENTAL) {
+ 		/* Don't start advertising managers on non-LE controllers. */
+ 		if (adapter->supported_settings & MGMT_SETTING_LE) {
+-- 
+1.9.1
+

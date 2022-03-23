@@ -1,0 +1,240 @@
+#
+# For a description of the syntax of this configuration file,
+# see scripts/kbuild/config-language.txt.
+#
+
+menu "Image Handlers"
+
+config SWUPDATE_CONFIG_UBIVOL
+	bool "ubivol"
+	default SWUPDATE_DEFAULT_UBIVOL
+	depends on SWUPDATE_CONFIG_HAVE_LIBUBI
+	depends on SWUPDATE_CONFIG_MTD
+	help
+	  ubi is the default format for NAND device.
+	  Say Y if you have NAND or you use UBI on
+	  your system.
+
+comment "ubivol support needs libubi"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBUBI
+
+config SWUPDATE_CONFIG_UBIATTACH
+	bool "Automatically attach UBI devices"
+	default SWUPDATE_DEFAULT_UBIATTACH
+	depends on SWUPDATE_CONFIG_UBIVOL
+	help
+	  If this option is enabled, swupdate will try to attach
+	  UBI devices to all MTD devices.
+
+	  Make sure UBIBLACKLIST or UBIWHITELIST is set correctly,
+	  since attaching a UBI device will write to it if it is
+	  found to be empty, and that may destroy already existing
+	  content on that device.
+
+config SWUPDATE_CONFIG_UBIBLACKLIST
+	string "List of MTD devices to be excluded for UBI"
+	depends on SWUPDATE_CONFIG_UBIATTACH
+	help
+	  Define a list of MTD devices that are excluded
+	  by scan_mtd_device. The devices are still available
+	  as raw devices.
+	  The list can be set as a string with the mtd numbers.
+	  Examples: "0 1 2"
+	  This excludes mtd0-mtd1-mtd2 to be searched for UBI volumes
+
+config SWUPDATE_CONFIG_UBIWHITELIST
+	string "List of MTD devices that must have UBI"
+	depends on SWUPDATE_CONFIG_UBIATTACH
+	help
+	  Define a list of MTD devices that are planned to have
+	  always UBI. If first attach fails, the device is erased
+	  and tried again.
+	  The list can be set as a string with the mtd numbers.
+	  Examples: "0 1 2"
+	  This sets mtd0-mtd1-mtd2 to be used as UBI volumes.
+	  UBIBLACKLIST has priority on UBIWHITELIST.
+
+config SWUPDATE_CONFIG_UBIVIDOFFSET
+	int "VID Header Offset"
+	depends on SWUPDATE_CONFIG_UBIATTACH
+	default SWUPDATE_DEFAULT_UBIVIDOFFSET
+	help
+	  Force UBI to set a VID header offset to be 2048 bytes
+	  instead of the value reported by the kernel.
+	  In other words, you may ask UBI to avoid using sub-pages.
+	  This is not recommended since this will require
+	  more storage overhead, but may be useful
+	  if your NAND driver incorrectly reports that it can handle
+	  sub-page accesses when it should not.
+
+config SWUPDATE_CONFIG_CFI
+	bool "cfi"
+	depends on SWUPDATE_CONFIG_MTD
+	default SWUPDATE_DEFAULT_CFI
+	help
+	  Handler to store images in flash in raw mode,
+	  without UBI
+
+config SWUPDATE_CONFIG_CFIHAMMING1
+	bool "NAND in raw mode with 1bit Hamming OOB (TI)"
+	depends on SWUPDATE_CONFIG_MTD
+	default SWUPDATE_DEFAULT_CFIHAMMING1
+	help
+	  On certain TI's omaps (for example, DM3730 or AM3517),
+	  the first bootloader (MLO or SPL) must be saved with one bit
+	  Hamming correction because this is requested by the SOC's ROM.
+	  However, the Linux driver must use for the rest of the NAND a more
+	  powerful algorithm to make data reliable, and this causes that
+	  it is not possible to update SPL by letting the driver to handle
+	  the OOB area. This handler raws the NAND in raw mode, computing
+	  the ECC with 1 bit Hamming Code and saving it into OOB
+	  (assumes sector size of 512 and page size of 2048).
+
+	  You do not need this if you do not have an OMAP SoC.
+
+config SWUPDATE_CONFIG_RAW
+	bool "raw"
+	default SWUPDATE_DEFAULT_RAW
+	help
+	  This is a simple handler that simply copies
+	  into the destination.
+
+config SWUPDATE_CONFIG_RDIFFHANDLER
+	bool "rdiff"
+	default SWUPDATE_DEFAULT_RDIFFHANDLER
+	help
+	  Add support for applying librsync's rdiff patches,
+	  see http://librsync.sourcefrog.net/
+
+config SWUPDATE_CONFIG_LUASCRIPTHANDLER
+	bool "Lua Script"
+	depends on SWUPDATE_CONFIG_LUA
+	default SWUPDATE_DEFAULT_LUASCRIPTHANDLER
+	help
+	  Handler to be called for pre- and post scripts
+	  written in Lua.
+
+config SWUPDATE_CONFIG_SHELLSCRIPTHANDLER
+	bool "shellscript"
+	default SWUPDATE_DEFAULT_SHELLSCRIPTHANDLER
+	help
+	  Handler to be called for pre- and post scripts
+	  written as shell scripts. The default shell /bin/sh
+	  is called.
+
+config SWUPDATE_CONFIG_HANDLER_IN_LUA
+	bool "Handlers in Lua"
+	depends on SWUPDATE_CONFIG_LUASCRIPTHANDLER
+	default SWUPDATE_DEFAULT_HANDLER_IN_LUA
+	help
+	  Allow to write own handlers in Lua.
+	  They are loaded at the start-up.
+
+config SWUPDATE_CONFIG_EMBEDDED_LUA_HANDLER
+	bool "Embed Lua handler in SWUpdate binary"
+	depends on SWUPDATE_CONFIG_HANDLER_IN_LUA
+	default SWUPDATE_DEFAULT_EMBEDDED_LUA_HANDLER
+	help
+	  Embed the Lua handler source code file into the
+	  SWUpdate binary.
+
+	  If enabled, a swupdate_handlers.lua will *not*
+	  be loaded from disk at SWUpdate startup.
+
+	  Note: Exactly one Lua source code file is embedded
+	  into the binary, i.e., possible dependencies either
+	  have to be deployed on the target system or put into
+	  the one embedded Lua source code file.
+
+config SWUPDATE_CONFIG_EMBEDDED_LUA_HANDLER_SOURCE
+	string "Lua handler file"
+	depends on SWUPDATE_CONFIG_EMBEDDED_LUA_HANDLER
+	default SWUPDATE_DEFAULT_EMBEDDED_LUA_HANDLER_SOURCE
+	help
+	  Path to the Lua handler source code file to be
+	  embedded into the SWUpdate binary.
+
+config SWUPDATE_CONFIG_ARCHIVE
+	bool "archive"
+	depends on SWUPDATE_CONFIG_HAVE_LIBARCHIVE
+	default SWUPDATE_DEFAULT_ARCHIVE
+	help
+	  Handler using the libarchive to extract tarballs
+	  into a filesystem.
+
+comment "archive support needs libarchive"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBARCHIVE
+
+config SWUPDATE_CONFIG_REMOTE_HANDLER
+	bool "Remote handler"
+	depends on SWUPDATE_CONFIG_HAVE_LIBZEROMQ
+	default SWUPDATE_DEFAULT_REMOTE_HANDLER
+	help
+	  Sometimes the update process should be done
+	  by another process, where code is already
+	  provided. The remote handler let communicate
+	  an external process with SWUpdate, sending
+	  the image to be updated with the help of the
+	  zeromq library.
+
+comment "remote handler needs zeromq"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBZEROMQ
+
+config SWUPDATE_CONFIG_SWUFORWARDER_HANDLER
+	bool "SWU forwarder"
+	depends on SWUPDATE_CONFIG_HAVE_LIBCURL
+	depends on SWUPDATE_CONFIG_HAVE_JSON_C
+	select SWUPDATE_CONFIG_CHANNEL_CURL
+	select SWUPDATE_CONFIG_JSON
+	default SWUPDATE_DEFAULT_SWUFORWARDER_HANDLER
+	help
+	  This allows to build a chain of updater. A
+	  SWU can contains other SWUs for other systems.
+	  The handler takes a list of URLs and forward the
+	  embedded SWU to the other devices using the
+	  Webserver REST API.
+
+comment "swuforward handler needs json-c and curl"
+	depends on !SWUPDATE_CONFIG_HAVE_JSON_C || !SWUPDATE_CONFIG_HAVE_LIBCURL
+
+comment "SWU forwarder requires libcurl"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBCURL
+
+config SWUPDATE_CONFIG_BOOTLOADERHANDLER
+	bool "bootloader"
+	default SWUPDATE_DEFAULT_BOOTLOADERHANDLER
+	help
+	  Enable it to change bootloader environment
+	  during the installation process.
+
+config SWUPDATE_CONFIG_AWBOOT_HANDLER
+	bool "allwinner boot0/uboot"
+	default SWUPDATE_DEFAULT_AWBOOT_HANDLER
+	help
+	  Handler using the libota-burnboot to update
+	  boot0/uboot for allwinner platform.
+
+config SWUPDATE_CONFIG_UCFWHANDLER
+	bool "microcontroller firmware update"
+	depends on SWUPDATE_CONFIG_HAVE_LIBGPIOD
+	default SWUPDATE_DEFAULT_UCFWHANDLER
+	help
+	  Simple protocol to upgrade a microcontroller
+	  via UART.
+
+comment "Microcontroller handler depends on libgpiod"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBGPIOD
+
+config SWUPDATE_CONFIG_UCFW_OLD_LIBGPIOD
+	bool "Support older libgpiod version"
+	depends on SWUPDATE_CONFIG_HAVE_LIBGPIOD
+	depends on SWUPDATE_CONFIG_UCFWHANDLER
+	default SWUPDATE_DEFAULT_UCFW_OLD_LIBGPIOD
+	help
+	  The libgpiod library changed the api gpiod_line_request_output.
+	  The old function was replaced by gpiod_line_request_flags_output
+	  while the new one dropped "flags" from the list of parameters.
+	  Rather there is no way to get this changes from the library
+	  at build time.
+
+endmenu

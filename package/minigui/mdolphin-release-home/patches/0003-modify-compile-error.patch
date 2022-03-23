@@ -1,0 +1,131 @@
+diff -uNrp mdolphin-release-home-2.0.4/src/error.cpp mdolphin-release-home-2.0.4/src/error.cpp
+--- a/src/error.cpp	2017-12-15 16:42:24.000000000 +0800
++++ b/src/error.cpp	2018-05-14 16:25:11.494311121 +0800
+@@ -237,7 +237,7 @@ static void deal_with_mouse_down(HWND hD
+     //g_err_hwnd_show = false;
+ }
+ 
+-static int InitDialogBoxProc (HWND hDlg, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ 	ERR_INFO *info;
+ 	RECT rc;
+diff -uNrp mdolphin-release-home-2.0.4/src/magnifier3.cpp mdolphin-release-home-2.0.4/src/magnifier3.cpp
+--- a/src/magnifier3.cpp	2017-12-15 16:42:24.000000000 +0800
++++ b/src/magnifier3.cpp	2018-05-14 16:32:38.262298232 +0800
+@@ -111,7 +111,7 @@ void get_screen_to_magnifier(HWND browse
+ }
+ 
+ static CLIPRGN crgn;
+-static int GlassWinProc (HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT GlassWinProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ 	switch (message) {
+         case MSG_CREATE:
+diff -uNrp mdolphin-release-home-2.0.4/src/mdhome.cpp mdolphin-release-home-2.0.4/src/mdhome.cpp
+--- a/src/mdhome.cpp	2017-12-15 16:42:25.000000000 +0800
++++ b/src/mdhome.cpp	2018-05-14 16:19:50.882320370 +0800
+@@ -284,7 +284,7 @@ static void DrawBoxFromBitmap (HDC hdc,
+ }
+ #endif
+ int mouse_down_x,mouse_down_y,mouse_up_x,mouse_up_y;
+-int MDolphinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++LRESULT MDolphinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     static bool capture = false;
+     static int startX = 0;
+diff -uNrp mdolphin-release-home-2.0.4/src/mdolphin_auth.cpp mdolphin-release-home-2.0.4/src/mdolphin_auth.cpp
+--- a/src/mdolphin_auth.cpp	2017-12-15 16:42:24.000000000 +0800
++++ b/src/mdolphin_auth.cpp	2018-05-14 16:31:19.738300497 +0800
+@@ -90,7 +90,7 @@ static CTRLDATA CtrlInitProgress [] =
+     }
+ };
+ 
+-static int AuthBoxProc (HWND hDlg, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT AuthBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ 
+     RECT rc;
+diff -uNrp mdolphin-release-home-2.0.4/src/progress_dialog.cpp mdolphin-release-home-2.0.4/src/progress_dialog.cpp
+---  a/src/progress_dialog.cpp	2017-12-15 16:42:24.000000000 +0800
++++ b/src/progress_dialog.cpp	2018-05-14 16:28:36.542305205 +0800
+@@ -68,7 +68,7 @@ static void saveParfree( struct savePar
+     }
+ }
+ 
+-static int SaveBoxProc (HWND hDlg, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT SaveBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ 
+     RECT rc;
+diff -uNrp mdolphin-release-home-2.0.4/src/prompt_dialog.cpp mdolphin-release-home-2.0.4/src/prompt_dialog.cpp
+--- a/src/prompt_dialog.cpp	2017-12-15 16:42:25.000000000 +0800
++++ b/src/prompt_dialog.cpp	2018-05-14 16:29:00.694304509 +0800
+@@ -15,7 +15,7 @@
+ #define IDC_INPUT	1000
+ static char *inputboxbuf;
+ static int inputboxbuflen;
+-static int InputBoxProc(HWND hDlg, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT InputBoxProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     if ( message == MSG_COMMAND ) {
+         if ( wParam == IDOK ) {
+diff -uNrp mdolphin-release-home-2.0.4/src/scrollpanel.cpp mdolphin-release-home-2.0.4/src/scrollpanel.cpp
+--- a/src/scrollpanel.cpp	2017-12-15 16:42:24.000000000 +0800
++++ b/src/scrollpanel.cpp	2018-05-14 16:26:22.570309070 +0800
+@@ -289,7 +289,7 @@ static void nav_process_move(HWND hWnd,
+ 
+ }
+ 
+-static int NonRegularWinProc(HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT NonRegularWinProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     switch (message)
+     {
+diff -uNrp mdolphin-release-home-2.0.4/src/startup.cpp mdolphin-release-home-2.0.4/src/startup.cpp
+--- a/src/startup.cpp	2017-12-15 16:42:24.000000000 +0800
++++ b/src/startup.cpp	2018-05-14 16:24:37.986312087 +0800
+@@ -27,7 +27,7 @@ static BITMAP sBmp;
+ #define STARTUP_TIMER_ID	1011
+ #define STARTUP_TIMER_TIME	200
+ 
+-static int InitDialogBoxProc (HWND hDlg, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT InitDialogBoxProc (HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ 	RECT rc;
+     switch (message) {
+diff -uNrp mdolphin-release-home-2.0.4/src/toolbar.cpp mdolphin-release-home-2.0.4/src/toolbar.cpp
+---  a/src/toolbar.cpp	2017-12-15 16:42:25.000000000 +0800
++++ b/src/toolbar.cpp	2018-05-14 16:23:22.458314266 +0800
+@@ -1114,7 +1114,7 @@ static int chose_page = 1;
+ static bool close_id ;
+ static int alwaysKeyPressCnt = 0;
+ 
+-static int TBWinProc (HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT TBWinProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     RECT    rc1;
+     int     speedy = 0;
+diff -uNrp mdolphin-release-home-2.0.4/src/tooltipwin.cpp mdolphin-release-home-2.0.4/src/tooltipwin.cpp
+--- a/src/tooltipwin.cpp	2017-12-15 16:42:25.000000000 +0800
++++ b/src/tooltipwin.cpp	2018-05-14 16:30:10.930302482 +0800
+@@ -41,7 +41,7 @@ void mdolphin_hideToolTip(HWND hwnd)
+         ShowWindow(hwnd, SW_HIDE);
+ }
+ 
+-static int mdolphin_ToolTipWinProc (HWND hWnd, int message, WPARAM wParam, LPARAM lParam)
++static LRESULT mdolphin_ToolTipWinProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+     switch (message) {
+         case MSG_CREATE:
+--- a/src/toolbar.cpp	2018-05-15 11:08:41.847371803 +0800
++++ b/src/toolbar.cpp	2018-05-15 11:08:02.555370129 +0800
+@@ -531,7 +531,7 @@
+         }
+     }
+     SetBkMode(hdc, BM_OPAQUE); 
+-    SelectFont(hdc, &oldFont);
++//    SelectFont(hdc, &oldFont);
+ #else
+     LOGFONT oldFont;
+     if (g_title_text) {

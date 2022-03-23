@@ -1,0 +1,210 @@
+--- a/animate/animate.h
++++ b/animate/animate.h
+@@ -1,6 +1,7 @@
+ #ifndef ANIMATE_H
+ #define ANIMATE_H
+ 
++#include <pthread.h>
+ #include <minigui/common.h>
+ #include <minigui/fixedmath.h>
+ #include "p-code.h"
+--- a/src/boxy/housekeeper.c
++++ b/src/boxy/housekeeper.c
+@@ -57,7 +57,7 @@ int _housekeeper_menu_undo_callback ( vo
+     switch ( op ) {
+ 
+         case PMP_MI_OP_DEF:
+-            sprintf ( text_buff, _(housekeeper_menu_item_text_id[0]) );
++            sprintf ( text_buff, "%s", _(housekeeper_menu_item_text_id[0]) );
+             return PMP_MI_ST_UPDATED;
+ 
+         case PMP_MI_OP_ENTER:
+@@ -71,7 +71,7 @@ int _housekeeper_menu_restart_callback (
+     switch ( op ) {
+ 
+         case PMP_MI_OP_DEF:
+-            sprintf ( text_buff, _(housekeeper_menu_item_text_id[1]) );
++            sprintf ( text_buff, "%s", _(housekeeper_menu_item_text_id[1]) );
+             return PMP_MI_ST_UPDATED;
+ 
+         case PMP_MI_OP_ENTER:
+--- a/src/ex_wifi/route.c
++++ b/src/ex_wifi/route.c
+@@ -12,6 +12,7 @@
+ #include <netinet/in.h>
+ #include <net/if.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <sys/socket.h>
+ #include <sys/ioctl.h>
+ #include <linux/netlink.h>
+@@ -144,9 +145,9 @@ void parseRoutes (struct nlmsghdr *nlHdr
+     if (strstr((char *)inet_ntoa(rtInfo->dstAddr), "0.0.0.0"))
+     {
+         //Get the default name and ip
+-        sprintf (name, rtInfo->ifName);
++        sprintf (name, "%s", rtInfo->ifName);
+         //printf ("%s\n", rtInfo->ifName);
+-        sprintf (gateway, (char *)inet_ntoa(rtInfo->gateWay));
++        sprintf (gateway, "%s", (char *)inet_ntoa(rtInfo->gateWay));
+     }
+ 
+     //printRoute(rtInfo);
+--- a/src/snake/worm.c
++++ b/src/snake/worm.c
+@@ -78,7 +78,7 @@ int _worm_menu_start_callback( void *con
+     switch( op ) {
+ 
+         case PMP_MI_OP_DEF:
+-            sprintf( text_buff, _(worm_menu_item_text_id[0]) );
++            sprintf( text_buff, "%s", _(worm_menu_item_text_id[0]) );
+             return PMP_MI_ST_UPDATED;
+ 
+         case PMP_MI_OP_ENTER:
+@@ -1558,7 +1558,7 @@ static int WormGameProc( HWND hWnd, int
+                     SetBkColor( hdc, COLOR_black );
+                     SetTextColor( hdc, COLOR_green );
+                     SetPenColor( hdc, COLOR_green );
+-                    snprintf( strText, 50, _(IDS_PMP_WORM_RESTART_GAME) );
++                    snprintf( strText, 50, "%s", _(IDS_PMP_WORM_RESTART_GAME) );
+                     TextOut( hdc, INFO_X, INFO_Y, strText );
+                     //EndPaint( hWnd, hdc );
+                     ReleaseDC( hdc );
+@@ -1681,7 +1681,7 @@ static int WormGameProc( HWND hWnd, int
+                             SetBkColor( hdc, COLOR_black );
+                             SetTextColor( hdc, COLOR_green );
+                             SetPenColor( hdc, COLOR_green );
+-                            snprintf( strText, 50, _(IDS_PMP_WORM_RESTART_GAME) );
++                            snprintf( strText, 50, "%s", _(IDS_PMP_WORM_RESTART_GAME) );
+                             TextOut( hdc, INFO_X, INFO_Y, strText );
+                             //EndPaint( hWnd, hdc );
+                             ReleaseDC( hdc );
+@@ -1712,7 +1712,7 @@ static int WormGameProc( HWND hWnd, int
+                             SetBkColor( hdc, COLOR_black );
+                             SetTextColor( hdc, COLOR_green );
+                             SetPenColor( hdc, COLOR_green );
+-                            snprintf( strText, 50, _(IDS_PMP_WORM_RESTART_GAME) );
++                            snprintf( strText, 50, "%s", _(IDS_PMP_WORM_RESTART_GAME) );
+                             TextOut( hdc, INFO_X, INFO_Y, strText );
+                             //EndPaint( hWnd, hdc );
+                             ReleaseDC( hdc );
+@@ -1744,7 +1744,7 @@ static int WormGameProc( HWND hWnd, int
+                             SetBkColor( hdc, COLOR_black );
+                             SetTextColor( hdc, COLOR_green );
+                             SetPenColor( hdc, COLOR_green );
+-                            snprintf( strText, 50, _(IDS_PMP_WORM_RESTART_GAME) );
++                            snprintf( strText, 50, "%s", _(IDS_PMP_WORM_RESTART_GAME) );
+                             TextOut( hdc, INFO_X, INFO_Y, strText );
+                             //EndPaint( hWnd, hdc );
+                             ReleaseDC( hdc );
+@@ -1775,7 +1775,7 @@ static int WormGameProc( HWND hWnd, int
+                             SetBkColor( hdc, COLOR_black );
+                             SetTextColor( hdc, COLOR_green );
+                             SetPenColor( hdc, COLOR_green );
+-                            snprintf( strText, 50, _(IDS_PMP_WORM_RESTART_GAME) );
++                            snprintf( strText, 50, "%s", _(IDS_PMP_WORM_RESTART_GAME) );
+                             TextOut( hdc, INFO_X, INFO_Y, strText );
+                             //EndPaint( hWnd, hdc );
+                             ReleaseDC( hdc );
+--- a/ime/softkeyboard/common.c
++++ b/ime/softkeyboard/common.c
+@@ -86,7 +86,7 @@ void strcpylower(char* buf, const char*
+ 	*buf = 0;
+ }
+ 
+-inline BOOL hit_rect(RECT rect, POINT p)
++BOOL hit_rect(RECT rect, POINT p)
+ {
+ 	if(p.x >= rect.left && p.x <= rect.right
+ 			&& p.y >= rect.top && p.y <= rect.bottom)
+--- a/src/calculator/calc.c
++++ b/src/calculator/calc.c
+@@ -232,7 +232,7 @@ static int display_led_digits (HDC hdc,
+ }
+ 
+ 
+-inline void calc_InvalidDiaplayRect(HWND hwnd) 
++void calc_InvalidDiaplayRect(HWND hwnd) 
+ {
+     RECT rc;
+     
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -1,5 +1,6 @@
+ TOP_DIR=..
+ INCLUDES = -I. -I../include -I.. -I../ime/
++LDFLAGS+=-L../animate/common_animates/.libs -L../animate/.libs -L../ime/.libs
+ LIBS+=-lanimate -lcommon_animates -lsoftkeywin -lminigui_procs
+ 
+ bin_PROGRAMS = mginit
+@@ -9,6 +10,7 @@ data_DATA=iphone-like-demo.etc animates.
+ 
+ SUBDIRS = agg calculator picture watch others ebctrl ex_wifi memo snake boxy weatherforecast iphone-animates calendar scrnsaver systemsetting res 
+ 
++mginit_LDFLAGS=-L../animate/common_animates/.libs -L../animate/.libs -L../ime/.libs
+ mginit_SOURCES= \
+ 		dragmanager.c icon_layout.c desktop-layout.c layout.c \
+ 		layouthlp.c mginit.c mgb_tswin.c phone_icon.c sence.c desktop.c \
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -119,7 +119,7 @@ INSTALL_DATA = @INSTALL_DATA@
+ INSTALL_PROGRAM = @INSTALL_PROGRAM@
+ INSTALL_SCRIPT = @INSTALL_SCRIPT@
+ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+-LDFLAGS = @LDFLAGS@
++LDFLAGS = @LDFLAGS@ -L../animate/common_animates/.libs -L../animate/.libs -L../ime/.libs
+ LIBOBJS = @LIBOBJS@
+ LIBS = @LIBS@ -lanimate -lcommon_animates -lsoftkeywin -lminigui_procs
+ LIBTOOL = @LIBTOOL@
+@@ -196,6 +196,7 @@ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+ TOP_DIR = ..
+ INCLUDES = -I. -I../include -I.. -I../ime/
++mginit_LDFLAGS= -L../animate/common_animates/.libs -L../animate/.libs -L../ime/.libs
+ data_DATA = iphone-like-demo.etc animates.pcc
+ SUBDIRS = agg calculator picture watch others ebctrl ex_wifi memo snake boxy weatherforecast iphone-animates calendar scrnsaver systemsetting res 
+ mginit_SOURCES = \
+--- a/src/memo/Makefile.am
++++ b/src/memo/Makefile.am
+@@ -2,7 +2,7 @@ INCLUDES = -I../ -I../../ -I../ebctrl -I
+ 
+ bin_PROGRAMS=memo
+ 
+-memo_LDFLAGS = -L../ebctrl -L../../ime ./../agg/.libs/libagg.a 
++memo_LDFLAGS = -L../ebctrl -L../../ime ./../agg/.libs/libagg.a -L../../animate/common_animates/.libs -L../../animate/.libs
+ memo_LDADD = -lebctrl -lanimate -lcommon_animates -lstdc++
+ 
+ memo_SOURCES= memo.c custom_scroll.c memo.h ../sharedbuff_api.c ../sfkbd_client.c
+--- a/src/memo/Makefile.in
++++ b/src/memo/Makefile.in
+@@ -185,7 +185,7 @@ target_vendor = @target_vendor@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+ INCLUDES = -I../ -I../../ -I../ebctrl -I../../include -I../../animate -I../../ime -I./../agg/
+-memo_LDFLAGS = -L../ebctrl -L../../ime ./../agg/.libs/libagg.a 
++memo_LDFLAGS = -L../ebctrl -L../../ime ./../agg/.libs/libagg.a -L../../animate/common_animates/.libs -L../../animate/.libs
+ memo_LDADD = -lebctrl -lanimate -lcommon_animates -lstdc++
+ memo_SOURCES = memo.c custom_scroll.c memo.h ../sharedbuff_api.c ../sfkbd_client.c
+ SUBDIRS = res
+--- a/src/picture/Makefile.am
++++ b/src/picture/Makefile.am
+@@ -2,7 +2,7 @@ INCLUDES = -I../ -I../../include -I../..
+ 
+ bin_PROGRAMS = picture
+ 
+-picture_LDFLAGS = ./../agg/.libs/libagg.a 
++picture_LDFLAGS = ./../agg/.libs/libagg.a -L../../animate/common_animates/.libs -L../../animate/.libs
+ picture_LDADD = -lanimate -lcommon_animates -lstdc++
+ 
+ picture_SOURCES = picture.c picture.h ../sharedbuff_api.c
+--- a/src/picture/Makefile.in
++++ b/src/picture/Makefile.in
+@@ -184,7 +184,7 @@ target_vendor = @target_vendor@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+ INCLUDES = -I../ -I../../include -I../../animate -I../../animate -I./../agg/
+-picture_LDFLAGS = ./../agg/.libs/libagg.a 
++picture_LDFLAGS = ./../agg/.libs/libagg.a -L../../animate/common_animates/.libs -L../../animate/.libs
+ picture_LDADD = -lanimate -lcommon_animates -lstdc++
+ picture_SOURCES = picture.c picture.h ../sharedbuff_api.c
+ SUBDIRS = view

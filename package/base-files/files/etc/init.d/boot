@@ -1,0 +1,187 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=10
+STOP=98
+
+uci_apply_defaults() {
+	. /lib/functions/system.sh
+
+	cd /etc/uci-defaults || return 0
+	files="$(ls)"
+	[ -z "$files" ] && return 0
+	mkdir -p /tmp/.uci
+	for file in $files; do
+		( . "./$(basename $file)" ) && rm -f "$file"
+	done
+	uci commit
+}
+
+link_by_name()
+{
+	local parts
+
+	[ -d /dev/by-name -o -h /dev/by-name/rootfs ] || {
+		mkdir -p -m 755 /dev/by-name
+		parts="$(grep -o 'partitions=[^ ]*' /proc/cmdline)"
+		parts=${parts##*=}
+		part=" "
+
+		if [ -n "${parts}" ]; then
+			while [ "$part" != "$parts" ]
+			do
+					part=${parts%%:*}
+					ln -s "/dev/${part#*@}" "/dev/by-name/${part%@*}"
+					parts=${parts#*:}
+			done
+		# partitions may not here, but we still get them for mtd-ubi platform.
+		elif which ubinfo >/dev/null && grep -q "ubi.mtd" /proc/cmdline; then
+			for dev in $(find /dev -name "ubi[0-9]*_[0-9]*")
+			do
+				target="$(ubinfo ${dev} | awk '/^Name:/{print $2}')"
+				[ -z "${target}" ] && continue
+				ln -s "${dev}" "/dev/by-name/${target}"
+			done
+		fi
+	}
+}
+
+mount_single_app()
+{
+	/usr/sbin/fsck.ext4 -y /dev/by-name/app &>/dev/null
+	/bin/mount /dev/by-name/app /mnt/app
+}
+
+# for ota
+# when appAB_now=A，update app_sub, set appAB_next=B, reboot
+# when appAB_now=B，update app, set appAB_next=A, reboot
+mount_dual_app()
+{
+	mkdir -p /var/lock
+	local appAB_next=$(fw_printenv -n appAB_next)
+	local appAB_now_in_env=$(fw_printenv -n appAB_now)
+	local first_app=app
+	local second_app=app_sub
+	local applimit=$(fw_printenv -n applimit 2>/dev/null)
+	[ x"$applimit" != x"" -a x"$applimit" != x"0" ] && {
+		local appcount=$(fw_printenv -n appcount)
+		let appcount+=1
+		[ "$appcount" -gt "$applimit" ] && {
+			echo "Warning: applimit ($applimit) exceeded. Switch app partition."
+			if [ x"$appAB_next" = x"A" ]; then
+				appAB_next=B
+			elif [ x"$appAB_next" = x"B" ]; then
+				appAB_next=A
+			else
+				echo "check appAB_next error: appAB_next=$appAB_next"
+				appAB_next=A
+			fi
+			fw_setenv appAB_next $appAB_next
+			echo "Switch appAB to $appAB_next"
+			appcount=1
+		}
+		fw_setenv appcount $appcount
+	}
+
+	if [ x"$appAB_next" = x"A" ]; then
+		first_app=app
+		second_app=app_sub
+	elif [ x"$appAB_next" = x"B" ]; then
+		first_app=app_sub
+		second_app=app
+	else
+		echo "check appAB_next error: appAB_next=$appAB_next"
+	fi
+
+	/usr/sbin/fsck.ext4 -y /dev/by-name/$first_app &> /dev/null
+	/bin/mount -t ext4 /dev/by-name/$first_app /mnt/app && {
+		echo "mount $first_app success"
+		if [ x"$first_app" = x"app" ]; then
+			appAB_now=A
+		elif [ x"$first_app" = x"app_sub" ]; then
+			appAB_now=B
+		fi
+		[ x"$appAB_now" != x"$appAB_now_in_env" ] && {
+			fw_setenv appAB_now $appAB_now
+		}
+		return
+	}
+
+	echo "mount $first_app fail, now try mount $second_app"
+
+	#mount first_app fail, try second_app
+	/usr/sbin/fsck.ext4 -y /dev/by-name/$second_app &> /dev/null
+	/bin/mount -t ext4 /dev/by-name/$second_app /mnt/app && {
+		echo "mount $second_app success"
+		if [ x"$second_app" = x"app" ]; then
+			appAB_now=A
+		elif [ x"$second_app" = x"app_sub" ]; then
+			appAB_now=B
+		fi
+		[ x"$appAB_now" != x"$appAB_now_in_env" ] && {
+			fw_setenv appAB_now $appAB_now
+		}
+		return
+	}
+
+	echo "mount app fail"
+}
+
+mount_app()
+{
+	[ -L /dev/by-name/app ] || return
+
+	if [ -L /dev/by-name/app_sub ]; then
+		mount_dual_app
+	else
+		mount_single_app
+	fi
+}
+
+
+boot() {
+	[ -f /proc/mounts ] || /sbin/mount_root
+	[ -f /proc/jffs2_bbc ] && echo "S" > /proc/jffs2_bbc
+	[ -f /proc/net/vlan/config ] && vconfig set_name_type DEV_PLUS_VID_NO_PAD
+
+	mkdir -p /var/run
+	mkdir -p /var/log
+	mkdir -p /var/lock
+	mkdir -p /var/state
+	mkdir -p /var/tmp
+	mkdir -p /tmp/.uci
+	chmod 0700 /tmp/.uci
+	touch /var/log/wtmp
+	touch /var/log/lastlog
+	touch /tmp/resolv.conf.auto
+	ln -sf /tmp/resolv.conf.auto /tmp/resolv.conf
+	grep -q debugfs /proc/filesystems && /bin/mount -o noatime -t debugfs debugfs /sys/kernel/debug
+	[ "$FAILSAFE" = "true" ] && touch /tmp/.failsafe
+
+	link_by_name
+
+	/sbin/kmodloader
+
+	# allow wifi modules time to settle
+	#sleep 1
+
+	/sbin/wifi detect > /tmp/wireless.tmp
+	[ -s /tmp/wireless.tmp ] && {
+		cat /tmp/wireless.tmp >> /etc/config/wireless
+	}
+	rm -f /tmp/wireless.tmp
+
+	/bin/board_detect
+	uci_apply_defaults
+
+	# temporary hack until configd exists
+	/sbin/reload_config
+
+	# create /dev/root if it doesn't exist
+	[ -e /dev/root -o -h /dev/root ] || {
+		rootdev=$(awk 'BEGIN { RS=" "; FS="="; } $1 == "root" { print $2 }' < /proc/cmdline)
+		[ -n "$rootdev" ] && ln -s "$rootdev" /dev/root
+	}
+
+	mount_app
+}

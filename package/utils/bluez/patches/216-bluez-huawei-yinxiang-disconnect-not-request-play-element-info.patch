@@ -1,0 +1,49 @@
+diff --git a/profiles/audio/avrcp.c b/profiles/audio/avrcp.c
+index 0269a4a..5960ed4 100644
+--- a/profiles/audio/avrcp.c
++++ b/profiles/audio/avrcp.c
+@@ -3667,6 +3667,11 @@ static gboolean avrcp_get_capabilities_resp(struct avctp *conn,
+ 	if (!session->controller)
+ 		return FALSE;
+ 
++	if (!btd_device_has_uuid(session->dev, A2DP_SOURCE_UUID)) {
++            DBG("device has not source return\n");
++            return false;
++        }
++
+ 	if (!(events & (1 << AVRCP_EVENT_SETTINGS_CHANGED)))
+ 		avrcp_list_player_attributes(session);
+ 
+diff --git a/src/device.c b/src/device.c
+index b62c88f..d2aa68e 100644
+--- a/src/device.c
++++ b/src/device.c
+@@ -5853,6 +5853,16 @@ void btd_device_add_uuid(struct btd_device *device, const char *uuid)
+ 						DEVICE_INTERFACE, "UUIDs");
+ }
+ 
++bool btd_device_has_uuid(struct btd_device *device, const char *uuid){
++        if (g_slist_find_custom(device->uuids, uuid, bt_uuid_strcmp)) {
++            DBG("have uuid is %s \n",uuid);
++            return true;
++        } else {
++            DBG("not have uuid is %s \n",uuid);
++           return false;
++       }
++}
++
+ static sdp_list_t *read_device_records(struct btd_device *device)
+ {
+ 	char local[18], peer[18];
+diff --git a/src/device.h b/src/device.h
+index db10827..caec072 100644
+--- a/src/device.h
++++ b/src/device.h
+@@ -74,6 +74,7 @@ void btd_device_gatt_set_service_changed(struct btd_device *device,
+ 						uint16_t start, uint16_t end);
+ bool device_attach_att(struct btd_device *dev, GIOChannel *io);
+ void btd_device_add_uuid(struct btd_device *device, const char *uuid);
++bool btd_device_has_uuid(struct btd_device *device, const char *uuid);
+ void device_add_eir_uuids(struct btd_device *dev, GSList *uuids);
+ void device_set_manufacturer_data(struct btd_device *dev, GSList *list);
+ void device_set_service_data(struct btd_device *dev, GSList *list);

@@ -1,0 +1,27 @@
+From 73a05cc95df0e82f398bccdc242c8da44ccd0bcc Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 18:55:39 +0800
+Subject: [PATCH 7/8] weston: Downgrade gdm verstion to 1.0
+
+Mali GBM driver's version is 1.0, this can make sure weston define
+HAVE_GBM_FD_IMPORT macro;
+---
+ configure.ac | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index d42cc2e..79923cd 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -206,7 +206,7 @@ AM_CONDITIONAL(ENABLE_DRM_COMPOSITOR, test x$enable_drm_compositor = xyes)
+ if test x$enable_drm_compositor = xyes; then
+   AC_DEFINE([BUILD_DRM_COMPOSITOR], [1], [Build the DRM compositor])
+   PKG_CHECK_MODULES(DRM_COMPOSITOR, [libudev >= 136 libdrm >= 2.4.30 gbm mtdev >= 1.1.0])
+-  PKG_CHECK_MODULES(DRM_COMPOSITOR_GBM, [gbm >= 10.2],
++  PKG_CHECK_MODULES(DRM_COMPOSITOR_GBM, [gbm >= 1.0],
+ 		    [AC_DEFINE([HAVE_GBM_FD_IMPORT], 1, [gbm supports dmabuf import])],
+ 		    [AC_MSG_WARN([gbm does not support dmabuf import, will omit that capability])])
+ fi
+-- 
+1.9.1
+

@@ -1,0 +1,236 @@
+if PACKAGE_eyesee-mpp-middleware
+
+choice
+	prompt "select sensor"
+	default imx386
+	help
+	  tell eyesee-mpp-middleware the used sensor type.
+
+config imx317
+	bool "use sensor imx317"
+
+config imx278
+	bool "use sensor imx278"
+
+config imx258
+	bool "use sensor imx258"
+
+config imx386
+	bool "use sensor imx386"
+	help
+	  imx386 is used commonly in sdv product.
+
+config sc2232
+	bool "use sensor sc2232"
+	help
+	  sc2232 is for ipc.
+
+config imx335
+	bool "use sensor imx335"
+	help
+	  imx335 is for test.
+
+config gc2053
+	bool "use sensor gc2053"
+	help
+	  gc2053 is for test.
+
+endchoice
+
+choice
+	prompt "select fwrite method"
+	default mpp_fwrite_method_vfs
+	help
+	  when writing file in recording, recorder can use vfs mode
+	  or directIO mode. vfs mode is common and we recommend it,
+	  directIO mode has its special advantage: don't use memory as
+	  file buffer, so it is useful when system memory is very low,
+	  but we don't recommend it unless there is no other solutions.
+
+config mpp_fwrite_method_vfs
+	bool "vfs"
+	help
+	  It is a common method, recommend it.
+
+config mpp_fwrite_method_directIO
+	bool "directIO"
+	help
+	  It can run in small memory, but don't recommend using this mode.
+	  Be careful to select it.
+
+endchoice
+
+config mpp_hw_display
+	bool "use hw display method"
+	help
+	  hw_display method is used to show video frame directly on hw layer.
+	  It will bypass gpu.
+
+config mpp_vi
+	bool "enable vi component"
+	help
+	  vi(video input) captures csi frame.
+
+config mpp_vo
+	bool "enable vo component"
+	help
+	  vo(video output) is used to display video frame.
+
+config mpp_textenc
+	bool "enable textenc component"
+	help
+	  textenc is used to make subtitle when record video file.
+
+config mpp_venc
+	bool "enable venc component"
+	help
+	  venc is used to encode video frame.
+
+config mpp_vdec
+	bool "enable vdec component"
+	help
+	  vdec is used to decode video frame.
+
+config mpp_muxer
+	bool "enable muxer component"
+	help
+	  muxer is used to wrap video frame and audio frame.
+
+config mpp_demuxer
+	bool "enable demuxer component"
+	help
+	  demuxer is used to demux video file to video stream, audio stream and subtitle stream.
+
+config mpp_ise
+	bool "enable ise component"
+	help
+	  ise is Image Stitching Engine.
+
+config mpp_ise_mo
+	bool "enable ise mo"
+	depends on mpp_ise
+	help
+	  enable ise mo module
+
+config mpp_ise_bi
+	bool "enable ise bi"
+	depends on (PLATFORM_v5 && mpp_ise)
+	help
+	  enable ise bi module
+
+config mpp_ise_bi_soft
+	bool "enable ise bi soft"
+	depends on (PLATFORM_v5 && mpp_ise)
+	help
+	  enable ise bi soft module
+
+config mpp_ise_sti
+	bool "enable ise sti"
+	depends on (PLATFORM_v5 && mpp_ise)
+	help
+	  enable ise sti module
+
+config mpp_eis
+	bool "enable eis component"
+	depends on PLATFORM_v316 || PLATFORM_v536 || PLATFORM_v313 || PLATFORM_v833 || PLATFORM_v831
+	help
+	  eis is Electronic Image Stabilization.
+
+config mpp_mod
+	bool "enable mod"
+	depends on PLATFORM_v5
+	help
+	  mod is Motion Object Detection.
+
+config mpp_motion_detect_soft
+	bool "enable soft motion detect"
+	depends on PLATFORM_v316 || PLATFORM_v536 || PLATFORM_v313 || PLATFORM_v533
+	help
+	  motion detect is detect something motion in video, software implementation.
+
+config mpp_vlpr
+	bool "enable vlpr"
+	depends on PLATFORM_v5
+	help
+	  vlpr is Vehicle License Plate Recognition.
+
+config mpp_adas_detect
+	bool "enable adas detect"
+	help
+	  adas detect is detect someting adas in video.
+config mpp_adas_detect_v2
+	bool "enable adas_v2 detect"
+	help
+	  adas_v2 detect is detect someting adas_v2 in video.
+config mpp_hcnt
+	bool "enable hcnt"
+	depends on PLATFORM_v5
+	help
+	  hcnt is Human CouNT.
+
+config mpp_bdii
+	bool "enable bdii"
+	depends on PLATFORM_v5
+	help
+	  bdii is Binocular Depth Information Image.
+
+config mpp_eveface
+	bool "enable eveface"
+	depends on PLATFORM_v5
+	help
+	  eveface is Face Detection basing on eve.
+
+config mpp_aec
+	bool "enable aec"
+	help
+	  aec is acoustic echo cancellation.
+
+config mpp_ans
+	bool "enable ans"
+	help
+	  ans is acoustic noise suppression.
+choice
+	prompt "select specified ans library"
+	depends on mpp_ans
+	default mpp_ans_libwebrtc
+	help
+	  two ans libraries are available,select one
+
+	config mpp_ans_libwebrtc
+		bool "enable ans library of webrtc"
+		help
+		  use ans libraty from webrtc
+	config mpp_ans_liblstm
+		bool "enable ans library of lstm"
+		help
+		  use ans library from lstm
+endchoice
+config mpp_uvc
+	bool "support usb video camera, enable uvc component"
+	help
+	  enable support for usb video camera.
+
+config mpp_iommu
+	bool "enable iommu"
+	depends on PLATFORM_v833 || PLATFORM_v831 || PLATFORM_v533
+	default y
+	help
+	  iommu can help improve memory usage.
+
+config mpp_compile_static_lib
+	bool "compile static lib"
+	help
+	  compile static lib of all capable modules.
+
+config mpp_compile_dynamic_lib
+	bool "compile dynamic lib"
+	help
+	  compile dynamic lib of all capable modules.
+
+config mpp_systrace
+	bool "use aw systrace to analyse"
+	help
+	  awsystrace will use ftrace to collect system running info.
+	  It need to enable kernel ftrace first.
+
+endif

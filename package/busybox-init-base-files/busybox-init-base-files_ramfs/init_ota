@@ -1,0 +1,98 @@
+#!/bin/sh
+################################## functions ##################################
+mkdir -p /proc /sys /dev /mnt /tmp /opt /root /run
+
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+mount -t devtmpfs none /dev
+
+exec < /dev/console > /dev/console 2>&1
+
+for parm in $(cat /proc/cmdline); do
+	case $parm in
+	ramfs)
+		RAMFS_MODE=1
+		;;
+	root=*)
+		ROOT_DEVICE=`echo $parm | awk -F\= '{print $2}'`
+		;;
+	console=*)
+		CONSOLE_DEVICE=`echo $parm | awk -F\= '{print $2}' | awk -F\, '{print $1}'`
+		;;
+	gpt=*)
+		GPT_SUPPORT=`echo $parm | awk -F\= '{print $2}'`
+		;;
+	ota=*)
+		OTA_SUPPORT=`echo $parm | awk -F\= '{print $2}'`
+		;;
+	esac
+done
+
+#mkfs_jffs2() <device in /dev/by-name>
+mkfs_jffs2() {
+	# format to jffs2
+	local erase_block=$(cat /proc/mtd | grep "$(basename $1)" | awk '{print $3}')
+	mkdir -p /tmp/jffs2.dir/tmp
+	mkfs.jffs2 -p -e 0x${erase_block} -d /tmp/jffs2.dir -o /tmp/jffs2.img
+	dd if=/tmp/jffs2.img of=$1
+	rm -rf /tmp/jffs2.img /tmp/jffs2.dir
+}
+
+set_parts_by_name() {
+	# create by-name
+	local parts part
+	mkdir -p /dev/by-name
+	parts=$(sed 's/ /\n/g' /proc/cmdline \
+		| awk -F'=' '/^partitions/{print $2}')
+	for part in $(echo ${parts} | sed 's/:/ /g')
+	do
+		[ ! -e /dev/${part#*@} ] && mdev -s
+		ln -s "/dev/${part#*@}" "/dev/by-name/${part%@*}"
+	done
+}
+
+mount_UDISK()
+{
+    local root_dev="$(readlink /dev/by-name/rootfs)"
+    mkdir -p /mnt/UDISK
+    # fix UDISK
+    if [ -h /dev/by-name/UDISK ]; then
+        echo ${root_dev} | grep -q "mtdblock" \
+            || /usr/sbin/fsck.ext4 -y /dev/by-name/UDISK &>/dev/null
+    fi
+
+    # mount UDISK
+    if [ -h /dev/by-name/UDISK -a -d /mnt/UDISK ]; then
+        case "${root_dev}" in
+            /dev/mtdblock*)
+                mount -t jffs2 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                if [ "$?" -ne "0" ]; then
+                    mkfs_jffs2 "/dev/by-name/UDISK"
+                    mount -t jffs2 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                fi
+                ;;
+            *)
+                mount -t ext4 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                if [ "$?" -ne "0" ]; then
+                    mkfs.ext4 /dev/by-name/UDISK >/dev/null
+                    mount -t ext4 /dev/by-name/UDISK /mnt/UDISK 2>/dev/null
+                fi
+                ;;
+        esac
+    fi
+
+    # enable hotplug
+    echo /sbin/mdev > /proc/sys/kernel/hotplug
+}
+#----------------------------------------------------------------
+
+set_parts_by_name
+
+mount_UDISK
+
+/sbin/aw_ota_apply_img.sh
+
+exec /bin/sh
+
+
+

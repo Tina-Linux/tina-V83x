@@ -1,0 +1,12 @@
+--- a/wolfssl/openssl/ssl.h
++++ b/wolfssl/openssl/ssl.h
+@@ -854,7 +854,8 @@ typedef STACK_OF(WOLFSSL_ASN1_OBJECT) GE
+ #define SSL_TLSEXT_ERR_NOACK            alert_warning
+ #define TLSEXT_NAMETYPE_host_name       WOLFSSL_SNI_HOST_NAME
+
+-#define SSL_set_tlsext_host_name        wolfSSL_set_tlsext_host_name
++#define SSL_set_tlsext_host_name(x, y) wolfSSL_UseSNI(x, WOLFSSL_SNI_HOST_NAME, y, strlen(y))
++
+ #define SSL_get_servername              wolfSSL_get_servername
+ #define SSL_set_SSL_CTX                 wolfSSL_set_SSL_CTX
+ #define SSL_CTX_get_verify_callback     wolfSSL_CTX_get_verify_callback

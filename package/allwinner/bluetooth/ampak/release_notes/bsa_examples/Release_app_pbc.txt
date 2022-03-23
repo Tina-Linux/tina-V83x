@@ -1,0 +1,23 @@
+
+This package contains the Bluetooth Phone Book Profile Client (app_pbc) on Linux.
+
+To compile the Bluetooth PBC sample application you have to type:
+> cd 3rdparty/embedded/std/linux/app_pbc/build
+> make          <= For PC/Linux target (default)
+> make CPU=mips     <= For MIPS/Linux target
+
+For PC/Linux target, the application executable is located in build/x86 folder.
+To execute it, you have to go in the folder used to start the server application:
+> cd  ../../server/build/
+> ../../app_pbc/build/x86/app_pbc
+
+Both server and applications need to access the named socket file (bt-daemon-socket),
+which is created when the server is started.
+
+For mips based embeded target, the application executable is located in build/mips folder.
+To execute it, you have to copy and to execute it on the target platform (from the same location used to execute the bsa_server).
+
+Ensure that the application side has been built with the following setting in app_pbc.txt
+    BSA_PBC_INCLUDED = TRUE
+Ensure that the server side has been built with the following setting in bte_server.txt
+    BTA_PBC_INCLUDED = TRUE

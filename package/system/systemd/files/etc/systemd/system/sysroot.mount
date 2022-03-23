@@ -1,0 +1,12 @@
+[Unit]
+Requires=overlay.mount
+Before=initrd-root-fs.target
+After=overlay.mount
+ConditionPathExists=/etc/initrd-release
+DefaultDependencies=false
+
+[Mount]
+What=overlayfs:/sysroot
+Where=/sysroot
+Type=overlayfs
+Options=noatime,lowerdir=/,upperdir=/overlay

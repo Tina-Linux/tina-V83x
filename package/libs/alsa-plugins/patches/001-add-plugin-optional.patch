@@ -1,0 +1,22 @@
+Index: alsa-plugins-1.1.4/Makefile.am
+===================================================================
+--- alsa-plugins-1.1.4.orig/Makefile.am
++++ alsa-plugins-1.1.4/Makefile.am
+@@ -1,4 +1,16 @@
+-SUBDIRS = oss mix usb_stream arcam-av doc
++SUBDIRS = mix doc
++if HAVE_OSS
++SUBDIRS += oss
++endif
++if HAVE_MIX
++SUBDIRS += mix
++endif
++if HAVE_USBSTREAM
++SUBDIRS += usb_stream
++endif
++if HAVE_ARCAMAV
++SUBDIRS += arcam-av
++endif
+ if HAVE_JACK
+ SUBDIRS += jack
+ endif

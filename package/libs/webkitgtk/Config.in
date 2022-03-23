@@ -1,0 +1,29 @@
+if PACKAGE_webkitgtk
+
+config WEBKITGTK_HTTPS
+	bool "HTTPS support"
+	select PACKAGE_ca_certificates
+	select PACKAGE_libsoup_ssl
+	help
+	  Enable HTTPS protocol support.
+
+config WEBKITGTK_MULTIMEDIA
+	bool "multimedia support"
+	select PACKAGE_gstreamer1
+	select PACKAGE_gst1_plugins_base
+	select PACKAGE_gst1_plugins_base_plugin_alsa
+	select PACKAGE_gst1_plugins_base_plugin_app
+	select PACKAGE_gst1_plugins_base_plugin_audioconvert
+	select PACKAGE_gst1_plugins_base_plugin_audioresample
+	select PACKAGE_gst1_plugins_base_plugin_playback
+	select PACKAGE_gst1_plugins_base_plugin_videoconvert
+	select PACKAGE_gst1_pugins_base_plugin_videoscale
+	select PACKAGE_gst1_plugins_base_plugin_volume
+	select PACKAGE_gst1_plugins_good
+	select PACKAGE_gst1_plugins_good_plugin_isomp4
+	select PACKAGE_gst1_plugins_good_plugin_rtsp
+	select PACKAGE_gst1_libav
+	help
+	  This option pulls in all of the required dependencies
+	  to enable multimedia (video/audio) support.
+endif

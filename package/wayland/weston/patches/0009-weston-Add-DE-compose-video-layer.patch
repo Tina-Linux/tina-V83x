@@ -1,0 +1,96 @@
+From 1dafa00891b79ea9f13c9fa96ffc8973face0ae9 Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 19:05:33 +0800
+Subject: [PATCH 8/8] weston: Add DE compose video layer
+
+1. Add choosing right DE hardware plane for sprites(UI & Video);
+2. Now video layer can support NV21 format;
+---
+ libweston/compositor-drm.c | 43 +++++++++++++++++++++++++++++++------------
+ 1 file changed, 31 insertions(+), 12 deletions(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index a5afe76..689e836 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -444,6 +444,13 @@ drm_fb_get_from_bo(struct gbm_bo *bo,
+ 		pitches[0] = fb->stride;
+ 		offsets[0] = 0;
+ 
++		if (format == DRM_FORMAT_NV21) {
++			handles[1] = fb->handle;
++			pitches[1] = fb->stride;
++			offsets[1] = fb->stride * height;
++			fb->size = fb->stride * height * 3 / 2;
++		}
++
+ 		ret = drmModeAddFB2(backend->drm.fd, fb->width, fb->height,
+ 				    format, handles, pitches, offsets,
+ 				    &fb->fb_id, 0);
+@@ -1100,16 +1107,6 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 	if (ec->plane_zorder <= 1)
+ 		return NULL;
+ 
+-	wl_list_for_each(s, &b->sprite_list, link) {
+-		if (!drm_sprite_crtc_supported(output, s))
+-			continue;
+-
+-		if (!s->next) {
+-			found = 1;
+-			break;
+-		}
+-	}
+-
+ 	/* No sprites available */
+ 	if (!found)
+ 		return NULL;
+@@ -1131,6 +1128,8 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 			.format = dmabuf->attributes.format
+ 		};
+ 
++/* If the video layer comes, the n_planes must > 1, so comment it */
++#if 0
+                 /* XXX: TODO:
+                  *
+                  * Currently the buffer is rejected if any dmabuf attribute
+@@ -1144,6 +1143,7 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+                     dmabuf->attributes.offset[0] != 0 ||
+ 		    dmabuf->attributes.flags)
+ 			return NULL;
++#endif
+ 
+ 		bo = gbm_bo_import(b->gbm, GBM_BO_IMPORT_FD, &gbm_dmabuf,
+ 				   GBM_BO_USE_SCANOUT);
+@@ -1157,8 +1157,27 @@ drm_output_prepare_overlay_view(struct drm_output *output,
+ 	if (!bo)
+ 		return NULL;
+ 
+-	format = drm_output_check_sprite_format(s, ev, bo);
+-	if (format == 0) {
++	/*
++	* Why move choose right sprite code after gbm_bo_import():
++	* Because you need get bo->format imformation to choose right sprite;
++	*/
++	wl_list_for_each(s, &b->sprite_list, link) {
++		if (!drm_sprite_crtc_supported(output, s->possible_crtcs))
++			continue;
++
++		/* choose perfect format plane for this sprite */
++		format = drm_output_check_sprite_format(s, ev, bo);
++		if (!format)
++			continue;
++
++		if (!s->next) {
++			found = 1;
++			break;
++		}
++	}
++
++	/* No sprites available */
++	if (!found) {
+ 		gbm_bo_destroy(bo);
+ 		return NULL;
+ 	}
+-- 
+1.9.1
+

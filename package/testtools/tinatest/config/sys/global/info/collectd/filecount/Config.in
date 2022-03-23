@@ -1,0 +1,36 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_ENABLE
+    bool "collectd_filecount"
+    select PACKAGE_collectd-mod-filecount
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_DIRECTORY
+        string "direcotry"
+        default "/mnt/UDISK"
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_INCLUDE_HIDDEN
+        bool "include_hidden"
+        default n
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_INCLUDE_SUBDIR
+        bool "include_subdir"
+        default n
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_MATCH
+        bool "match"
+        default y
+
+    if TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_MATCH
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_MATCH_NAME
+            string "name"
+            default "ALL"
+
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_MATCH_SIZE
+            string "size"
+            default "ALL"
+
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_FILECOUNT_MATCH_MTIME
+            string "mtime"
+            default "ALL"
+    endif
+endif

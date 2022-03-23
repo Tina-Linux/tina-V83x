@@ -1,0 +1,87 @@
+--- a/include/window.h	2019-03-22 11:37:41.000000000 +0800
++++ b/include/window.h	2019-03-22 11:18:39.000000000 +0800
+@@ -9920,6 +9920,8 @@
+ 
+     /** @} end of fns */
+ 
++MG_EXPORT int GUIAPI DoubleBufferEnable(BOOL enable);
++MG_EXPORT void GUIAPI YOffsetBufferEnable(BOOL enable);
+ #ifdef __cplusplus
+ }
+ #endif  /* __cplusplus */
+diff --git a/src/gui/window.c b/src/gui/window.c
+index d0b97fd..46cff11 100644
+--- a/src/gui/window.c
++++ b/src/gui/window.c
+@@ -3913,9 +3913,9 @@ BOOL GUIAPI DestroyMainWindow (HWND hWnd)
+ }
+ 
+ /*************************** Main window creation ****************************/
+-void GUIAPI DoubleBufferEnable(BOOL enable)
++int GUIAPI DoubleBufferEnable(BOOL enable)
+ {
+-	GAL_DoubleBufferEnable(enable);
++	return GAL_DoubleBufferEnable(enable);
+ }
+ 
+ void GUIAPI YOffsetBufferEnable(BOOL enable)
+diff --git a/src/newgal/fbcon/fbvideo.c b/src/newgal/fbcon/fbvideo.c
+index cca9de3..be7bfdd 100644
+--- a/src/newgal/fbcon/fbvideo.c
++++ b/src/newgal/fbcon/fbvideo.c
+@@ -1270,8 +1270,10 @@ static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable)
+ {
+ 	unsigned int args[2];
+ 	args[0] = enable;
++	FB_LockHWSurface(this, current);
+ 	if (ioctl(console_fd, FBIO_ENABLE_CACHE, args) < 0) {
+ 		GAL_SetError("FBIO_ENABLE_CACHE disable failed\n");
++		return (-1);
+ 	}
+ 	if (mapped_mem) {
+ 		munmap(mapped_mem, mapped_memlen);
+@@ -1280,10 +1282,16 @@ static int FB_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable)
+ 
+ 	mapped_mem = mmap(NULL, mapped_memlen, PROT_READ | PROT_WRITE, MAP_SHARED,
+ 			console_fd, 0);
++	if(mapped_mem == (char *)-1){
++		GAL_SetError("NEWGAL>FBCON: Unable to memory map the video hardware\n");
++		mapped_mem = NULL;
++		return (-1);
++	}
+ 	current->pixels = mapped_mem + mapped_offset;
+ 	flip_address[0] = (char *) current->pixels;
+ 	flip_address[1] = (char *) current->pixels + current->h * current->pitch;
+ 
++	FB_UnlockHWSurface(this, current);
+ 	if (!enable) {
+ 		flip_page = !flip_page;
+ 		this->screen->pixels = flip_address[flip_page];
+diff --git a/src/newgal/video.c b/src/newgal/video.c
+index 4706000..c3fb3bd 100644
+--- a/src/newgal/video.c
++++ b/src/newgal/video.c
+@@ -1265,15 +1265,19 @@ GAL_Surface *gal_SlaveVideoInit(const char* driver_name, const char* mode)
+     return surface;
+ }
+ 
+-void GAL_DoubleBufferEnable(BOOL enable)
++int GAL_DoubleBufferEnable(BOOL enable)
+ {
++	int ret = -1;
+ 	GAL_VideoDevice *video = current_video;
+ 	if (video && video->doubleBufferStatus == enable)
+-		return;
+-	video->doubleBufferStatus = enable;
++		return 0;
+ 	if (video->DoubleBufferEnable) {
+-		video->DoubleBufferEnable(video, GAL_VideoSurface, enable);
++		ret = video->DoubleBufferEnable(video, GAL_VideoSurface, enable);
++	}
++	if(ret == 0){
++		video->doubleBufferStatus = enable;
+ 	}
++	return ret;
+ }
+ 
+ void GAL_YOffsetBufferEnable(BOOL enable)

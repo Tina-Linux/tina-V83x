@@ -1,0 +1,14 @@
+type fw_env, domain;
+# permissive fw_env;
+type fw_env_exec, exec_type, file_type;
+
+domain_auto_trans(init,fw_env_exec,fw_env)
+
+allow fw_env console_device:chr_file r_file_perms;
+
+allow fw_env init:fifo_file { write ioctl };
+
+allow fw_env tmpfs:dir rw_dir_perms;
+allow fw_env tmpfs:file create_file_perms;
+
+allow fw_env { nand_device mmc_device }:blk_file rw_file_perms;

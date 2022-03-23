@@ -1,0 +1,14 @@
+LOCAL_MODULE		     := example
+LOCAL_SRC_FILES			 :=
+LOCAL_SRC_DIRS			 :=	tdmin_interface.c
+LOCAL_SRC_DIRS			 +=	example.c
+
+
+LOCAL_CFLAGS	:= -rdynamic -g -O0 -Wall -DMG_ENABLE_THREADS  -Wno-unused-variable -fPIC
+LOCAL_CFLAGS += -I./
+
+LOCAL_LDFLAGS += -lasound
+
+LOCAL_CXXFLAGS	:= LOCAL_CFLAGS -rdynamic
+
+include $(BUILD_EXECUTABLE)

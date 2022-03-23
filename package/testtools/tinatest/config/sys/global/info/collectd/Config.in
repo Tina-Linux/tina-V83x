@@ -1,0 +1,21 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD
+    bool "collectd"
+    select PACKAGE_collectd
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD
+    #===== interval sec =====
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_INTERVAL_SEC
+        int "collectd_interval_sec"
+        default 2
+
+    #===== mcollectd =====
+    source rrdtool/Config.in
+    source csv/Config.in
+    source cpu/Config.in
+    source memory/Config.in
+    source df/Config.in
+    source disk/Config.in
+    source filecount/Config.in
+    source ping/Config.in
+endif

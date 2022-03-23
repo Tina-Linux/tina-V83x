@@ -1,0 +1,26 @@
+From be26e21a53684c3207f6f002423c71b7da76c1b8 Mon Sep 17 00:00:00 2001
+From: liumingyuan <liumingyuan@allwinnertech.com>
+Date: Mon, 8 Apr 2019 14:34:19 +0800
+Subject: [PATCH] avctp: Fix possible crash when accepting browsing channel
+
+Signed-off-by: liumingyuan <liumingyuan@allwinnertech.com>
+---
+ profiles/audio/avctp.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/profiles/audio/avctp.c b/profiles/audio/avctp.c
+index 22bf35b..8b1d994 100644
+--- a/profiles/audio/avctp.c
++++ b/profiles/audio/avctp.c
+@@ -1395,6 +1395,8 @@ static void avctp_browsing_confirm(struct avctp *session, GIOChannel *chan,
+ 	if (bt_io_accept(chan, avctp_connect_browsing_cb, session, NULL,
+ 								&err)) {
+ 		avctp_set_state(session, AVCTP_STATE_BROWSING_CONNECTING, 0);
++		session->browsing = avctp_channel_create(session, chan, avctp_destroy_browsing);
++
+ 		return;
+ 	}
+ 
+-- 
+1.9.1
+

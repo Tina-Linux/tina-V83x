@@ -1,0 +1,40 @@
+
+# A. Config enable/disable Setting file#
+
+ConfigSetting=off
+
+# B. Default Tx Antenna RF PATH , Default disable. Use input parameter to config #
+
+#TxAnt=a
+
+# C. destination MacAddress #
+
+destaddr=ff:ff:ff:ff:ff:ff
+
+# D. default Packet Length Setting #
+
+PacketLength=1500
+
+# E. default Packet Period Interval Setting #
+
+PacketPeriod=100
+
+# F. default Packet Pattern Setting: rand¡Bspecific hex byte : 0x55 0xA5 0xAA... #
+
+PacketPattern=rand
+
+# I. Config the LDPC #
+
+LDPC=0
+
+# J. Config the STBC #
+
+STBC=0
+
+# K. Config the SPreamble & SGI #
+
+SPreambleSGI=0
+
+# L. Config the NDP SOUND #
+
+NDP_sound=0

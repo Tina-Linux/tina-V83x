@@ -1,0 +1,18 @@
+--- a/python_orocos_kdl/cmake/FindSIP.cmake	2018-03-22 04:48:25.000000000 +0800
++++ b/python_orocos_kdl/cmake/FindSIP.cmake	2019-01-15 11:22:07.875830467 +0800
+@@ -42,12 +42,12 @@
+     ENDIF(NOT SIP_DEFAULT_SIP_DIR)
+
+     IF(CMAKE_CROSSCOMPILING)
+-      FIND_PROGRAM(SIP_EXECUTABLE sip)
++      FIND_PROGRAM(${HOST_SIP_PATH} sip)
+       STRING(REGEX REPLACE ".*\nsip_inc_dir:([^\n]+).*$" "\\1" SIP_INCLUDE_DIR ${sip_config})
+-      LIST(GET CMAKE_FIND_ROOT_PATH 0 SIP_SYSROOT)
+-      SET(SIP_INCLUDE_DIR "${SIP_SYSROOT}${SIP_INCLUDE_DIR}")
++      LIST(GET CMAKE_FIND_ROOT_PATH 0 HOST_SIP_PATH)
++      SET(SIP_INCLUDE_DIR "${HOST_SIP_PATH}${SIP_INCLUDE_DIR}")
+     ELSE(CMAKE_CROSSCOMPILING)
+-      STRING(REGEX REPLACE ".*\nsip_bin:([^\n]+).*$" "\\1" SIP_EXECUTABLE ${sip_config})
++      STRING(REGEX REPLACE ".*\nsip_bin:([^\n]+).*$" "\\1" ${HOST_SIP_PATH} ${sip_config})
+       STRING(REGEX REPLACE ".*\nsip_inc_dir:([^\n]+).*$" "\\1" SIP_INCLUDE_DIR ${sip_config})
+     ENDIF(CMAKE_CROSSCOMPILING)

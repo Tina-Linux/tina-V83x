@@ -1,0 +1,33 @@
+#! /bin/sh
+local hasOnboarding=$(uci get ucitrack.@alljoyn-onboarding[-1] 2> /dev/null)
+if [ -z "$hasOnboarding" ]; then
+uci batch <<EOF
+add ucitrack alljoyn-onboarding
+set ucitrack.@alljoyn-onboarding[-1].init=alljoyn-onboarding
+add_list ucitrack.@alljoyn[-1].affects=alljoyn-onboarding
+commit ucitrack
+EOF
+fi
+uci batch <<EOF
+set wireless.@wifi-device[-1].disabled=0
+set wireless.@wifi-iface[-1].disabled=0
+commit wireless
+EOF
+local hasObswifi=$(uci show /etc/config/firewall | grep obswifi)
+if [ -z "$hasObswifi" ]; then
+uci batch <<EOF
+add firewall zone
+set firewall.@zone[-1].name=obswifi
+add_list firewall.@zone[-1].network='obswifi'
+set firewall.@zone[-1].input=ACCEPT
+set firewall.@zone[-1].output=ACCEPT
+set firewall.@zone[-1].forward=ACCEPT
+commit firewall
+EOF
+fi
+/etc/init.d/alljoyn-onboarding enable
+/etc/init.d/wifi_scan enable
+/etc/init.d/alljoyn-onboarding-reload enable
+crontab -l 2>/dev/null | sed '/\/etc\/init.d\/alljoyn-onboarding/d' | echo '*/1 * * * * /etc/init.d/alljoyn-onboarding poll_connection' | crontab -
+/etc/init.d/cron enable
+exit 0

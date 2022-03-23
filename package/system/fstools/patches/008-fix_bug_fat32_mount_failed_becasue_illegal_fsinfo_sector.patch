@@ -1,0 +1,21 @@
+Index: source/libblkid-tiny/vfat.c
+===================================================================
+--- source.orig/libblkid-tiny/vfat.c
++++ source/libblkid-tiny/vfat.c
+@@ -347,7 +347,7 @@ static int probe_vfat(blkid_probe pr, co
+ 
+ 	} else if (vs->vs_fat32_length) {
+ 		unsigned char *buf;
+-		uint16_t fsinfo_sect;
++		uint16_t fsinfo_sect = le16_to_cpu(vs->vs_fsinfo_sector);
+ 		int maxloop = 100;
+ 
+ 		/* Search the FAT32 root dir for the label attribute */
+@@ -397,7 +397,6 @@ static int probe_vfat(blkid_probe pr, co
+ 		 * but also allow all bytes set to '\0', because some volumes
+ 		 * do not set the signature at all.
+ 		 */
+-		fsinfo_sect = le16_to_cpu(vs->vs_fsinfo_sector);
+ 		if (fsinfo_sect) {
+ 			struct fat32_fsinfo *fsinfo;
+ 

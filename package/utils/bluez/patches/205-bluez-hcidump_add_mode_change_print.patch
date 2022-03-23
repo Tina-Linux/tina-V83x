@@ -1,0 +1,61 @@
+diff --git a/tools/hcidump.c b/tools/hcidump.c
+index af8f592..9fe46af 100644
+--- a/tools/hcidump.c
++++ b/tools/hcidump.c
+@@ -265,8 +265,25 @@ static int process_frames(int dev, int sock, int fd, unsigned long flags)
+ 				perror("Write error");
+ 				return -1;
+ 			}
+-			break;
+ 
++			/* Xradio: for mode change notification */
++{
++			struct frame *pfrm = &frm;
++			uint8_t type = *(uint8_t *)pfrm->ptr;
++
++			pfrm->ptr++; pfrm->len--;
++			if (type == HCI_EVENT_PKT) {
++				hci_event_hdr *hdr = pfrm->ptr;
++				uint8_t event = hdr->evt;
++
++				if (event == EVT_MODE_CHANGE) {
++					pfrm->ptr += HCI_EVENT_HDR_SIZE;
++					pfrm->len -= HCI_EVENT_HDR_SIZE;
++					ex_mode_change_dump(0, pfrm);
++				}
++			}
++}
++			break;
+ 		default:
+ 			/* Parse and print */
+ 			parse(&frm);
+diff --git a/tools/parser/hci.c b/tools/parser/hci.c
+index 8c7bd25..ed8815a 100644
+--- a/tools/parser/hci.c
++++ b/tools/parser/hci.c
+@@ -4101,6 +4101,12 @@ static inline void vendor_dump(int level, struct frame *frm)
+ 	raw_dump(level, frm);
+ }
+ 
++void ex_mode_change_dump(int level, struct frame *frm)
++{
++	mode_change_dump(level, frm);
++
++}
++
+ void hci_dump(int level, struct frame *frm)
+ {
+ 	uint8_t type = *(uint8_t *)frm->ptr;
+diff --git a/tools/parser/parser.h b/tools/parser/parser.h
+index b7e1d75..76d9f14 100644
+--- a/tools/parser/parser.h
++++ b/tools/parser/parser.h
+@@ -251,6 +251,8 @@ void bpa_dump(int level, struct frame *frm);
+ 
+ void amp_assoc_dump(int level, uint8_t *assoc, uint16_t len);
+ 
++void ex_mode_change_dump(int level, struct frame *frm);
++
+ static inline void parse(struct frame *frm)
+ {
+ 	p_indent(-1, NULL);

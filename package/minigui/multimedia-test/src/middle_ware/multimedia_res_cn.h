@@ -1,0 +1,6 @@
+#ifndef SRC_MIDDLE_WARE_MULTIMEDIA_RES_CN_H_
+#define SRC_MIDDLE_WARE_MULTIMEDIA_RES_CN_H_
+
+/*multimedia_test.c */
+
+#endif /* SRC_MIDDLE_WARE_MULTIMEDIA_RES_CN_H_ */

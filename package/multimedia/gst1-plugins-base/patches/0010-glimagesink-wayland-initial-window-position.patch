@@ -1,0 +1,13 @@
+diff --git a/gst-libs/gst/gl/wayland/gstglwindow_wayland_egl.c b/gst-libs/gst/gl/wayland/gstglwindow_wayland_egl.c
+index 61c9b15..07104aa 100644
+--- a/gst-libs/gst/gl/wayland/gstglwindow_wayland_egl.c
++++ b/gst-libs/gst/gl/wayland/gstglwindow_wayland_egl.c
+@@ -578,6 +578,8 @@ gst_gl_window_wayland_egl_set_render_rectangle (GstGLWindow * window,
+   render->rect.w = width;
+   render->rect.h = height;
+ 
++  wl_shell_surface_set_window_position(window_egl->window.shell_surface, x, y);
++
+   gst_gl_window_send_message_async (window,
+       (GstGLWindowCB) _set_render_rectangle, render,
+       (GDestroyNotify) _free_set_render_rectangle);

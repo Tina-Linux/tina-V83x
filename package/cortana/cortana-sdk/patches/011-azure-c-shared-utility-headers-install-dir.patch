@@ -1,0 +1,11 @@
+--- a/c/azure-c-shared-utility/CMakeLists.txt
++++ b/c/azure-c-shared-utility/CMakeLists.txt
+@@ -51,7 +51,7 @@ option(use_audio "set the use_audio to ON if you would like to use the audio sta
+ option(azureiot_debug "set the azureiot_debug to ON if you would like to have verbosity in your logs" OFF)
+ 
+ # Start of variables used during install
+-set (INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/usr/include/azure_c_shared_utility" CACHE PATH "Include file directory")
++set (INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include/azure_c_shared_utility" CACHE PATH "Include file directory")
+ set (LIB_INSTALL_DIR lib CACHE PATH "Library object file directory")
+ 
+ #Use solution folders. 

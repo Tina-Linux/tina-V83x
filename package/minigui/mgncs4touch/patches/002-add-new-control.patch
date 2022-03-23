@@ -1,0 +1,638 @@
+diff -uNpr mgncs4touch-1.2.0/include/highlight.h mgncs4touch-1.2.0/include/highlight.h
+--- /dev/null	1970-01-01 08:00:00.000000000 +0800
++++ b/include/highlight.h	2018-09-06 14:02:54.064068391 +0800
+@@ -0,0 +1,15 @@
++#ifndef HIGHLIGHT_H_
++#define HIGHLIGHT_H_
++#include "mgncs4touch.h"
++#define HIGHLIGHT "HighLight"
++typedef struct {
++	char *text;
++	gal_pixel TextColor;
++	PLOGFONT TextFont;
++	int HighLightStartX;
++	int AnimDuration;
++	RECT TextRect;
++}HighLight;
++BOOL RegisterHighLight();
++void UnregisterHighLight(void);
++#endif
+diff -uNpr mgncs4touch-1.2.0/include/Makefile.am mgncs4touch-1.2.0/include/Makefile.am
+--- a/include/Makefile.am	2018-09-06 14:08:42.740058332 +0800
++++ b/include/Makefile.am	2018-09-06 14:02:22.736069295 +0800
+@@ -23,7 +23,7 @@ libmgncs4touchinclude_HEADERS = ../mgncs
+     mpicker.h mcombopicker.h mtimepicker.h mdatepicker.h \
+     mbtnnavbar.h mimgnavbar.h mexlist.h mitembar.h balloon_tip_maker.h \
+     mpieceitem.h mitemiterator.h mcenterhbox.h mlayout_manager.h mlinevbox.h \
+-    mcontainerctrl.h miconflow.h mfillboxex.h
++    mcontainerctrl.h miconflow.h mfillboxex.h picture-preview.h highlight.h
+ 
+ EXTRA_DIST =
+ 
+diff -uNpr mgncs4touch-1.2.0/include/mgncs4touch.h mgncs4touch-1.2.0/include/mgncs4touch.h
+--- a/include/mgncs4touch.h	2018-09-06 14:09:32.884056886 +0800
++++ b/include/mgncs4touch.h	2018-09-06 14:02:35.292068933 +0800
+@@ -88,6 +88,7 @@
+ #include "pieces/mnavigationitem.h"
+ #include "pieces/mnavigationbarpiece.h"
+ #include "pieces/mnavigationpanelpiece.h"
++#include "pieces/mhighlightpiece.h"
+ 
+ #include "physics-animation/chipmunk-utils.h"
+ #include "physics-animation/mspeedmeter.h"
+@@ -106,6 +107,8 @@
+ 
+ #include "miconflow.h"
+ #include "mcontainerctrl.h"
++#include "highlight.h"
++//#include "picture-preview.h"
+ 
+ #ifdef __cplusplus
+ extern "C" {
+diff -uNpr mgncs4touch-1.2.0/include/picture-preview.h mgncs4touch-1.2.0/include/picture-preview.h
+--- /dev/null	1970-01-01 08:00:00.000000000 +0800
++++ b/include/picture-preview.h	2018-09-06 14:02:45.208068647 +0800
+@@ -0,0 +1,29 @@
++#ifndef PICTURE_PREVIEW_H_
++#define PICTURE_PREVIEW_H_
++#include <minigui/common.h>
++#include <minigui/minigui.h>
++#include <minigui/gdi.h>
++#include <minigui/window.h>
++#include <minigui/control.h>
++
++#include <mgncs/mgncs.h>
++#include <mgeff/mgeff.h>
++
++#define PICPREVIEW "PicPreview"
++#define PIC_MOVE_LEFT 0
++#define PIC_MOVE_RIGHT 1
++#define TIMER_PICID 301
++#define MAX_NUM 51
++static int g_index;
++static unsigned ex;
++int picmoveflage;
++typedef struct {
++	int picture_num;
++	unsigned long animation_type;
++	int duration;
++	char* s_pic_paths[MAX_NUM];
++	HDC g_hdc_pic[MAX_NUM];
++}PicPreview;
++BOOL RegisterPicPreview();
++void UnregisterPicPreview(void);
++#endif
+diff -uNpr mgncs4touch-1.2.0/include/pieces/Makefile.am mgncs4touch-1.2.0/include/pieces/Makefile.am
+--- a/include/pieces/Makefile.am	2018-09-06 14:09:00.904057808 +0800
++++ b/include/pieces/Makefile.am	2018-09-06 14:03:43.628066961 +0800
+@@ -37,7 +37,8 @@ HEAD_FILES = \
+     mwidgethostpiece.h \
+     mwrappaintpiece.h \
+     mscrollviewpiece.h \
+-    mhscrollviewpiece.h
++    mhscrollviewpiece.h \
++    mhighlightpiece.h
+ 
+ libmgncs4touchinclude_HEADERS = $(HEAD_FILES)
+ 
+diff -uNpr mgncs4touch-1.2.0/include/pieces/mhighlightpiece.h mgncs4touch-1.2.0/include/pieces/mhighlightpiece.h
+--- /dev/null	1970-01-01 08:00:00.000000000 +0800
++++ b/include/pieces/mhighlightpiece.h	2018-09-06 14:03:54.724066641 +0800
+@@ -0,0 +1,54 @@
++#ifndef MHIGHLIGHTPIECE_H
++#define MHIGHLIGHTPIECE_H
++
++#include <stdio.h>
++#include <minigui/common.h>
++#include <minigui/minigui.h>
++#include <minigui/gdi.h>
++#include <minigui/window.h>
++#include <minigui/control.h>
++
++#include <mgncs/mgncs.h>
++#include <mgeff/mgeff.h>
++
++//#include "mgncs4touch.h"
++//#include "mtouchdebug.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct _mHighlightPieceClass mHighlightPieceClass;
++typedef struct _mHighlightPiece mHighlightPiece;
++
++#define mHighlightPieceClassHeader(clss, superCls) \
++	mTextPieceClassHeader(clss, superCls) \
++
++struct _mHighlightPieceClass
++{
++	mHighlightPieceClassHeader(mHighlightPiece, mTextPiece)
++};
++
++MGNCS_EXPORT extern mHighlightPieceClass g_stmHighlightPieceCls;
++
++#define mHighlightPieceHeader(clss) \
++	mTextPieceHeader(clss) \
++    int highlight_x;    \
++    HDC dc_white_font;
++
++struct _mHighlightPiece
++{
++	mHighlightPieceHeader(mHighlightPiece)
++};
++
++enum mHighlightPieceProps {
++	NCSP_HIGHLIGHTPIECE_HIGHTX     = USER_PIECE_PROP_BEGIN + 10,
++};
++
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
++
+diff -uNpr mgncs4touch-1.2.0/src/highlight.c mgncs4touch-1.2.0/src/highlight.c
+--- /dev/null	1970-01-01 08:00:00.000000000 +0800
++++ b/src/highlight.c	2018-09-06 14:04:37.884065396 +0800
+@@ -0,0 +1,124 @@
++#include <minigui/common.h>
++#include <minigui/minigui.h>
++#include <minigui/gdi.h>
++#include <minigui/window.h>
++
++#include <mgplus/mgplus.h>
++#include <mgncs/mgncs.h>
++#include <mgeff/mgeff.h>
++#include "highlight.h"
++#define TIMER_HIGHLIGHT_SLIDE 501
++#define START_HIGHLIGHT_DURATION   20
++
++mPanelPiece* panel;
++mHighlightPiece* m_highlightPiece;
++mContainerCtrl* ctnr;
++MGEFF_ANIMATION anim;
++HWND GetMainWnd();
++static void highlightAnimCallback(MGEFF_ANIMATION anim, void* target, intptr_t id, void* value)
++{
++	int highlight_x = *(int*)value;
++	_c(m_highlightPiece)->setProperty(m_highlightPiece,NCSP_HIGHLIGHTPIECE_HIGHTX, highlight_x);
++	PanelPiece_invalidatePiece((mHotPiece*)m_highlightPiece, NULL);
++	/*InvalidateRect(GetMainWnd(), NULL, TRUE);*/
++}
++void startHighlight(mContainerCtrl* ctnr, HighLight *highlight)
++{
++	int start =highlight->HighLightStartX;
++	int end = highlight->TextRect.right;
++	int duration = highlight->AnimDuration;
++/*	MGEFF_ANIMATION anim = mGEffAnimationCreate((void *)GetWindowAdditionalData(GetMainWnd()), highlightAnimCallback, 1, MGEFF_INT);*/
++	anim = mGEffAnimationCreate((void *)ctnr, highlightAnimCallback, 1, MGEFF_INT);
++	mGEffAnimationSetStartValue (anim, &start);
++	mGEffAnimationSetEndValue(anim, &end);
++	mGEffAnimationSetProperty(anim, MGEFF_PROP_DURATION, duration);
++	mGEffAnimationSetProperty(anim, MGEFF_PROP_LOOPCOUNT, MGEFF_INFINITE);
++	mGEffAnimationAsyncRun(anim);
++	/*_c(highlight_slide_panel)->animationAsyncRun(highlight_slide_panel, anim, 0);*/
++}
++#if 0
++static BOOL hintbar_onTimer(HWND hwnd, LINT id, DWORD count)
++{
++	printf("hintbar_onTimer\n");
++	HighLight *highlight = (HighLight *)GetWindowAdditionalData(hwnd);
++    startHighlight(hwnd, ctnr, highlight);
++
++    return FALSE;
++}
++#endif
++void InitHintBar(mContainerCtrl* ctnr, HighLight *highlight)
++{
++	RECT rc = {0, 0, 800, 200};
++	RECT slide_rc = {0, 0, 10, 10};
++	panel = NEWPIECE(mPanelPiece);
++	_c(panel)->setRect (panel, &highlight->TextRect);
++	m_highlightPiece = (mHighlightPiece*)NEWPIECE(mHighlightPiece);
++	_c(m_highlightPiece)->setRect(m_highlightPiece, &highlight->TextRect);
++	_c(m_highlightPiece)->setProperty(m_highlightPiece, NCSP_LABELPIECE_LABEL, (DWORD)highlight->text);
++	_c(m_highlightPiece)->setProperty(m_highlightPiece, NCSP_TEXTPIECE_TEXTCOLOR, (DWORD)highlight->TextColor);
++	_c(m_highlightPiece)->setProperty(m_highlightPiece, NCSP_TEXTPIECE_LOGFONT, (DWORD)highlight->TextFont);
++	_c(m_highlightPiece)->setProperty(m_highlightPiece, NCSP_HIGHLIGHTPIECE_HIGHTX, (DWORD)highlight->HighLightStartX);
++	_c(panel)->addContent(panel, (mHotPiece*)m_highlightPiece, 0, 0);
++	_c(ctnr)->setBody(ctnr, (mHotPiece*)panel);
++}
++static int HighLightProc(HWND hwnd, int nMessage, WPARAM wParam, LPARAM lParam)
++{
++	HighLight *highlight = NULL;
++	highlight = (HighLight *)GetWindowAdditionalData(hwnd);
++	switch (nMessage) {
++	case MSG_CREATE:{
++		mGEffInit();
++		ctnr = (mContainerCtrl*)ncsCreateWindow(NCSCTRL_CONTAINERCTRL,
++                "ContainerCtrl",
++                WS_VISIBLE, WS_EX_TRANSPARENT, 0,
++                0,0,800,480,
++                hwnd,
++                NULL, NULL, NULL, (DWORD)highlight);
++		printf("MSG_CREATE 1\n");
++		InitHintBar(ctnr, highlight);
++		//SetTimerEx(ctnr->hwnd, TIMER_HIGHLIGHT_SLIDE, START_HIGHLIGHT_DURATION, hintbar_onTimer);
++		SetTimer(hwnd, TIMER_HIGHLIGHT_SLIDE, 1);
++		return 0;
++	}
++	case MSG_TIMER:{
++		startHighlight(ctnr, highlight);
++		return 0;
++	}
++	case MSG_DESTROY:{
++		mGEffAnimationDelete (anim);
++		ncs4TouchUninitialize();
++        	ncsUninitialize();
++        	mGEffDeinit();
++                DestroyAllControls(hwnd);
++                return 0;
++        }
++        case MSG_CLOSE: {
++                DestroyMainWindow(hwnd);
++                PostQuitMessage(0);
++                return 0;
++        }
++
++	}
++	return DefaultMainWinProc(hwnd, nMessage, wParam, lParam);
++}
++static int registerControlsAndPieces()
++{
++    MGNCS_INIT_CLASS(mHighlightPiece);
++    MGNCS_INIT_CLASS(mTextPiece);
++    return 0;
++}
++BOOL RegisterHighLight() {
++        WNDCLASS MyClass;
++        MyClass.spClassName = HIGHLIGHT;
++        MyClass.dwStyle = WS_NONE;
++        MyClass.dwExStyle = WS_EX_NONE;
++        MyClass.hCursor = 0;
++        MyClass.iBkColor = PIXEL_lightgray;
++        MyClass.WinProc = HighLightProc;
++	registerControlsAndPieces();
++        return RegisterWindowClass(&MyClass);
++}
++
++void UnregisterHighLight(void) {
++        UnregisterWindowClass(HIGHLIGHT);
++}
+diff -uNpr mgncs4touch-1.2.0/src/Makefile.am mgncs4touch-1.2.0/src/Makefile.am
+--- a/src/Makefile.am	2018-09-06 14:09:57.632056172 +0800
++++ b/src/Makefile.am	2018-09-06 14:04:58.176064811 +0800
+@@ -10,7 +10,7 @@ COMMON_SRCS = mgncs4touch.c mtouchcomm.c
+     mexlist.c mbtnnavbar.c mimgnavbar.c mitembar.c balloon_tip_maker.c \
+     mpieceitem.c mitemiterator.c \
+     mcenterhbox.c mfillboxex.c mlayout_manager.c mlinevbox.c \
+-    miconflow.c mcontainerctrl.c
++    miconflow.c mcontainerctrl.c picture-preview.c highlight.c
+
+ SUBLIBS = pieces/libpieces.la \
+     physics-animation/libphysics-animation.la 
+diff -uNpr mgncs4touch-1.2.0/src/picture-preview.c mgncs4touch-1.2.0/src/picture-preview.c
+--- /dev/null	1970-01-01 08:00:00.000000000 +0800
++++ b/src/picture-preview.c	2018-09-06 14:04:47.752065111 +0800
+@@ -0,0 +1,152 @@
++#include "picture-preview.h"
++int newX,oldX,oldgap;
++
++static int fillAnimation (HWND hWnd, HDC src1_dc, HDC src2_dc, HDC dst_dc, int index, PicPreview *picpreview)
++{
++	unsigned long key;
++	MGEFF_ANIMATION anim;
++	MGEFF_EFFECTOR effector;
++	MGEFF_SOURCE src1, src2;
++	MGEFF_SINK sink;
++	effector = mGEffEffectorCreate (picpreview->animation_type);
++
++	src1 = mGEffCreateSource (src1_dc);
++	src2 = mGEffCreateSource (src2_dc);
++
++	sink = mGEffCreateHDCSink (dst_dc);
++	if(picpreview->animation_type == MGEFF_EFFECTOR_PUSH){
++		if(picmoveflage == PIC_MOVE_RIGHT){
++			mGEffEffectorSetProperty(effector, MGEFF_PROPERTY_DIRECTION, MGEFF_DIRECTION_LEFT2RIGHT);
++		}else if(picmoveflage == PIC_MOVE_LEFT){
++			mGEffEffectorSetProperty(effector, MGEFF_PROPERTY_DIRECTION, MGEFF_DIRECTION_RIGHT2LEFT);
++		}
++	}else{
++
++	}
++	mGEffEffectorAppendSource (effector, src1);
++	mGEffEffectorAppendSource (effector, src2);
++
++	mGEffSetBufferSink (sink, src1_dc);
++	mGEffEffectorSetSink (effector, sink);
++
++	anim = mGEffAnimationCreateWithEffector (effector);
++	mGEffAnimationSetDuration (anim, picpreview->duration);
++	mGEffAnimationSyncRun (anim);
++	mGEffAnimationDelete (anim);
++
++	mGEffEffectorDelete (effector);
++        return 0;
++}
++static int onNextWithEffector(HWND hwnd, HDC hdc, PicPreview *picpreview)
++{
++        fillAnimation (hwnd, picpreview->g_hdc_pic[ex % picpreview->picture_num],
++                           picpreview->g_hdc_pic[(ex + 1) % picpreview->picture_num], hdc, g_index, picpreview);
++        ++ex;
++        if (++g_index > picpreview->picture_num){
++                g_index = 0;
++        }
++        return 0;
++}
++static int onPrevWithEffector(HWND hwnd, HDC hdc, PicPreview *picpreview)
++{
++
++        if(g_index-- < 0){
++                g_index = picpreview->picture_num;
++        }
++        --ex;
++        fillAnimation (hwnd, picpreview->g_hdc_pic[(ex + 1) % picpreview->picture_num],
++                           picpreview->g_hdc_pic[ex % picpreview->picture_num], hdc, g_index, picpreview);
++}
++static int PicPreviewProc(HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
++{
++	PicPreview *picpreview = NULL;
++	picpreview = (PicPreview *)GetWindowAdditionalData(hwnd);
++	HDC hdc;
++	RECT rect;
++	BITMAP bmp;
++	if(picpreview->picture_num > MAX_NUM){
++		return 0;
++	}
++	switch (message) {
++	case MSG_CREATE:{
++		SetTimer(hwnd, TIMER_PICID, 1);
++		break;
++	}
++	case MSG_TIMER:{
++		KillTimer(hwnd, TIMER_PICID);
++		GetClientRect(hwnd, &rect);
++		LoadBitmap (hdc, &bmp, picpreview->s_pic_paths[0]);
++		FillBoxWithBitmap(hdc, 0, 0, rect.right, rect.bottom, &bmp);
++		break;
++	}
++	case MSG_LBUTTONDOWN:{
++		oldX = LOWORD(lParam);
++		break;
++	}
++	case MSG_LBUTTONUP:{
++		newX = LOWORD(lParam);
++		hdc = GetDC (hwnd);
++		if(picmoveflage == PIC_MOVE_RIGHT){
++			//prev pic
++			onPrevWithEffector(hwnd, hdc, picpreview);
++		}else if(picmoveflage == PIC_MOVE_LEFT){
++			//next pic
++			onNextWithEffector(hwnd, hdc, picpreview);
++		}
++		break;
++	}
++	case MSG_MOUSEMOVE:{
++		newX = LOWORD(lParam);
++		int gap = newX - oldX;
++		if(gap < 0){
++			picmoveflage = PIC_MOVE_LEFT;
++		}else if(gap > 0){
++			picmoveflage = PIC_MOVE_RIGHT;
++		}
++		oldX = newX;
++		break;
++	}
++	case MSG_DESTROY:{
++		UnloadBitmap(&bmp);
++	}
++	case MSG_ERASEBKGND: {
++                HDC hdc = (HDC) wParam;
++		BITMAP bmp;
++                const RECT* clip = (const RECT*) lParam;
++                BOOL fGetDC = FALSE;
++                RECT rcTemp;
++                if (hdc == 0) {
++                        hdc = GetClientDC(hwnd);
++                        fGetDC = TRUE;
++                }
++                if (clip) {
++                        rcTemp = *clip;
++                        ScreenToClient(hwnd, &rcTemp.left, &rcTemp.top);
++                        ScreenToClient(hwnd, &rcTemp.right, &rcTemp.bottom);
++                        IncludeClipRect(hdc, &rcTemp);
++                }
++                if (fGetDC)
++                        ReleaseDC(hdc);
++                return 0;
++        }
++	}
++	return DefaultControlProc(hwnd, message, wParam, lParam);
++}
++
++BOOL RegisterPicPreview() {
++        WNDCLASS MyClass;
++        MyClass.spClassName = PICPREVIEW;
++        MyClass.dwStyle = WS_NONE;
++        MyClass.dwExStyle = WS_EX_NONE;
++        MyClass.hCursor = 0;
++        MyClass.iBkColor = PIXEL_lightgray;
++        MyClass.WinProc = PicPreviewProc;
++	g_index = 0;
++	ex = 0;
++	picmoveflage = 0;
++        return RegisterWindowClass(&MyClass);
++}
++
++void UnregisterPicPreview(void) {
++        UnregisterWindowClass(PICPREVIEW);
++}
+diff -uNpr mgncs4touch-1.2.0/src/pieces/Makefile.am mgncs4touch-1.2.0/src/pieces/Makefile.am
+--- a/src/pieces/Makefile.am	2018-09-06 14:10:07.460055888 +0800
++++ b/src/pieces/Makefile.am	2018-09-06 14:05:32.704063815 +0800
+@@ -37,7 +37,8 @@ COMMON_SRCS = \
+     mhscrollviewpiece.c \
+     mnavigationbarpiece.c \
+     mnavigationitem.c \
+-    mnavigationpanelpiece.c 
++    mnavigationpanelpiece.c \
++    mhighlightpiece.c
+ #    mphoneseparatorpiece.c
+ #    mphonestaticrdrpiece.c
+ #    mwidgethostpiece.c
+diff -uNpr mgncs4touch-1.2.0/src/pieces/mhighlightpiece.c mgncs4touch-1.2.0/src/pieces/mhighlightpiece.c
+--- /dev/null	1970-01-01 08:00:00.000000000 +0800
++++ b/src/pieces/mhighlightpiece.c	2018-09-06 14:05:16.556064280 +0800
+@@ -0,0 +1,170 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <assert.h>
++
++#include <minigui/common.h>
++#include <minigui/minigui.h>
++#include <minigui/gdi.h>
++#include <minigui/window.h>
++
++#include <mgeff/mgeff.h>
++#include <mgncs/mgncs.h>
++//#include "mhighlightpiece.h"
++#include "mgncs4touch.h"
++
++static void highlight(mHighlightPiece* self, HDC hdc, const char* str, RECT* prc,
++                      UINT uFormat)
++{
++    const int highlight_width = 60; //40;
++    const int w = RECTWP(prc);
++    const int h = RECTHP(prc);
++
++#if 0
++    HDC memdc2 = CreateCompatibleDC(hdc);
++    HDC memdc3 = CreateCompatibleDC(hdc);
++
++	SetTextColor(memdc2, RGBA2Pixel(memdc2, 0x00, 0x00, 0x00, 0xff));
++    SetBkMode(memdc2, BM_TRANSPARENT);
++    DrawText(memdc2, str, -1, prc, uFormat);
++
++    SetBrushColor(memdc3, RGBA2Pixel(memdc3, 0x80, 0x80, 0x80, 0xfe));
++    FillBox(memdc3, 0, 0, highlight_x, h);
++    SetBrushColor(memdc3, RGBA2Pixel(memdc3, 0xff, 0xff, 0xFF, 0xfe));
++    FillBox(memdc3, highlight_x, 0, highlight_width, h);
++    SetBrushColor(memdc3, RGBA2Pixel(memdc3, 0x80, 0x80, 0x80, 0xfe));
++    FillBox(memdc3, highlight_x+highlight_width, 0, w-highlight_x-highlight_width, h);
++
++    BitBlt(memdc3, 0, 0, 0, 0, memdc2, 0, 0, 0);
++    //BitBlt(memdc2, 0, 0, 0, 0, memdc1, 0, 0, 0);
++    BitBlt(memdc2, 0, 0, 0, 0, hdc, 0, 0, 0);
++
++    //DeleteMemDC(memdc1);
++    DeleteMemDC(memdc2);
++    DeleteMemDC(memdc3);
++#else
++    if (self->dc_white_font == HDC_INVALID) {
++        /* create dc */
++        self->dc_white_font = CreateCompatibleDC(hdc);
++        
++        /* draw dc with white font */
++        SetBrushColor(self->dc_white_font, RGBA2Pixel(self->dc_white_font, 0x0, 0x0, 0x0, 0x00));
++        FillBox(self->dc_white_font, 0, 0, w, h);
++        SetTextColor(self->dc_white_font, RGBA2Pixel(self->dc_white_font, 0xff, 0xff, 0xff, 0xff));
++        SetBkMode(self->dc_white_font, BM_TRANSPARENT);
++        DrawText(self->dc_white_font, str, -1, prc, uFormat);
++    }
++    /* black */
++    SetTextColor(hdc, RGBA2Pixel(hdc, 0x80, 0x80, 0x80, 0xff));
++    DrawText(hdc, str, -1, prc, uFormat);
++
++    if (GetGDCapability(self->dc_white_font, GDCAP_AMASK) == 0)
++        SetMemDCColorKey (self->dc_white_font, MEMDC_FLAG_SRCCOLORKEY, 
++                          RGBA2Pixel(self->dc_white_font, 0x0, 0x0, 0x0, 0x00));
++    BitBlt(self->dc_white_font, self->highlight_x, 0, highlight_width, h, hdc, self->highlight_x, 0, 0);
++#endif
++}
++
++static void mHighlightPiece_construct(mHighlightPiece *self, DWORD add_data)
++{
++	Class(mHotPiece).construct((mHotPiece*)self, add_data);
++
++	self->str = (const char*)add_data;
++	self->align = NCS_ALIGN_CENTER;
++	self->valign = NCS_VALIGN_CENTER;
++	mLabelPiece_setAutoWrap(self, 0);
++
++    self->highlight_x = 0;
++    self->dc_white_font = HDC_INVALID;
++}
++
++static void mHighlightPiece_destroy(mHighlightPiece* self)
++{
++    Class(mTextPiece).destroy((mTextPiece*)self);
++    if (self->dc_white_font != HDC_INVALID) {
++        DeleteMemDC(self->dc_white_font);
++    }
++}
++
++static void mHighlightPiece_paint(mHighlightPiece *self, HDC hdc, mWidget *owner, DWORD add_data)
++{
++    RECT rcClient;
++    DWORD uFormat = DT_WORDBREAK;
++    gal_pixel old_color;
++    const char* str = self->str;
++
++    if(owner == NULL || str == NULL)
++        return ;
++
++    if (self->font == NULL) {
++        self->font = GetWindowFont(owner->hwnd);
++    }
++
++    SelectFont(hdc, self->font);
++    _c(self)->getRect(self, &rcClient);
++
++    old_color = SetTextColor(hdc, ncsColor2Pixel(hdc, self->color));
++
++    if(self->align == NCS_ALIGN_CENTER)
++        uFormat |= DT_CENTER ;
++    else if(self->align == NCS_ALIGN_RIGHT)
++        uFormat |= DT_RIGHT ;
++    else
++        uFormat |= DT_LEFT;
++
++    if(self->valign == NCS_VALIGN_CENTER)
++        uFormat |= DT_VCENTER ;
++    else if(self->valign == NCS_VALIGN_BOTTOM)
++        uFormat |= DT_BOTTOM ;
++    else
++        uFormat |= DT_TOP;
++
++    if(!mLabelPiece_isAutoWrap(self))
++        uFormat |= DT_SINGLELINE;
++
++    if(!mLabelPiece_isPrefix(self))
++        uFormat |= DT_NOPREFIX;
++
++    if(mLabelPiece_isWordBreak(self))
++        uFormat |= DT_WORDBREAK;
++
++    SetBkMode(hdc, BM_TRANSPARENT);
++
++    //DrawText(hdc, str, -1, &rcClient, uFormat);
++    highlight(self, hdc, str, &rcClient, uFormat);
++
++    SetTextColor(hdc, ncsColor2Pixel(hdc, old_color));
++}
++
++static BOOL mHighlightPiece_setProperty(mHighlightPiece *self, int id, DWORD value)
++{
++    switch(id)
++    {
++        case NCSP_HIGHLIGHTPIECE_HIGHTX:
++            self->highlight_x = value;
++            break;
++        default:
++            return Class(mTextPiece).setProperty((mTextPiece*)self, id, value);
++    }
++    return TRUE;
++}
++
++static DWORD mHighlightPiece_getProperty(mHighlightPiece* self, int id)
++{
++	switch(id)
++	{
++	case NCSP_HIGHLIGHTPIECE_HIGHTX:
++		return self->highlight_x;
++	}
++
++	return Class(mTextPiece).getProperty((mTextPiece*)self, id);
++}
++
++BEGIN_MINI_CLASS(mHighlightPiece, mTextPiece)
++	CLASS_METHOD_MAP(mHighlightPiece, construct)
++	CLASS_METHOD_MAP(mHighlightPiece, destroy)
++	CLASS_METHOD_MAP(mHighlightPiece, paint)
++	CLASS_METHOD_MAP(mHighlightPiece, setProperty)
++	CLASS_METHOD_MAP(mHighlightPiece, getProperty)
++END_MINI_CLASS
++

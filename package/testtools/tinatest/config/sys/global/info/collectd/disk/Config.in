@@ -1,0 +1,20 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_DISK_ENABLE
+    bool "collectd_disk"
+    select PACKAGE_collectd-mod-disk
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_DISK_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DISK_MATCH
+        bool "match"
+        default y
+
+    if TINATEST_SYS_GLOBAL_INFO_COLLECTD_DISK_MATCH
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DISK_MATCH_SELLECT_OR_IGNORE
+            string "sellect_or_ignore"
+            default "sellect"
+
+        config TINATEST_SYS_GLOBAL_INFO_COLLECTD_DISK_MATCH_DISK_REGULAR_EXPRESSION
+            string "disk_regular_expression"
+            default "mmcblk0p.*"
+    endif
+endif

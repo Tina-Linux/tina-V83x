@@ -1,0 +1,508 @@
+LOCAL_PATH:= $(call my-dir)
+
+include $(LOCAL_PATH)/../config.mk
+
+MY_SDK="notdef"
+
+ifeq ($(JB42_AND_NEWER), yes)
+MY_SDK=ajb42
+endif
+
+ifeq ($(KITKAT_AND_NEWER), yes)
+MY_SDK=akk44
+endif
+
+ifeq ($(LOLLIPOP_AND_NEWER), yes)
+MY_SDK=alp50
+endif
+
+ifeq ($(MARSHMALLOW_AND_NEWER), yes)
+MY_SDK=amm60
+endif
+
+ifeq ($(MY_SDK), "notdef")
+$(warning $(TARGET_PRODUCT) config not found! Please check it!)
+endif
+
+# 1.libve
+include $(CLEAR_VARS)
+LOCAL_MODULE := libVE
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libVE.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 1.libMemAdapter
+include $(CLEAR_VARS)
+LOCAL_MODULE := libMemAdapter
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libMemAdapter.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 1.libadecoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libadecoder
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libadecoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 2.libsdecoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libsdecoder
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libsdecoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 3. libvencoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libvencoder
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libvencoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 5.libnormal_audio
+include $(CLEAR_VARS)
+LOCAL_MODULE := libnormal_audio
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libnormal_audio.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 8.libawavs
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawavs
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawavs.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 9.libawh264
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawh264
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawh264.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 10.libawh265
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawh265
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawh265.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 11.libawh265soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawh265soft
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawh265soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 12.libawmjpeg
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmjpeg
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmjpeg.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 13.libawmjpegplus
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmjpegplus
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmjpegplus.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 14.libawmpeg2
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg2
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmpeg2.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 15.libawmpeg4base
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4base
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmpeg4base.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 16.libawmpeg4dx
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4dx
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmpeg4dx.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 17.libawmpeg4h263
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4h263
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmpeg4h263.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 18.libawmpeg4normal
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4normal
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmpeg4normal.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 19.libawmpeg4vp6
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4vp6
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawmpeg4vp6.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 20.libawvp6soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawvp6soft
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawvp6soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 21.libawvp8
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawvp8
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawvp8.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 22.libawvp9soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawvp9soft
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawvp9soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 23.libawwmv3
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawwmv3
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawwmv3.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 24.libawwmv12soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawwmv12soft
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libawwmv12soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+# 25.libvdecoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libvdecoder
+LOCAL_SRC_FILES := lib32/$(MY_SDK)/libvdecoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 32
+include $(BUILD_PREBUILT)
+
+ifeq ($(LOLLIPOP_AND_NEWER), yes)
+
+# 1.libve
+include $(CLEAR_VARS)
+LOCAL_MODULE := libVE
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libVE.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 1.libMemAdapter
+include $(CLEAR_VARS)
+LOCAL_MODULE := libMemAdapter
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libMemAdapter.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 1.libadecoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libadecoder
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libadecoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 2.libsdecoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libsdecoder
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libsdecoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 3. libvencoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libvencoder
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libvencoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 5.libnormal_audio
+include $(CLEAR_VARS)
+LOCAL_MODULE := libnormal_audio
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libnormal_audio.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 8.libawavs
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawavs
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawavs.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 9.libawh264
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawh264
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawh264.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 10.libawh265
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawh265
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawh265.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 11.libawh265soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawh265soft
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawh265soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 12.libawmjpeg
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmjpeg
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmjpeg.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 13.libawmjpegplus
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmjpegplus
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmjpegplus.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 14.libawmpeg2
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg2
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmpeg2.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 15.libawmpeg4base
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4base
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmpeg4base.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 16.libawmpeg4dx
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4dx
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmpeg4dx.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 17.libawmpeg4h263
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4h263
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmpeg4h263.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 18.libawmpeg4normal
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4normal
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmpeg4normal.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 19.libawmpeg4vp6
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawmpeg4vp6
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawmpeg4vp6.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 20.libawvp6soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawvp6soft
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawvp6soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 21.libawvp8
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawvp8
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawvp8.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 22.libawvp9soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawvp9soft
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawvp9soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 23.libawwmv3
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawwmv3
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawwmv3.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 24.libawwmv12soft
+include $(CLEAR_VARS)
+LOCAL_MODULE := libawwmv12soft
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libawwmv12soft.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+
+# 25.libvdecoder
+include $(CLEAR_VARS)
+LOCAL_MODULE := libvdecoder
+LOCAL_SRC_FILES := lib64/$(MY_SDK)/libvdecoder.so
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MULTILIB := 64
+include $(BUILD_PREBUILT)
+endif

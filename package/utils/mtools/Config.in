@@ -1,0 +1,190 @@
+if PACKAGE_mtools
+
+config MTOOLS_MATTRIB
+	bool "Enable mattrib support"
+	default y
+	help
+		This option will support mtool build with mattrib
+
+
+config MTOOLS_MBADBLOCKS
+	bool "Enable mbadblocks support"
+	default y
+	help
+		This option will support mtool build with mbadblocks
+
+
+config MTOOLS_MCAT
+	bool "Enable mcat support"
+	default y
+	help
+		This option will support mtool build with mcat
+
+
+config MTOOLS_MCD
+	bool "Enable mcd support"
+	default y
+	help
+		This option will support mtool build with mcd
+
+
+config MTOOLS_MCLASSERASE
+	bool "Enable mclasserase support"
+	default y
+	help
+		This option will support mtool build with mclasserase
+
+
+config MTOOLS_MCOPY
+	bool "Enable mcopy support"
+	default y
+	help
+		This option will support mtool build with mcopy
+
+
+config MTOOLS_MDEL
+	bool "Enable mdel support"
+	default y
+	help
+		This option will support mtool build with mdel
+
+
+config MTOOLS_MDELTREE
+	bool "Enable mdeltree support"
+	default y
+	help
+		This option will support mtool build with mdeltree
+
+
+config MTOOLS_MDIR
+	bool "Enable mdir support"
+	default y
+	help
+		This option will support mtool build with mdir
+
+
+config MTOOLS_MDOCTORFAT
+	bool "Enable mdoctorfat support"
+	default y
+	help
+		This option will support mtool build with mdoctorfat
+
+
+config MTOOLS_MDU
+	bool "Enable mdu support"
+	default y
+	help
+		This option will support mtool build with mdu
+
+
+config MTOOLS_MFORMAT
+	bool "Enable mformat support"
+	default y
+	help
+		This option will support mtool build with mformat
+
+
+config MTOOLS_MINFO
+	bool "Enable minfo support"
+	default y
+	help
+		This option will support mtool build with minfo
+
+
+config MTOOLS_MLABEL
+	bool "Enable mlabel support"
+	default y
+	help
+		This option will support mtool build with mlabel
+
+
+config MTOOLS_MMD
+	bool "Enable mmd support"
+	default y
+	help
+		This option will support mtool build with mmd
+
+
+config MTOOLS_MMOUNT
+	bool "Enable mmount support"
+	default y
+	help
+		This option will support mtool build with mmount
+
+
+config MTOOLS_MPARTITION
+	bool "Enable mpartition support"
+	default y
+	help
+		This option will support mtool build with mpartition
+
+
+config MTOOLS_MRD
+	bool "Enable mrd support"
+	default y
+	help
+		This option will support mtool build with mrd
+
+
+config MTOOLS_MREAD
+	bool "Enable mread support"
+	default y
+	help
+		This option will support mtool build with mread
+
+
+config MTOOLS_MMOVE
+	bool "Enable mmove support"
+	default y
+	help
+		This option will support mtool build with mmove
+
+
+config MTOOLS_MREN
+	bool "Enable mren support"
+	default y
+	help
+		This option will support mtool build with mren
+
+
+config MTOOLS_MSHOWFAT
+	bool "Enable mshowfat support"
+	default y
+	help
+		This option will support mtool build with mshowfat
+
+
+config MTOOLS_MSHORTNAME
+	bool "Enable mshortname support"
+	default y
+	help
+		This option will support mtool build with mshortname
+
+
+config MTOOLS_MTOOLSTEST
+	bool "Enable mtoolstest support"
+	default y
+	help
+		This option will support mtool build with mtoolstest
+
+
+config MTOOLS_MTYPE
+	bool "Enable mtype support"
+	default y
+	help
+		This option will support mtool build with mtype
+
+
+config MTOOLS_MWRITE
+	bool "Enable mwrite support"
+	default y
+	help
+		This option will support mtool build with mwrite
+
+
+config MTOOLS_MZIP
+	bool "Enable mzip support"
+	default y
+	help
+		This option will support mtool build with mzip
+endif

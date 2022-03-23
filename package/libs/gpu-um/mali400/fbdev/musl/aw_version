@@ -1,0 +1,24 @@
+mali-utgard: r8p1-00rel0 um 002
+
+Build parameters:
+CONFIG=release
+VARIANT=mali400-r1p1-gles-linux-no_profiling-rgb_is_xrgb-no_Werror
+TARGET_PLATFORM=default_7a (32-bit), TARGET_PLATFORM=default_8a (64-bit)
+TARGET_TOOLCHAIN=arm-linux-gcc-vfp (32-bit), TARGET_TOOLCHAIN=aarch64-linux-gcc (64-bit)
+
+Toolchain information:
+Reading specs from /home/yuxyun/tina/prebuilt/gcc/linux-x86/arm/toolchain-sunxi-musl/toolchain/bin/../lib/gcc/arm-openwrt-linux-muslgnueabi/6.4.1/specs
+COLLECT_GCC=arm-openwrt-linux-muslgnueabi-gcc.bin
+COLLECT_LTO_WRAPPER=/home/yuxyun/tina/prebuilt/gcc/linux-x86/arm/toolchain-sunxi-musl/toolchain/bin/../libexec/gcc/arm-openwrt-linux-muslgnueabi/6.4.1/lto-wrapper
+Target: arm-openwrt-linux-muslgnueabi
+Configured with: /home/caiyongheng/tina/out/r16-parrot/compile_dir/toolchain/gcc-linaro-6.4-2017.11/configure --with-bugurl=https://dev.openwrt.org/ --with-pkgversion='OpenWrt/Linaro GCC 6.4-2017.11 2017-11' --prefix=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=arm-openwrt-linux-muslgnueabi --with-gnu-ld --enable-target-optspace --enable-libgomp --disable-libmudflap --disable-multilib --disable-nls --without-isl --without-cloog --with-host-libstdcxx=-lstdc++ --with-gmp=/home/caiyongheng/tina/out/host --with-mpfr=/home/caiyongheng/tina/out/host --with-mpc=/home/caiyongheng/tina/out/host --disable-decimal-float --with-diagnostics-color=auto-if-env --disable-libssp --enable-__cxa_atexit --with-arch=armv7-a --with-float=hard --with-headers=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain/include --disable-libsanitizer --enable-languages=c,c++ --enable-shared --enable-threads --with-slibdir=/home/caiyongheng/tina/out/r16-parrot/staging_dir/toolchain/lib --enable-lto --with-libelf=/home/caiyongheng/tina/out/host
+Thread model: posix
+gcc version 6.4.1 (OpenWrt/Linaro GCC 6.4-2017.11 2017-11)
+
+Reading specs from /home/yuxyun/tina/prebuilt/gcc/linux-x86/aarch64/toolchain-sunxi-musl/toolchain/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/specs
+COLLECT_GCC=aarch64-openwrt-linux-musl-gcc.bin
+COLLECT_LTO_WRAPPER=/home/yuxyun/tina/prebuilt/gcc/linux-x86/aarch64/toolchain-sunxi-musl/toolchain/bin/../libexec/gcc/aarch64-openwrt-linux-musl/6.4.1/lto-wrapper
+Target: aarch64-openwrt-linux-musl
+Configured with: /home/caiyongheng/tina/out/r18-noma/compile_dir/toolchain/gcc-linaro-6.4-2017.11/configure --with-bugurl=https://dev.openwrt.org/ --with-pkgversion='OpenWrt/Linaro GCC 6.4-2017.11 2017-11' --prefix=/home/caiyongheng/tina/out/r18-noma/staging_dir/toolchain --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=aarch64-openwrt-linux-musl --with-gnu-ld --enable-target-optspace --enable-libgomp --disable-libmudflap --disable-multilib --disable-nls --without-isl --without-cloog --with-host-libstdcxx=-lstdc++ --with-gmp=/home/caiyongheng/tina/out/host --with-mpfr=/home/caiyongheng/tina/out/host --with-mpc=/home/caiyongheng/tina/out/host --disable-decimal-float --with-diagnostics-color=auto-if-env --disable-libssp --enable-fix-cortex-a53-835769 --enable-fix-cortex-a53-843419 --enable-__cxa_atexit --with-headers=/home/caiyongheng/tina/out/r18-noma/staging_dir/toolchain/include --disable-libsanitizer --enable-languages=c,c++ --enable-shared --enable-threads --with-slibdir=/home/caiyongheng/tina/out/r18-noma/staging_dir/toolchain/lib --enable-lto --with-libelf=/home/caiyongheng/tina/out/host
+Thread model: posix
+gcc version 6.4.1 (OpenWrt/Linaro GCC 6.4-2017.11 2017-11) 

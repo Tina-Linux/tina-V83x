@@ -1,0 +1,17 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2013 Francisco Borges
+
+# fontconfig is not a service but it needs its cache to be rebuilt on
+# every reboot
+
+START=50
+
+start() {
+    # -f == force
+    fc-cache -f
+}
+
+reload() {
+    # -r, --really-force   erase all existing caches, then rescan
+    fc-cache -r
+}

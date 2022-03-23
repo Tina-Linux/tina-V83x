@@ -1,0 +1,38 @@
+# list of required include directories for the current application
+appincdir := $(appdir)/include \
+             $(appdir)/../app_common/include \
+             $(appdir)/../app_ble/include \
+             $(appdir)/../app_tm/include
+
+# list of required source directories for the current application
+appsrcdir := $(appdir)/source \
+            $(appdir)/../app_common/source \
+            $(appdir)/../app_ble/source \
+            $(appdir)/../app_tm/source
+
+# list of sources for the current application
+appsrcs := \
+    app_ble_blp_main.c \
+    app_ble.c \
+    app_ble_client.c \
+    app_ble_server.c \
+    app_ble_blp.c \
+    app_ble_client_xml.c \
+    app_ble_client_db.c \
+    app_disc.c \
+    app_utils.c \
+    app_dm.c \
+    app_tm_vse.c \
+    app_mgt.c \
+    app_xml_param.c \
+    app_xml_utils.c \
+    app_services.c \
+    nanoxml.c
+
+
+# add the include and source directories to the whole project
+incdirs := $(incdirs) $(appincdir)
+srcdirs := $(srcdirs) $(appsrcdir)
+
+# add the list of sources to the current list
+appsources := $(appsources) $(appsrcs)

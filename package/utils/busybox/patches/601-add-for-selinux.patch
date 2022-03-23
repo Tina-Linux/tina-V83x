@@ -1,0 +1,155 @@
+diff -Naur a/init/init.c b/init/init.c
+--- a/init/init.c	2018-07-04 16:04:31.349007139 +0800
++++ b/init/init.c	2018-07-16 14:14:19.336137812 +0800
+@@ -137,6 +137,12 @@
+ #endif
+ #include "reboot.h" /* reboot() constants */
+
++#ifdef CONFIG_SELINUX
++#include <selinux/selinux.h>
++#include <selinux/label.h>
++#include <selinux/restorecon.h>
++#endif
++
+ #if DEBUG_SEGV_HANDLER
+ # undef _GNU_SOURCE
+ # define _GNU_SOURCE 1
+@@ -1146,6 +1152,16 @@
+	}
+
+ #if ENABLE_SELINUX
++	static const struct selinux_opt se_opts[] = {
++		{ SELABEL_OPT_PATH, "/etc/selinux/targeted/contexts/files/file_contexts" },
++		{ 0, NULL } };
++	struct selabel_handle *h = NULL;
++	int ret;
++	//DIR *root_dir = NULL;
++	//struct dirent *entry = NULL;
++	//struct stat sb;
++	//char fullname[256] = {0};
++
+	if (getenv("SELINUX_INIT") == NULL) {
+		int enforce = 0;
+
+@@ -1159,6 +1175,88 @@
+			return EXIT_FAILURE;
+		}
+	}
++
++	ret = setcon("u:r:init:s0");
++	if (ret)
++		fprintf(stdout, "setcon init failed!\n");
++	else
++		fprintf(stdout, "setcon init 0x%x success!\n", ret);
++
++	// load file_contexts
++	h = selabel_open(SELABEL_CTX_FILE, se_opts, 1);
++	if (!h)
++		fprintf(stderr, "Error getting file context handle: %d\n", errno);
++	else
++		fprintf(stdout, "%s load success!\n", se_opts[0].value);
++
++#if 1
++	ret = selinux_restorecon("/data/tee",
++			SELINUX_RESTORECON_RECURSE |
++			SELINUX_RESTORECON_PROGRESS |
++			SELINUX_RESTORECON_MASS_RELABEL |
++			SELINUX_RESTORECON_IGNORE_NOENTRY |
++			SELINUX_RESTORECON_ADD_ASSOC |
++			SELINUX_RESTORECON_SET_SPECFILE_CTX);
++	if (ret < 0)
++		fprintf(stdout, "selinux_restorecon /data/tee failed\n");
++
++	ret = selinux_restorecon("/etc",
++			SELINUX_RESTORECON_RECURSE |
++			SELINUX_RESTORECON_PROGRESS |
++			SELINUX_RESTORECON_MASS_RELABEL |
++			SELINUX_RESTORECON_IGNORE_NOENTRY |
++			SELINUX_RESTORECON_ADD_ASSOC |
++			SELINUX_RESTORECON_SET_SPECFILE_CTX);
++	if (ret < 0)
++		fprintf(stdout, "selinux_restorecon /etc failed\n");
++
++	ret = selinux_restorecon("/dev",
++			SELINUX_RESTORECON_RECURSE |
++			SELINUX_RESTORECON_PROGRESS |
++			SELINUX_RESTORECON_MASS_RELABEL |
++			SELINUX_RESTORECON_IGNORE_NOENTRY |
++			SELINUX_RESTORECON_ADD_ASSOC |
++			SELINUX_RESTORECON_SET_SPECFILE_CTX);
++	if (ret < 0)
++		fprintf(stdout, "selinux_restorecon /dev failed\n");
++#else
++	root_dir = opendir("/");
++	if (!root_dir) {
++		fprintf(stdout, "can not open root dir / \n");
++		return ;
++	}
++
++	// restorecon rootfs
++	while((entry = readdir(root_dir)) != NULL ) {
++		// it may be . or .. or hidden file
++		if (entry->d_name[0] == '.')
++			continue;
++
++		if (stat(entry->d_name, &sb) < 0)
++			continue ;
++
++		snprintf(fullname, sizeof(fullname), "/%s", entry->d_name);
++		fprintf(stdout, "==: %s\n", fullname);
++		if (S_ISDIR(sb.st_mode)) {
++			ret = selinux_restorecon(fullname,
++					SELINUX_RESTORECON_RECURSE |
++					SELINUX_RESTORECON_PROGRESS |
++					SELINUX_RESTORECON_MASS_RELABEL |
++					SELINUX_RESTORECON_IGNORE_NOENTRY |
++					SELINUX_RESTORECON_ADD_ASSOC |
++					SELINUX_RESTORECON_SET_SPECFILE_CTX);
++		} else {
++			ret = selinux_restorecon(fullname,
++					SELINUX_RESTORECON_MASS_RELABEL |
++					SELINUX_RESTORECON_IGNORE_NOENTRY |
++					SELINUX_RESTORECON_ADD_ASSOC |
++					SELINUX_RESTORECON_SET_SPECFILE_CTX);
++		}
++		if (ret < 0)
++			fprintf(stdout, "selinux_restorecon %s failed\n", fullname);
++	}
++	closedir(root_dir);
++#endif
+ #endif
+
+	if (ENABLE_FEATURE_INIT_MODIFY_CMDLINE) {
+diff -Naur a/selinux/load_policy.c b/selinux/load_policy.c
+--- a/selinux/load_policy.c	2018-07-04 16:04:34.421007084 +0800
++++ b/selinux/load_policy.c	2018-07-16 14:21:26.924130155 +0800
+@@ -24,15 +24,28 @@
+ int load_policy_main(int argc UNUSED_PARAM, char **argv UNUSED_PARAM)
+ {
+	int rc;
++	int enforce = 0;
++	int ret = 0;
+
+	if (argv[1]) {
+		bb_show_usage();
+	}
+
++	ret = selinux_init_load_policy(&enforce);
++	if (ret != 0 ) {
++		if (enforce > 0) {
++			/* SELinux in enforcing mode but load_policy failed */
++			fprintf(stderr,
++				"%s:  Can't load policy and enforcing mode requested:  %s\n",
++			argv[0], strerror(errno));
++			exit(3);
++		}
++	}
++/*
+	rc = selinux_mkload_policy(1);
+	if (rc < 0) {
+		bb_perror_msg_and_die("can't load policy");
+	}
+-
++*/
+	return 0;
+ }

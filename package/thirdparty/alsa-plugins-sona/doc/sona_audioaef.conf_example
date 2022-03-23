@@ -1,0 +1,106 @@
+# "#"means annotation
+#	the config line should not have space ahead
+# 	which means that only lines starting with letters of a~z/A~Z will be handled
+#	allow empty lines for appearance, program will ignore those lines
+# if there is no any configs following; program code takes the default
+
+# bqf type scope: { "AP1", "LP1", "HP1", "LS1", "HS1","LP2","HP2","LS2","HS2","PEAK","NOTCH","AP2","BP2" };
+# xover type scope :{ "LP", "HP" };
+# xover function scope:  { "BUTTWORTH", "BESSEL", "LINKREILY" };
+# xover slope scope: { "SLOPE_6", "SLOPE_12", "SLOPE_18", "SLOPE_24", "SLOPE_30", "SLOPE_36", "SLOPE_48" };
+
+#input-level enable attack_time release_time
+input-level 1 0.0002 0.2
+
+#input-hpf  enable type freq func slope
+input-hpf 0 HP 80 BUTTWORTH SLOPE_24
+
+#input gain x dB
+input-gain 0.0
+
+#virtbass sub-function on/off
+virtbass 0
+
+virtbass-hpf 1 HP 100 BUTTWORTH SLOPE_24
+virtbass-lpf 1 LP 180 BUTTWORTH SLOPE_36
+virtbass-lband-hpf 1 HP 180 BUTTWORTH SLOPE_36
+virtbass-lband-lpf 1 LP 400 BUTTWORTH SLOPE_24
+
+#eq enable/disable  5xBQF
+virtbass-lband-eq 0
+#eq band enable type gain q freq #band in[0, 4]
+virtbass-lband-eq  0 1 PEAK 1.0 0.7 200
+virtbass-lband-eq  1 1 PEAK 1.0	1.0 250
+virtbass-lband-eq  2 1 PEAK 2.5 1.0 350
+#gain
+virtbass-lband-gain 3.0
+
+#speaker nonlinear compensator mode in [bypass, gene, hivi, idea]
+nonlinear bypass
+
+#file-eq enable/disable  10xBQF
+filter-eq 0
+#eq band enable type gain q freq #band in[0, 9]
+filter-eq  0 1 PEAK 1.0 0.7 300
+filter-eq  1 1 PEAK 1.0	1.0 550
+filter-eq  2 1 PEAK 2.5 1.0 950
+
+
+# gain -eq module enable/disable
+deq 0
+#gain-related-eq 10xBQF
+#[format] eq startdB enddB enable #whole qroup of eq disable/enable for specific gain range
+#	only enable==1, program will read the related configs;
+#	and this config should always list ahead of the following gain-related bqf parameters
+#[format] eq startdB enddB band enable type gain q freq #startdB must less than enddB
+#   if the above gaindB falls in (startdB enddB](. >startdB and <= enddB), than apply the following configs to eq0
+# 	band in [0, 7]
+#   type in [AP1, LP1,HP1, LS1, HS1,LP2,HP2,LS2,HS2,PEAK,NOTCH,AP2,BP2]
+#   program only support most 30 groups of ranges for now
+#
+#	one group of parameters, for gaindB range in (-20 -15]
+gaineq-eq -20 -15 0
+gaineq-eq -20 -15 0 1 PEAK 0 0.667 300
+gaineq-eq -20 -15 1 1 PEAK 0 0.667 600
+gaineq-eq -20 -15 2 1 PEAK 0 0.667 800
+gaineq-eq -20 -15 7 1 PEAK 0 0.667 12000
+
+#another group of parameter, for gaindB range in (-40 -35]
+gaineq-eq -40 -35 0
+gaineq-eq -40 -35 0 1 PEAK 0 0.667 300
+gaineq-eq -40 -35 1 1 PEAK 0 0.667 600
+gaineq-eq -40 -35 2 1 PEAK 0 0.667 800
+gaineq-eq -40 -35 7 1 PEAK 0 0.667 12000
+#you can add more groups of parameters, for different range of gaindB
+#if above gaindB ranges repeated or overlaped, the last one will be valid;
+gaineq-eq -35 -5 0
+gaineq-eq -35 -5 0 1 PEAK 0 0.667 300
+gaineq-eq -35 -5 1 1 PEAK 0 0.667 600
+gaineq-eq -35 -5 2 1 PEAK 0 0.667 800
+gaineq-eq -35 -5 7 1 PEAK 0 0.667 20000
+
+gaineq-gain 0
+
+
+#subband balance global on/off
+subbandbalance 0
+#subband balance
+subbandbalance-lpf 1 LP 6000 LINKREILY SLOPE_24
+subbandbalance-bpf-hpf 1 HP 6000 LINKREILY SLOPE_24
+subbandbalance-bpf-lpf 1 LP 16000 LINKREILY SLOPE_24
+subbandbalance-hpf 1 HP 16000 LINKREILY SLOPE_24
+
+subbandbalance-low-level 1 0.0002 0.2
+#compressor enable attack_time release_time threshold ratio
+subbandbalance-low-compr 1 0.015 0.3 -26 3
+subbandbalance-mid-level 1 0.0002 0.2
+subbandbalance-mid-compr 1 0.015 0.3 -21 4
+subbandbalance-high-level 1 0.0002 0.2
+subbandbalance-high-compr 1 0.015 0.3 -20 3
+
+#output-level enable attack_time release_time
+output-level 1 0.0002 0.2
+#output-limiter enable threshold  attack_time release_time
+output-limiter 0 -3 0.0002 0.2
+output-gain 0
+

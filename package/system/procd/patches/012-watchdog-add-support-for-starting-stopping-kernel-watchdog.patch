@@ -1,0 +1,180 @@
+From 1f2a8fc5b71b0ae79e2361beca558874ba5c93cf Mon Sep 17 00:00:00 2001
+From: Hans Dedecker <dedeckeh@gmail.com>
+Date: Mon, 19 Jun 2017 11:14:27 +0200
+Subject: [PATCH] watchdog: add support for starting/stopping kernel watchdog
+
+Extend the ubus watchdog cmd with the parameter magicclose; when set and
+in case the stopped parameter is enabled the kernel watchdog will be stopped
+by first sending the magic character 'V' followed by a close of the watchdog
+fd. In case stopped is set to disabled the watchdog fd will be created again.
+
+Signed-off-by: Hans Dedecker <dedeckeh@gmail.com>
+Acked-by: John Crispin <john@phrozen.org>
+---
+ system.c   |  6 +++++
+ watchdog.c | 76 +++++++++++++++++++++++++++++++++++++++++++++++---------------
+ watchdog.h |  2 ++
+ 3 files changed, 66 insertions(+), 18 deletions(-)
+
+diff --git a/system.c b/system.c
+index fb7fbe4..6f521a6 100644
+--- a/system.c
++++ b/system.c
+@@ -238,6 +238,7 @@ static int system_upgrade(struct ubus_context *ctx, struct ubus_object *obj,
+ enum {
+ 	WDT_FREQUENCY,
+ 	WDT_TIMEOUT,
++	WDT_MAGICCLOSE,
+ 	WDT_STOP,
+ 	__WDT_MAX
+ };
+@@ -245,6 +246,7 @@ enum {
+ static const struct blobmsg_policy watchdog_policy[__WDT_MAX] = {
+ 	[WDT_FREQUENCY] = { .name = "frequency", .type = BLOBMSG_TYPE_INT32 },
+ 	[WDT_TIMEOUT] = { .name = "timeout", .type = BLOBMSG_TYPE_INT32 },
++	[WDT_MAGICCLOSE] = { .name = "magicclose", .type = BLOBMSG_TYPE_BOOL },
+ 	[WDT_STOP] = { .name = "stop", .type = BLOBMSG_TYPE_BOOL },
+ };
+ 
+@@ -279,6 +281,9 @@ static int watchdog_set(struct ubus_context *ctx, struct ubus_object *obj,
+ 		 watchdog_timeout(timeout);
+ 	}
+ 
++	if (tb[WDT_MAGICCLOSE])
++		watchdog_set_magicclose(blobmsg_get_bool(tb[WDT_MAGICCLOSE]));
++
+ 	if (tb[WDT_STOP])
+ 		watchdog_set_stopped(blobmsg_get_bool(tb[WDT_STOP]));
+ 
+@@ -293,6 +298,7 @@ static int watchdog_set(struct ubus_context *ctx, struct ubus_object *obj,
+ 	blobmsg_add_string(&b, "status", status);
+ 	blobmsg_add_u32(&b, "timeout", watchdog_timeout(0));
+ 	blobmsg_add_u32(&b, "frequency", watchdog_frequency(0));
++	blobmsg_add_u8(&b, "magicclose", watchdog_get_magicclose());
+ 	ubus_send_reply(ctx, req, b.head);
+ 
+ 	return 0;
+diff --git a/watchdog.c b/watchdog.c
+index bb0e2f4..aae78ec 100644
+--- a/watchdog.c
++++ b/watchdog.c
+@@ -31,6 +31,7 @@
+ static struct uloop_timeout wdt_timeout;
+ static int wdt_fd = -1;
+ static int wdt_frequency = 5;
++static bool wdt_magicclose = false;
+ 
+ void watchdog_ping(void)
+ {
+@@ -45,12 +46,66 @@ static void watchdog_timeout_cb(struct uloop_timeout *t)
+ 	uloop_timeout_set(t, wdt_frequency * 1000);
+ }
+ 
++static int watchdog_open(bool cloexec)
++{
++	char *env = getenv("WDTFD");
++
++	if (wdt_fd >= 0)
++		return wdt_fd;
++
++	if (env) {
++		DEBUG(2, "Watchdog handover: fd=%s\n", env);
++		wdt_fd = atoi(env);
++		unsetenv("WDTFD");
++	} else {
++		wdt_fd = open(WDT_PATH, O_WRONLY);
++	}
++
++	if (wdt_fd < 0)
++		return wdt_fd;
++
++	if (cloexec)
++		fcntl(wdt_fd, F_SETFD, fcntl(wdt_fd, F_GETFD) | FD_CLOEXEC);
++
++	return wdt_fd;
++}
++
++static void watchdog_close(void)
++{
++	if (wdt_fd < 0)
++		return;
++
++	if (write(wdt_fd, "V", 1) < 0)
++		ERROR("WDT failed to write release: %s\n", strerror(errno));
++
++	if (close(wdt_fd) == -1)
++		ERROR("WDT failed to close watchdog: %s\n", strerror(errno));
++
++	wdt_fd = -1;
++}
++
++void watchdog_set_magicclose(bool val)
++{
++	wdt_magicclose = val;
++}
++
++bool watchdog_get_magicclose(void)
++{
++	return wdt_magicclose;
++}
++
+ void watchdog_set_stopped(bool val)
+ {
+-	if (val)
++	if (val) {
+ 		uloop_timeout_cancel(&wdt_timeout);
+-	else
++
++		if (wdt_magicclose)
++			watchdog_close();
++	}
++	else {
++		watchdog_open(true);
+ 		watchdog_timeout_cb(&wdt_timeout);
++	}
+ }
+ 
+ bool watchdog_get_stopped(void)
+@@ -98,25 +153,10 @@ char* watchdog_fd(void)
+ 
+ void watchdog_init(int preinit)
+ {
+-	char *env = getenv("WDTFD");
+-
+-	if (wdt_fd >= 0)
+-		return;
+-
+ 	wdt_timeout.cb = watchdog_timeout_cb;
+-	if (env) {
+-		DEBUG(2, "Watchdog handover: fd=%s\n", env);
+-		wdt_fd = atoi(env);
+-		unsetenv("WDTFD");
+-	} else {
+-		wdt_fd = open("/dev/watchdog", O_WRONLY);
+-	}
+-
+-	if (wdt_fd < 0)
++	if (watchdog_open(!preinit) < 0)
+ 		return;
+ 
+-	if (!preinit)
+-		fcntl(wdt_fd, F_SETFD, fcntl(wdt_fd, F_GETFD) | FD_CLOEXEC);
+ 
+ 	LOG("- watchdog -\n");
+ 	watchdog_timeout(15);
+diff --git a/watchdog.h b/watchdog.h
+index 015fa93..ae49185 100644
+--- a/watchdog.h
++++ b/watchdog.h
+@@ -19,6 +19,8 @@ void watchdog_init(int preinit);
+ char* watchdog_fd(void);
+ int watchdog_timeout(int timeout);
+ int watchdog_frequency(int frequency);
++void watchdog_set_magicclose(bool val);
++bool watchdog_get_magicclose(void);
+ void watchdog_set_stopped(bool val);
+ bool watchdog_get_stopped(void);
+ void watchdog_no_cloexec(void);
+-- 
+1.9.1
+

@@ -1,0 +1,62 @@
+#! /bin/sh
+
+NAME=ntpd
+PROG=/usr/sbin/$NAME
+DESC="busybox ntpd"
+test -x $PROG || exit 0
+
+startdaemon(){
+	echo -n "Starting ntpd: "
+	$PROG -N -p ntp5.aliyun.com -p 0.openwrt.pool.ntp.org
+	echo "done"
+}
+stopdaemon(){
+	echo -n "Stopping ntpd: "
+	do_stop
+	echo "done"
+}
+
+
+do_stop() {
+	local pid status
+	status=0
+	pid=`pgrep $PROG` || status=$?
+	case $status in
+	0)
+		kill -s 15 $pid >/dev/null && echo "Stopped $DESC ($pid)." || exit $?
+		;;
+	*)
+		echo "$DESC is not running; none killed." >&2
+		;;
+	esac
+	return $status
+}
+
+case "$1" in
+	start)
+		startdaemon
+		;;
+	stop)
+		stopdaemon
+		;;
+	force-reload)
+		stopdaemon
+		startdaemon
+		;;
+	restart)
+		# Don't reset the tick here
+		stopdaemon
+		startdaemon
+		;;
+	reload)
+		# Must do this by hand, but don't do -g
+		stopdaemon
+		startdaemon
+		;;
+	*)
+		echo "Usage: ntpd { start | stop | restart | reload }" >&2
+		exit 1
+		;;
+esac
+
+exit 0

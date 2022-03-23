@@ -1,0 +1,34 @@
+From 92cc557984240d1b64206fbecd53b4afbc0d4a46 Mon Sep 17 00:00:00 2001
+From: liumingyuan <liumingyuan@allwinnertech.com>
+Date: Wed, 24 Apr 2019 10:32:52 +0800
+Subject: [PATCH] cancel gatt listen
+
+Signed-off-by: liumingyuan <liumingyuan@allwinnertech.com>
+---
+ src/gatt-database.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/gatt-database.c b/src/gatt-database.c
+index b8da955..75e07bd 100644
+--- a/src/gatt-database.c
++++ b/src/gatt-database.c
+@@ -2614,6 +2614,7 @@ struct btd_gatt_database *btd_gatt_database_new(struct btd_adapter *adapter)
+ 		goto fail;
+ 
+ 	addr = btd_adapter_get_address(adapter);
++/*
+ 	database->le_io = bt_io_listen(connect_cb, NULL, NULL, NULL, &gerr,
+ 					BT_IO_OPT_SOURCE_BDADDR, addr,
+ 					BT_IO_OPT_SOURCE_TYPE, BDADDR_LE_PUBLIC,
+@@ -2625,7 +2626,7 @@ struct btd_gatt_database *btd_gatt_database_new(struct btd_adapter *adapter)
+ 		g_error_free(gerr);
+ 		goto fail;
+ 	}
+-
++*/
+ 	/* BR/EDR socket */
+ 	database->l2cap_io = bt_io_listen(connect_cb, NULL, NULL, NULL, &gerr,
+ 					BT_IO_OPT_SOURCE_BDADDR, addr,
+-- 
+1.9.1
+

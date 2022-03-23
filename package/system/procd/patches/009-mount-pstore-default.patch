@@ -1,0 +1,12 @@
+Index: procd-2016-02-08/initd/early.c
+===================================================================
+--- procd-2016-02-08.orig/initd/early.c
++++ procd-2016-02-08/initd/early.c
+@@ -105,6 +105,7 @@ early_mounts(void)
+ 	mount("sysfs", "/sys", "sysfs", MS_NOATIME | MS_NODEV | MS_NOEXEC | MS_NOSUID, 0);
+ 	mount("cgroup", "/sys/fs/cgroup", "cgroup",  MS_NODEV | MS_NOEXEC | MS_NOSUID, 0);
+ 	dev_mount();
++	mount("pstore", "/sys/fs/pstore", "pstore", 0, 0);
+ 	ignore(symlink("/tmp/shm", "/dev/shm"));
+ 	mkdir("/dev/pts", 0755);
+ 	mount("devpts", "/dev/pts", "devpts", MS_NOATIME | MS_NOEXEC | MS_NOSUID, "mode=600");

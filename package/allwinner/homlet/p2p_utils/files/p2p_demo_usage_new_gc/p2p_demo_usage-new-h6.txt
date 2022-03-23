@@ -1,0 +1,14 @@
+说明：
+  p2pManager.h是p2p设备发现组件的头文件，使用方法文件中有详细的说明
+  同时也可以参见编写的demo源码了解使用；
+
+p2p_demo_usage_new-h6/文件夹下是H6平台上的测试资料， 测试方法如下：
+1. p2p_supplicant.conf 放到/etc 目录下添加可读权限
+   gc_wfd_start.sh  p2p_action.sh h6_gc 放到/usr/bin/ 目录下添加执行权限
+2. 运行gc_wfd_start.sh 即可
+    程序将扫描设备，并等待链接， 当打印出IP表明成功
+	样例：DEBUG  : WFD_LOG <onProcessThread:87>: peerIP: 192.168.49.1, mac: 6c:55:ad:79:ba:69, port: 7236 
+
+
+
+

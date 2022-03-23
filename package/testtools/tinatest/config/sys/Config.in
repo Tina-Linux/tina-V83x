@@ -1,0 +1,5 @@
+menu 'System Config'
+    source build/Config.in
+    source global/Config.in
+    source local/Config.in
+endmenu

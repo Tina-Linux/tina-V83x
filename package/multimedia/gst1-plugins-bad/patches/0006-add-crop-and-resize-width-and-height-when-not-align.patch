@@ -1,0 +1,108 @@
+diff --git a/ext/wayland/gstwaylandsink.c b/ext/wayland/gstwaylandsink.c
+index 4b34a49..ad14844 100644
+--- a/ext/wayland/gstwaylandsink.c
++++ b/ext/wayland/gstwaylandsink.c
+@@ -755,6 +755,8 @@ gst_wayland_sink_show_frame (GstVideoSink * vsink, GstBuffer * buffer)
+ 
+   GST_LOG_OBJECT (sink, "render buffer %p", buffer);
+ 
++  vmeta = gst_buffer_get_video_meta (buffer);
++
+   if (G_UNLIKELY (!sink->window)) {
+     /* ask for window handle. Unlock render_lock while doing that because
+      * set_window_handle & friends will lock it in this context */
+@@ -763,6 +765,13 @@ gst_wayland_sink_show_frame (GstVideoSink * vsink, GstBuffer * buffer)
+     g_mutex_lock (&sink->render_lock);
+ 
+     if (!sink->window) {
++      /* always show actual data */
++      if (sink->display) {
++        sink->display->crop.x = 0;
++        sink->display->crop.y = 0;
++        sink->display->crop.width = GST_ROUND_DOWN_2(vmeta->width) - 1;
++        sink->display->crop.height = GST_ROUND_DOWN_2(vmeta->height) - 1;
++    }
+       /* if we were not provided a window, create one ourselves */
+       sink->window = gst_wl_window_new_toplevel (sink->display,
+           &sink->video_info, &sink->render_lock);
+@@ -791,22 +800,21 @@ gst_wayland_sink_show_frame (GstVideoSink * vsink, GstBuffer * buffer)
+   /* update video info from video meta */
+   mem = gst_buffer_peek_memory (buffer, 0);
+ 
+-  vmeta = gst_buffer_get_video_meta (buffer);
+   if (vmeta) {
+-    gint i;
++    /* align and reset vmeta when width and height not equal to offset */
++    if (vmeta->offset[1] != vmeta->width * vmeta->height) {
++      sink->video_info.width = GST_ROUND_UP_16(vmeta->width);
++      sink->video_info.height = GST_ROUND_UP_16(vmeta->height);
++      vmeta->width = sink->video_info.width;
++      vmeta->height = sink->video_info.height;
++    }
+ 
+-    for (i = 0; i < vmeta->n_planes; i++) {
+-         /* When format is YV12 change u and v offset */
+-         if (vmeta->format == GST_VIDEO_FORMAT_YV12) {
+-             if (i == 0)
+-                 sink->video_info.offset[i] = vmeta->offset[i];
+-             else
+-                 sink->video_info.offset[i] = vmeta->offset[vmeta->n_planes - i];
+-             sink->video_info.stride[i] = vmeta->stride[i];
+-         } else {
++    for (gint i = 1; i < vmeta->n_planes ; i++) {
++      /* When format is YV12 change u and v offset */
++      if (vmeta->format == GST_VIDEO_FORMAT_YV12)
++          sink->video_info.offset[i] = vmeta->offset[vmeta->n_planes - i];
++      else
+              sink->video_info.offset[i] = vmeta->offset[i];
+-             sink->video_info.stride[i] = vmeta->stride[i];
+-         }
+     }
+     sink->video_info.size = gst_buffer_get_size (buffer);
+   }
+diff --git a/ext/wayland/wldisplay.h b/ext/wayland/wldisplay.h
+index ca8e152..1568d31 100644
+--- a/ext/wayland/wldisplay.h
++++ b/ext/wayland/wldisplay.h
+@@ -70,6 +70,9 @@ struct _GstWlDisplay
+   gint position_y;  /* property(position_y) */
+   gint out_width;   /* property out_width */
+   gint out_height;  /* property out_height */
++
++  GstVideoCropMeta crop;  /* crop info */
++
+ };
+ 
+ struct _GstWlDisplayClass
+diff --git a/ext/wayland/wlwindow.c b/ext/wayland/wlwindow.c
+index c9e1ebb..95b881f 100644
+--- a/ext/wayland/wlwindow.c
++++ b/ext/wayland/wlwindow.c
+@@ -131,12 +131,21 @@ gst_wl_window_new_internal (GstWlDisplay * display, GMutex * render_lock)
+       window->video_surface, window->area_surface);
+   wl_subsurface_set_desync (window->video_subsurface);
+ 
+-  if (display->viewporter) {
+-    window->area_viewport = wp_viewporter_get_viewport (display->viewporter,
+-        window->area_surface);
+-    window->video_viewport = wp_viewporter_get_viewport (display->viewporter,
+-        window->video_surface);
+-  }
++	if (display->viewporter) {
++		window->area_viewport = wp_viewporter_get_viewport(display->viewporter,
++				window->area_surface);
++		window->video_viewport = wp_viewporter_get_viewport(display->viewporter,
++				window->video_surface);
++		/* use crop struct to crop source */
++		if (display->crop.x >= 0 && display->crop.x >= 0
++			&& display->crop.width > 0 && display->crop.height > 0) {
++			wp_viewport_set_source(window->video_viewport,
++				wl_fixed_from_int(display->crop.x),
++				wl_fixed_from_int(display->crop.y),
++				wl_fixed_from_int(display->crop.width),
++				wl_fixed_from_int(display->crop.height));
++		}
++	}
+ 
+   /* do not accept input */
+   region = wl_compositor_create_region (display->compositor);

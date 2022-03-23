@@ -1,0 +1,29 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+START=99
+STOP=98
+DEPEND=sysntpd
+
+USE_PROCD=1
+PROG=/usr/bin/smart_ctrl
+
+export_ts_lib()
+{
+	export TSLIB_CALIBFILE=/etc/pointercal
+	export TSLIB_CONFFILE=/etc/ts.conf
+	export TSLIB_PLUGINDIR=/usr/lib/ts
+	export TSLIB_CONSOLEDEVICE=none
+	export TSLIB_FBDEVICE=/dev/fb0
+	export TSLIB_TSDEVICE=/dev/input/event2
+}
+start_service() {
+	config_foreach export_ts_lib
+	procd_open_instance
+	procd_set_param command $PROG
+	procd_close_instance
+}
+
+shutdown() {
+	echo shutdown
+}

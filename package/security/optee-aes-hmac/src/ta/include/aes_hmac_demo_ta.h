@@ -1,0 +1,15 @@
+#ifndef __AES_HMAC_DEMO_H
+#define __AES_HMAC_DEMO_H
+
+#define AES_HMAC_DEMO_UUID { 0xcb71e0c9, 0x260c, 0x48e8, \
+	{0xb0,0xdd,0x36,0xc9,0x5d,0x3c,0xad,0xba} }
+
+#define AES_HMAC_CMD_ROTPK_READ			0x220
+#define AES_HMAC_CMD_ROTPK_WRITE			0x221
+#define AES_HMAC_CMD_DRIVE_UNIQUE_KEY		0x222
+#define AES_HMAC_CMD_UI_ENCRYPT			0x223
+#define AES_HMAC_CMD_UI_DECRYPT			0x224
+#define AES_HMAC_CMD_UI_DIGEST			0x225
+#define AES_HMAC_CMD_SET_INFO			0x226
+
+#endif

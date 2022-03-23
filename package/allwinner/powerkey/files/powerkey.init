@@ -1,0 +1,17 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2016 Allwinner Project
+
+START=13
+STOP=98
+DEPEND=dbus
+USE_PROCD=1
+PROG=/usr/sbin/powerkey_daemon
+OOM_ADJ=-17
+
+start_service() {
+
+	procd_open_instance
+	procd_set_param oom_adj $OOM_ADJ
+	procd_set_param command $PROG
+	procd_close_instance
+}

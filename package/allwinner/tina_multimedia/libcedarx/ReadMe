@@ -1,0 +1,42 @@
+CedarX README
+=============
+
+CedarX is a middware to process multimedia content.
+
+## Dependencies
+CedarC        v1.1
+AudioDec      v?
+sub_decoder   v?
+
+---------------------------------------------------------------------------------------------------------------------------
+linux 编译方法
+1.准备好Cedarx 和 对应的 libcedarc
+使得cedarx 目录与 libcedarc 目录都在同一个文件夹中
+
+2.先编译libcedarc
+./bootstrap
+./configure --prefix=$INSTALL_PATH --host=$(toolchain) CFLAGS="-DCONF_KERNEL_VERSION_3_10" CPPFLAGS="-DCONF_KERNEL_VERSION_3_10" LDFLAGS="-L(当前libcedarc目录绝对路径)/library/arm-linux-gnueabi"
+make
+make install
+说明:
+$INSTALL_PATH: 安装目录
+$(toolchain): 编译 toolchain 前缀
+例子:
+./bootstrap
+./configure --prefix=~/install --host=arm-linux-gnueabi CFLAGS="-DCONF_KERNEL_VERSION_3_10" CPPFLAGS="-DCONF_KERNEL_VERSION_3_10" LDFLAGS="-L~/cedarc-release/libcedarc/library/arm-linux-gnueabi"
+make
+make install
+
+3.编译cedarx
+./bootstrap
+./configure --host=arm-linux-gnueabi CFLAGS="-D__ENABLE_ZLIB__" CPPFLAGS="-D__ENABLE_ZLIB__" LDFLAGS="-lcrypto -lz -L(当前cedarx目录绝对路径)/cedarx/external/(当前toolchain对应目录) -L(当前libcedarc目录绝对路径)/lib/" --prefix=$INSTALL_PATH
+make
+make install
+说明：
+$INSTALL_PATH: 安装目录
+$(toolchain): 编译 toolchain 前缀
+例子:
+./bootstrap
+./configure --host=arm-linux-gnueabi CFLAGS="-D__ENABLE_ZLIB__" CPPFLAGS="-D__ENABLE_ZLIB__" LDFLAGS="-lcrypto -lz -L~/cedarx/external/lib32/arm-linux-gnueabi -L~/lib/" --prefix=~/install
+make
+make install

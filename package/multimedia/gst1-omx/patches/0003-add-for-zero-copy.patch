@@ -1,0 +1,83 @@
+From d3096c4fc4e7d13647df55a7c74dc5ba1e143bc7 Mon Sep 17 00:00:00 2001
+From: xiebin <xiebin@allwinnertech.com>
+Date: Tue, 2 Jan 2018 17:20:30 +0800
+Subject: [PATCH 4/4] add for zero copy
+
+---
+ omx/gstomxbufferpool.c     |  7 ++++++-
+ omx/gstomxvideo.c          |  3 +++
+ omx/openmax/OMX_IVCommon.h | 12 ++++++++++++
+ 3 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/omx/gstomxbufferpool.c b/omx/gstomxbufferpool.c
+index b57612d..607bee8 100644
+--- a/omx/gstomxbufferpool.c
++++ b/omx/gstomxbufferpool.c
+@@ -344,6 +344,7 @@ gst_omx_buffer_pool_alloc_buffer (GstBufferPool * bpool,
+   GstOMXBufferPool *pool = GST_OMX_BUFFER_POOL (bpool);
+   GstBuffer *buf;
+   GstOMXBuffer *omx_buf;
++  GstMemoryFlags flags = 0;
+
+   g_return_val_if_fail (pool->allocating, GST_FLOW_ERROR);
+
+@@ -389,7 +390,10 @@ gst_omx_buffer_pool_alloc_buffer (GstBufferPool * bpool,
+     gsize offset[GST_VIDEO_MAX_PLANES] = { 0, };
+     gint stride[GST_VIDEO_MAX_PLANES] = { nstride, 0, };
+
+-    mem = gst_omx_memory_allocator_alloc (pool->allocator, 0, omx_buf);
++	if(pool->port->port_def.bBuffersContiguous)
++		flags|= GST_MEMORY_FLAG_PHYSICALLY_CONTIGUOUS;
++
++    mem = gst_omx_memory_allocator_alloc (pool->allocator, flags, omx_buf);
+     buf = gst_buffer_new ();
+     gst_buffer_append_memory (buf, mem);
+     g_ptr_array_add (pool->buffers, buf);
+@@ -405,6 +409,7 @@ gst_omx_buffer_pool_alloc_buffer (GstBufferPool * bpool,
+       case GST_VIDEO_FORMAT_GRAY8:
+         break;
+       case GST_VIDEO_FORMAT_I420:
++	  case GST_VIDEO_FORMAT_YV12:
+         stride[1] = nstride / 2;
+         offset[1] = offset[0] + stride[0] * nslice;
+         stride[2] = nstride / 2;
+diff --git a/omx/gstomxvideo.c b/omx/gstomxvideo.c
+index 8a42c71..fd4cad4 100644
+--- a/omx/gstomxvideo.c
++++ b/omx/gstomxvideo.c
+@@ -44,6 +44,9 @@ gst_omx_video_get_format_from_omx (OMX_COLOR_FORMATTYPE omx_colorformat)
+     case OMX_COLOR_FormatYUV420PackedPlanar:
+       format = GST_VIDEO_FORMAT_I420;
+       break;
++	case OMX_COLOR_FormatYVU420Planar:
++	  format = GST_VIDEO_FORMAT_YV12;
++	  break;
+     case OMX_COLOR_FormatYUV420SemiPlanar:
+     case OMX_COLOR_FormatYUV420PackedSemiPlanar:
+       format = GST_VIDEO_FORMAT_NV12;
+diff --git a/omx/openmax/OMX_IVCommon.h b/omx/openmax/OMX_IVCommon.h
+index 4c4995c..367670b 100644
+--- a/omx/openmax/OMX_IVCommon.h
++++ b/omx/openmax/OMX_IVCommon.h
+@@ -132,6 +132,18 @@ typedef enum OMX_COLOR_FORMATTYPE {
+     OMX_COLOR_Format24BitABGR6666,
+     OMX_COLOR_FormatKhronosExtensions = 0x6F000000, /**< Reserved region for introducing Khronos Standard Extensions */
+     OMX_COLOR_FormatVendorStartUnused = 0x7F000000, /**< Reserved region for introducing Vendor Extensions */
++    //* extended by aw;
++    OMX_COLOR_FormatYVU420SemiPlanar,
++	OMX_COLOR_FormatYVU420Planar,
++    //* end;
++
++    OMX_COLOR_FormatAndroidOpaque = 0x7F000789,
++    OMX_COLOR_FormatYUV420Flexible = 0x7F420888,
++    OMX_TI_COLOR_FormatYUV420PackedSemiPlanar = 0x7F000100,
++    OMX_QCOM_COLOR_FormatYVU420SemiPlanar = 0x7FA30C00,
++    OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka = 0x7FA30C03,
++    OMX_SEC_COLOR_FormatNV12Tiled = 0x7FC00002,
++    OMX_QCOM_COLOR_FormatYUV420PackedSemiPlanar32m = 0x7FA30C04,
+     OMX_COLOR_FormatMax = 0x7FFFFFFF
+ } OMX_COLOR_FORMATTYPE;
+
+--
+2.7.4
+

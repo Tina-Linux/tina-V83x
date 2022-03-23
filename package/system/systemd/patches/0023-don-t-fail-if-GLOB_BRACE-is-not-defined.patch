@@ -1,0 +1,43 @@
+From b02b924713f71a2133fdab704eb3addef15f91d8 Mon Sep 17 00:00:00 2001
+From: Emil Renner Berthing <systemd@esmil.dk>
+Date: Thu, 18 Sep 2014 15:24:44 +0200
+Subject: [PATCH 23/31] don't fail if GLOB_BRACE is not defined
+
+If the standard library doesn't provide brace
+expansion users just won't get it.
+---
+ src/basic/util.c        | 7 +++++++
+ src/tmpfiles/tmpfiles.c | 6 ++++++
+ 2 files changed, 13 insertions(+)
+
+--- a/src/basic/util.c
++++ b/src/basic/util.c
+@@ -3373,6 +3373,13 @@ int in_group(const char *name) {
+         return in_gid(gid);
+ }
+ 
++/* Don't fail if the standard library
++ * doesn't provide brace expansion */
++
++#ifndef GLOB_BRACE
++#define GLOB_BRACE 0
++#endif
++
+ int glob_exists(const char *path) {
+         _cleanup_globfree_ glob_t g = {};
+         int k;
+--- a/src/tmpfiles/tmpfiles.c
++++ b/src/tmpfiles/tmpfiles.c
+@@ -67,6 +67,12 @@
+ #define GLOB_ALTDIRFUNC 0
+ #endif
+ 
++/* Don't fail if the standard library
++ * doesn't provide brace expansion */
++#ifndef GLOB_BRACE
++#define GLOB_BRACE 0
++#endif
++
+ typedef enum ItemType {
+         /* These ones take file names */
+         CREATE_FILE = 'f',

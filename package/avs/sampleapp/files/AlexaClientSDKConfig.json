@@ -1,0 +1,28 @@
+{
+   "deviceInfo":{
+     "deviceSerialNumber":"",
+     "clientId":"amzn1.application-oa2-client.284d50cceeab47db9f0b6a38dfd4f3f9",
+     "productId":"test_huang"
+   },
+   "cblAuthDelegate":{
+       "databaseFilePath":"/etc/avs/cblAuthDelegate.db"
+   },
+   "miscDatabase":{
+       "databaseFilePath":"/etc/avs/miscDatabase.db"
+   },
+   "alertsCapabilityAgent":{
+       "databaseFilePath":"/etc/avs/alerts.db"
+   },
+   "settings":{
+       "databaseFilePath":"/etc/avs/settings.db",
+       "defaultAVSClientSettings":{
+           "locale":"en-US"
+       }
+   },
+   "certifiedSender":{
+      "databaseFilePath":"/etc/avs/certifiedSender.db"
+   },
+   "notifications":{
+       "databaseFilePath":"/etc/avs/notifications.db"
+   }
+}

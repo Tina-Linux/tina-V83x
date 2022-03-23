@@ -1,0 +1,186 @@
+*****************************************************************************************
+1. 将tool 所需文件放到系统里
+cp rtlbtmp /usr/sbin/
+chmod 777 /usr/sbin/rtlbtmp
+
+cp  mp_rtl8723d_config_h5  /lib/firmware/
+chmod 644  /lib/firmware/mp_rtl8723d_config_h5
+
+cp  mp_rtl8723d_config_h4  /lib/firmware/
+chmod 644  /lib/firmware/mp_rtl8723d_config_h4
+
+cp  mp_rtl8723d_fw  /lib/firmware/
+chmod 644  /lib/firmware/mp_rtl8723d_fw
+
+以上文件建议放到SDK 里，不会影响正常的蓝牙使用；
+
+*****************************************************************************************
+
+*****************************************************************************************
+2. 选好BT天线以及关闭正常蓝牙；
+
+测试BT TX power 前，先确保BT天线固定在S0或者S1，具体请咨询wifi 部门；
+
+测试时候还需要关闭正常的蓝牙；
+请关闭normal 蓝牙，即开机后默认不加载rtk_hciattach等流程；
+
+
+*****************************************************************************************
+小米产线修改BT efuse 前是H5 mode，修改BT efuse 后并断电重启就是H4 mode
+*****************************************************************************************
+
+//切BT 天线
+rtwpriv wlan0 mp_start
+rtwpriv wlan0 mp_setrfpath 0
+rtwpriv wlan0 mp_ant_tx a //BT RF从近端（S0）出来,wifi 在S1；
+rtwpriv wlan0 mp_ant_tx b //BT RF从远端（S1）出来,wifi 在S0；
+
+
+3. link mode测试简单流程；
+rtlbtmp
+
+如果是H4 mode(小米TV 或者 已经量产校验完的小米产品):
+enable uart4:/dev/ttyS1      //假设UART 接口是ttyS1，具体请根据平台提供
+
+
+如果是H5 mode（RTK原来的芯片）:
+enable uart5:/dev/ttyS1
+
+bt_mp_Exec 1  //芯片进入link mode，等待仪器来连接测试；
+
+quit
+
+*****************************************************************************************
+
+*****************************************************************************************
+
+4. non-link mode测试简单流程；
+
+rtlbtmp
+
+如果是H4 mode(小米TV 或者 已经量产校验完的小米产品):
+enable uart4:/dev/ttyS1      //假设UART 接口是ttyS1，具体请根据平台提供
+
+
+如果是H5 mode（RTK原来的芯片）:
+enable uart5:/dev/ttyS1
+
+bt_mp_Exec 5
+
+bt_mp_Exec 6
+//测试期间都需要关闭normal 蓝牙，然后执行上面4条命令；
+
+
+//2402MHz单载波
+
+bt_mp_SetParam  1,0;2,0x08;3,0x00;4,0x00;6,0xFF;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+
+bt_mp_Exec 34  //此时频谱分析仪上会有波形输出；
+
+bt_mp_Exec 35  //此时频谱分析仪上不会有波形输出；
+
+//2480MHz单载波:
+
+bt_mp_SetParam  1,78;2,0x08;3,0x00;4,0x00;6,0xFF;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+
+bt_mp_Exec 34  //此时频谱分析仪上会有波形输出；
+
+bt_mp_Exec 35  //此时频谱分析仪上不会有波形输出；
+
+
+//2402MH调制波
+
+bt_mp_SetParam  1,0;2,0x08;3,0x07;4,0x00;6,0x80;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+
+bt_mp_Exec 30   //此时频谱分析仪上会有波形输出
+
+bt_mp_Exec 31    //停止；
+
+//2480MHz调制波
+
+bt_mp_SetParam  1,78;2,0x08;3,0x07;4,0x00;6,0x80;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+
+bt_mp_Exec 30  //此时频谱分析仪上会有波形输出
+
+bt_mp_Exec 31    //停止；
+
+quit
+
+如果需要连续的TX power出来，可以使用CONTINUE_TX
+[19:10:32.061] bt_mp_Exec 36   //FW_LE_CONTINUE_TX_START
+
+
+[19:10:33.120] bt_mp_Exec 37   //FW_LE_CONTINUE_TX_STOP
+
+*****************************************************************************************
+
+*****************************************************************************************
+
+
+以下是我本地在TV 串口里操作的结果：
+130|root@android:/ # rtlbtmp
+::::::::::::::::::::::::::::::::::::::::::::::::
+:::::::: Bluetooth MP Test Tool Starting for xiaomi RTL8723DS(H4/H5) Linux OS 20180628 ::::::::
+>
+enable uart4:/dev/ttyS1
+
+> enable[Success:0]
+
+>
+> bt_mp_SetParam  1,0;2,0x08;3,0x00;4,0x00;6,0xFF;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+bt_mp_SetParam[Success:0]
+> bt_mp_SetParam,11,0x00
+bt_mp_Exec 34
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,34,0x00
+bt_mp_Exec 35
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,35,0x00
+
+> bt_mp_SetParam  1,78;2,0x08;3,0x00;4,0x00;6,0xFF;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+bt_mp_SetParam[Success:0]
+> bt_mp_SetParam,11,0x00
+bt_mp_Exec 34
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,34,0x00
+bt_mp_Exec 35
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,35,0x00
+
+>
+> bt_mp_SetParam  1,0;2,0x08;3,0x07;4,0x00;6,0x80;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+bt_mp_SetParam[Success:0]
+> bt_mp_SetParam,11,0x00
+bt_mp_Exec 30
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,30,0x00
+bt_mp_Exec 31
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,31,0x00
+
+> bt_mp_SetParam  1,78;2,0x08;3,0x07;4,0x00;6,0x80;7,0x21;9,0x3FFFF;11,0x000000c6967e;
+bt_mp_SetParam[Success:0]
+> bt_mp_SetParam,11,0x00
+bt_mp_Exec 30
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,30,0x00
+bt_mp_Exec 31
+bt_mp_Exec[Success:0]
+> bt_mp_Exec,31,0x00
+
+> h
+Unknown command[h]
+help :: Lists all available console commands(ver 16.10.21)
+quit :: Abort the MP tool test app
+enable :: Enable bluetooth
+disable :: Disable bluetooth
+bt_mp_HciCmd :: Send HCI Commands
+bt_mp_GetParam :: Get all/individual exposed parameters
+bt_mp_SetParam :: Set specific parameters<index,value>
+bt_mp_SetConfig :: Set configurations to the specific file
+bt_mp_Exec :: Execute specific action<action id>
+bt_mp_Report :: Report specific info according to item selected
+bt_mp_RegRW :: R/W Modem, RF, SYS & BB registers
+search :: search remote MAC or remote Name
+read :: read mac
+>

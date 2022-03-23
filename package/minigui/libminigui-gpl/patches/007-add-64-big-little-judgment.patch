@@ -1,0 +1,70 @@
+--- a/src/misc/endianrw.c
++++ b/src/misc/endianrw.c
+@@ -47,11 +47,25 @@
+ #include "common.h"
+ #include "endianrw.h"
+ 
++int checkSystem(void)
++{
++    union check
++    {
++        int i;
++        char ch;
++    }c;
++    c.i = 1;
++    return (c.ch==1);
++}
++
+ Uint16 MGUI_ReadLE16 (MG_RWops *src)
+ {
+ 	Uint16 value;
+ 
+ 	MGUI_RWread(src, &value, (sizeof value), 1);
++	if(1==checkSystem())
++             return value;
++        else
+ 	return(ArchSwapLE16(value));
+ }
+ 
+@@ -68,6 +82,9 @@
+ 	Uint32 value;
+ 
+ 	MGUI_RWread(src, &value, (sizeof value), 1);
++	if(1==checkSystem())
++             return value;
++        else
+ 	return(ArchSwapLE32(value));
+ }
+ 
+@@ -136,10 +153,15 @@
+ 	Uint16 value;
+     size_t size;
+ 
+-	size = fread (&value, (sizeof value), 1, src);
++    size = fread (&value, (sizeof value), 1, src);
++#if 0
+     if (size < 1)
+         return -1;
++#endif
++	if(1==checkSystem()){
++             return value;
+ 
++        }else
+ 	return (ArchSwapLE16(value));
+ }
+ 
+@@ -149,9 +171,13 @@
+ 	size_t size;
+ 
+     size = fread(&value, (sizeof value), 1, src);
++#if 0
+     if (size < 1)
+         return -1;
+-
++#endif
++	if(1==checkSystem()){
++             return value;
++        }else
+ 	return (ArchSwapLE32(value));
+ }
+ 

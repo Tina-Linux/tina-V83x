@@ -1,0 +1,14 @@
+# Copyright (C) 2018 Allwinner Technology Co., Ltd.
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+if PACKAGE_tina-upgrade
+
+config TINA_UPGRADE_INSTALL_PUB_KEY
+	bool "Install pub key to rootfs"
+	default n
+	help
+	   These options are used to config install pub key
+
+endif

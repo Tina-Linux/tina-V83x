@@ -1,0 +1,45 @@
+From 8476b2f27f74eeae7c7ffa96dc613c12525fa0b5 Mon Sep 17 00:00:00 2001
+From: zhuangqiubin <zhuangqiubin@allwinnertech.com>
+Date: Mon, 22 Jul 2019 21:47:52 +0800
+Subject: [PATCH] env:try redund when check device 0 fail
+
+Signed-off-by: zhuangqiubin <zhuangqiubin@allwinnertech.com>
+---
+ tools/env/fw_env.c | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
+index b8de409..63149c6 100644
+--- a/tools/env/fw_env.c
++++ b/tools/env/fw_env.c
+@@ -1680,7 +1680,7 @@ err:
+ 
+ static int parse_config(struct env_opts *opts)
+ {
+-	int rc;
++	int rc, rc_redund;
+ 
+ 	if (!opts)
+ 		opts = &default_opts;
+@@ -1725,13 +1725,14 @@ static int parse_config(struct env_opts *opts)
+ #endif
+ #endif
+ 	rc = check_device_config(0);
+-	if (rc < 0)
+-		return rc;
+ 
+-	if (HaveRedundEnv) {
+-		rc = check_device_config(1);
++	if (!HaveRedundEnv) {
+ 		if (rc < 0)
+ 			return rc;
++	} else {
++		rc_redund = check_device_config(1);
++		if (rc < 0 && rc_redund < 0)
++			return rc;
+ 
+ 		if (ENVSIZE(0) != ENVSIZE(1)) {
+ 			fprintf(stderr,
+-- 
+1.9.1
+

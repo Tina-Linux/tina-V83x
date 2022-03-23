@@ -1,0 +1,9 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_OUTLOG
+    bool "outlog"
+    default y
+
+if TINATEST_SYS_GLOBAL_INFO_OUTLOG
+    source serial/Config.in
+    source markdown/Config.in
+    source dragonmat/Config.in
+endif

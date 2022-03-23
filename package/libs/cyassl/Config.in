@@ -1,0 +1,381 @@
+if PACKAGE_libcyassl
+
+config CYASSL_WITH_STATIC
+	bool
+	default n
+	prompt "Build static libraries"
+	help
+
+config CYASSL_WITH_DEBUG
+	bool
+	default n
+	prompt "Add debug code/turns off optimizations (yes|no)"
+	help
+
+config CYASSL_WITH_SSLV3
+	bool
+	default n
+	prompt "Enable ssl version 3.0 "
+	help
+
+config CYASSL_WITH_AFALG
+	bool
+	default y
+	prompt "Enable linux af_alg use for crypto "
+	help
+
+config CYASSL_WITH_ZERO_COPY
+	bool
+	default y
+	depends on CYASSL_WITH_AFALG
+	prompt "Support to use splice send data for afalg"
+	help
+
+config CYASSL_WITH_SINGLETHREADED
+	bool
+	default y
+	prompt "Enable wolfssl single threaded"
+	help
+
+choice
+      prompt "Openssl Compatible"
+      default CYASSL_WITH_OPENSSLEXTRA
+      depends on PACKAGE_libcyassl
+
+config CYASSL_WITH_OPENSSLCOEXIST
+	bool
+	prompt "Enable coexistence of wolfssl/openssl"
+	help
+
+
+config CYASSL_WITH_OPENSSLALL
+	bool
+	prompt "Enable all openssl api, size++"
+	help
+
+
+config CYASSL_WITH_OPENSSLEXTRA
+	bool
+	select CYASSL_WITH_PWDBASED
+	select CYASSL_WITH_CODING
+	prompt "Enable extra openssl api, size+"
+	help
+
+endchoice
+
+menu "Cipher Algorithms"
+     depends on PACKAGE_libcyassl
+
+config CYASSL_WITH_IDEA
+	bool
+	default n
+	prompt "Enable idea cipher "
+	help
+
+
+config CYASSL_WITH_ARC4
+	bool
+	default n
+	prompt "Enable arc4 support"
+	help
+
+config CYASSL_WITH_CMAC
+	bool
+	default n
+	prompt "Enable cmac "
+	help
+
+config CYASSL_WITH_AES
+	bool
+	default y
+	prompt "Enable aes algorithm support"
+	help
+
+
+config CYASSL_WITH_XTS
+	bool
+	depends on CYASSL_WITH_AES
+	default n
+	prompt "Enable wolfssl aes-xts support"
+	help
+
+
+config CYASSL_WITH_AESCBC
+	bool
+	depends on CYASSL_WITH_AES
+	default y
+	prompt "Enable wolfssl aes-cbc support "
+	help
+
+
+config CYASSL_WITH_AESGCM
+	bool
+	depends on CYASSL_WITH_AES
+	default n
+	prompt "Enable wolfSSL AES-GCM support"
+	help
+
+config CYASSL_WITH_AESCTR
+	bool
+	depends on CYASSL_WITH_AES
+	default n
+	prompt "Enable wolfssl aes-ctr support "
+	help
+
+
+config CYASSL_WITH_AESCFB
+	bool
+	depends on CYASSL_WITH_AES
+	default n
+	prompt "Enable wolfssl aes-cfb support "
+	help
+
+config CYASSL_WITH_AESKEYWRAP
+	bool
+	depends on CYASSL_WITH_AES
+	default n
+	prompt "Enable aes key wrap support "
+	help
+
+endmenu
+
+menu "Hash Algorithms"
+       depends on PACKAGE_libcyassl
+
+
+config CYASSL_WITH_HASHDRBG
+	bool
+	default y
+	prompt "Enable hash drbg support "
+	help
+
+
+config CYASSL_WITH_SHA
+	bool
+	default y
+	prompt "Enable wolfssl sha support"
+	help
+
+
+config CYASSL_WITH_SHA3
+	bool
+	default y
+	prompt "Enable wolfssl sha-3 support"
+	help
+
+
+config CYASSL_WITH_SHA224
+	bool
+	default y
+	depends on !CYASSL_WITH_AFALG
+	prompt "Enable wolfssl sha-224 support"
+	help
+
+config CYASSL_WITH_SHA384
+	bool
+	default y
+	prompt "Enable wolfssl sha-384 support"
+	help
+
+config CYASSL_WITH_SHA512
+	bool
+	default y
+	prompt "Enable wolfssl sha-512 support"
+	help
+
+
+config CYASSL_WITH_MD2
+	bool
+	default n
+	prompt "Enable wolfssl md2 support"
+	help
+
+
+config CYASSL_WITH_MD4
+	bool
+	default n
+	prompt "Enable wolfssl md4 support"
+	help
+
+
+config CYASSL_WITH_MD5
+	bool
+	default y
+	prompt "Enable wolfssl md5 support"
+	help
+
+endmenu
+
+
+menu "RSA Algorithms"
+	depends on CYASSL_WITH_ASN
+
+config CYASSL_WITH_DH
+	bool
+	default y
+	prompt "Enable dh support"
+	help
+
+
+config CYASSL_WITH_RSA
+	bool
+	default y
+	prompt "Enable rsa support"
+	help
+
+
+config CYASSL_WITH_OAEP
+	bool
+	default y
+	prompt "Enable rsa-oaep support"
+	help
+
+
+config CYASSL_WITH_RSAPUB
+	bool
+	default n
+	prompt "Enable rsa public only "
+	help
+
+
+config CYASSL_WITH_RSAVFY
+	bool
+	default n
+	prompt "Enable rsa verify inline only "
+	help
+
+
+config CYASSL_WITH_RSAPSS
+	bool
+	default n
+	prompt "Enable rsa-pss "
+	help
+
+endmenu
+
+menu "PKCSx Type"
+
+config CYASSL_WITH_PKCS7
+	bool
+	default n
+	prompt "Enable pkcs7  access"
+	help
+
+
+config CYASSL_WITH_PKCS11
+	bool
+	default n
+	prompt "Enable pkcs11 access"
+	help
+
+
+config CYASSL_WITH_PKCS12
+	bool
+	default y
+	prompt "Enable pkcs12 access"
+	help
+
+endmenu
+
+menu "TLS Type"
+
+config CYASSL_WITH_OLDTLS
+	bool
+	default n
+	prompt "Enable old TLS versions < 1.2"
+	help
+
+config CYASSL_WITH_TLSV10
+	bool
+	depends on CYASSL_WITH_OLDTLS
+	default n
+	prompt "Enable old TLS versions 1.0"
+	help
+
+config CYASSL_WITH_TLS13
+	bool
+	default n
+	prompt "Enable wolfSSL TLS v1.3"
+	help
+
+config CYASSL_WITH_TLS13_DRAFT18
+	bool
+	depends on CYASSL_WITH_TLS13
+	default n
+	prompt "Enable wolfSSL TLS v1.3 Draft 18"
+	help
+
+config CYASSL_WITH_TLS13_DRAFT22
+	bool
+	depends on CYASSL_WITH_TLS13
+	default n
+	prompt "Enable wolfSSL TLS v1.3 Draft 22"
+	help
+
+config CYASSL_WITH_TLS13_DRAFT23
+	bool
+	depends on CYASSL_WITH_TLS13
+	default n
+	prompt "Enable wolfSSL TLS v1.3 Draft 23"
+	help
+
+config CYASSL_WITH_TLS13_DRAFT26
+	bool
+	depends on CYASSL_WITH_TLS13
+	default n
+	prompt "Enable wolfSSL TLS v1.3 Draft 26"
+	help
+
+config CYASSL_WITH_TLS13_DRAFT28
+	bool
+	depends on CYASSL_WITH_TLS13
+	default n
+	prompt "Enable wolfSSL TLS v1.3 Draft 28"
+	help
+
+endmenu
+
+
+config CYASSL_WITH_FILESYSTEM
+	bool
+	default n
+	prompt "Enable Filesystem support"
+	help
+	   This option can read pem/x509/der format key from file,
+	   it you do not need it, select n.
+
+config CYASSL_WITH_POLY1305
+	bool
+	default n
+	prompt "Enable wolfSSL POLY1305 support"
+	help
+
+config CYASSL_WITH_CHACHA
+	bool
+	default n
+	prompt "Enable CHACHA support"
+	help
+
+config CYASSL_WITH_ASN
+	bool
+	default y
+	prompt "Enable asn support"
+	help
+
+config CYASSL_WITH_ECC
+	bool
+	depends on CYASSL_WITH_ASN
+	default y
+	prompt "Enable ecc support"
+	help
+
+
+config CYASSL_WITH_ECCSHAMIR
+	bool
+	depends on CYASSL_WITH_ECC
+	default y
+	prompt "Enable ecc shamir "
+	help
+
+endif
+

@@ -1,0 +1,10 @@
+type ota, domain;
+permissive ota;
+
+type ota_exec, exec_type, file_type;
+
+domain_auto_trans(init,ota_exec,ota)
+# unconfined_domain(ota)
+
+allow ota console_device: chr_file rw_file_perms;
+allow ota init:fifo_file write;

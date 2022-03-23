@@ -1,0 +1,40 @@
+if PACKAGE_libcairo
+
+config CAIRO_PS
+	bool
+	default n
+	prompt "Enable cairo postscript support"
+	select PACKAGE_zlib
+	select CAIRO_PDF
+
+config CAIRO_PDF
+	bool
+	default y
+	prompt "Enable cairo pdf support"
+
+config CAIRO_PNG
+	bool
+	default y
+	prompt "Enable cairo png support"
+
+config CAIRO_SCRIPT
+	bool
+	default n
+	prompt "Enable script support"
+
+config CAIRO_SVG
+	bool
+	default n
+	prompt "Enable cairo svg support"
+
+config CAIRO_TEE
+	bool
+	default n
+	prompt "Enable cairo tee support"
+
+config CAIRO_XML
+	bool
+	default n
+	prompt "Enable cairo xml support"
+
+endif

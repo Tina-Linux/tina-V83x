@@ -1,0 +1,25 @@
+config TINATEST_SYS_LOCAL_INFO
+    bool 'info'
+    default y
+
+if TINATEST_SYS_LOCAL_INFO
+    config TINATEST_SYS_LOCAL_INFO_DATE
+        bool "date"
+        default y
+        ---help---
+            Save Running Date.
+
+    config TINATEST_SYS_LOCAL_INFO_RESOURCE
+        bool "resource"
+        default y
+        ---help---
+            Save resources for each testcase.
+
+    config TINATEST_SYS_LOCAL_INFO_REAL_TIME_LOG
+        bool "real_time_log"
+        default n
+        ---help---
+            Print log of testcase real time.
+            In default, tinatest just collect all log, and print them when testcase end.
+
+endif

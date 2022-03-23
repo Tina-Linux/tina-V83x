@@ -1,0 +1,209 @@
+--- a/configure.ac	2018-04-09 19:30:42.000000000 +0800
++++ b/configure.ac	2018-08-16 11:46:48.709887227 +0800
+@@ -179,6 +179,11 @@
+ [  --enable-effpush         include push effector <default=yes>],
+ effector_push=$enableval)
+ 
++effector_drop="yes"
++AC_ARG_ENABLE(effdrop,
++[  --enable-effdrop         include drop effector <default=yes>],
++effector_drop=$enableval)
++
+ effector_windowanimation="yes"
+ AC_ARG_ENABLE(windowanimation,
+ [  --enable-windowanimation support for window-animation <default=yes>],
+@@ -263,6 +268,9 @@
+ if test "x$effector_push" = "xyes"; then
+     AC_DEFINE(_MGEFF_PUSHEFFECTOR, 1, [Define if include push effector])
+ fi
++if test "x$effector_drop" = "xyes"; then
++    AC_DEFINE(_MGEFF_DROPEFFECTOR, 1, [Define if include drop effector])
++fi
+ if test "x$effector_windowanimation" = "xyes"; then
+     AC_DEFINE(_MGEFF_WINDOWANIMATION, 1, [Define if include window animation])
+ fi
+--- a/mgeffconfig.h.in	2018-04-09 19:30:42.000000000 +0800
++++ b/mgeffconfig.h.in	2018-08-16 11:43:56.909879906 +0800
+@@ -167,6 +167,9 @@
+ /* Define if include push effector */
+ #undef _MGEFF_PUSHEFFECTOR
+ 
++/* Define if include drop effector */
++#undef _MGEFF_DROPEFFECTOR
++
+ /* Define if include radar scan effector */
+ #undef _MGEFF_RADARSCANEFFECTOR
+ 
+--- a/src/effector/effector.c	2018-04-09 19:30:42.000000000 +0800
++++ b/src/effector/effector.c	2018-08-16 14:41:20.078333461 +0800
+@@ -142,6 +142,9 @@
+ #ifdef _MGEFF_PUSHEFFECTOR
+ extern MGEFF_EFFECTOROPS pusheffector;
+ #endif
++#ifdef _MGEFF_DROPEFFECTOR
++extern MGEFF_EFFECTOROPS dropeffector;
++#endif
+ #ifdef _MGEFF_CLEAREFFECTOR
+ extern MGEFF_EFFECTOROPS cleareffector;
+ #endif
+@@ -196,6 +199,9 @@
+ #ifdef _MGEFF_PUSHEFFECTOR
+     &pusheffector,
+ #endif
++#ifdef _MGEFF_DROPEFFECTOR
++    &dropeffector,
++#endif
+ #ifdef _MGEFF_CLEAREFFECTOR
+     &cleareffector,
+ #endif
+--- a/include/mgeff-effector.h
++++ b/include/mgeff-effector.h
+@@ -195,6 +195,7 @@ typedef struct _EFFECTOROPS {
+ #define MGEFF_MINOR_mgplus_rotate       "mgplus-rotate"          /**< mGPlus rotate */
+ #define MGEFF_MINOR_mgplus_cubicrotate  "mgplus-cubicrotate"     /**< mGPlus cubic rotate */
+ #define MGEFF_MINOR_mgplus_flip         "mgplus-flip"            /**< mGPlus flip */
++#define MGEFF_MINOR_drop                "drop"                   /**< drop >*/
+ 
+ 
+ #define MGEFF_EFFECTOR_LEAFWINDOW           mGEffStr2Key(MGEFF_MINOR_leafwindow)         /**< leaf window */
+@@ -217,6 +218,7 @@ typedef struct _EFFECTOROPS {
+ #define MGEFF_EFFECTOR_MGPLUS_ROTATE        mGEffStr2Key(MGEFF_MINOR_mgplus_rotate)      /**< mGPlus rotate */
+ #define MGEFF_EFFECTOR_MGPLUS_CUBIC_ROTATE  mGEffStr2Key(MGEFF_MINOR_mgplus_cubicrotate) /**< mGPlus cubic rotate */
+ #define MGEFF_EFFECTOR_MGPLUS_FLIP          mGEffStr2Key(MGEFF_MINOR_mgplus_flip)        /**< mGPlus flip */
++#define MGEFF_EFFECTOR_DROP                 mGEffStr2Key(MGEFF_MINOR_drop)               /**< drop */
+ 
+ /* #define MGEFF_EFFECTOR_MAX 0 */
+ /**
+--- a/src/effector/Makefile.am
++++ b/src/effector/Makefile.am
+@@ -8,7 +8,7 @@ COMMON_SRCS= \
+ 3DCompute.c     common-effector.c  effector-source.c        gl-rectrotate-effector.c  radarscan-effector.c  zoom-effector.c \
+ alpha-effector.c    cubic-effector.c   flip-effector.c      leafwindow-effector.c     scroll-effector.c \
+ centersplit-effector.c  effector.c     gl-coverflow-effector.c  opengl-manager.c          star-effector.c \
+-clear-effector.c    effector-sink.c    gl-cubeturn-effector.c   push-effector.c       zip-effector.c
++clear-effector.c    effector-sink.c    gl-cubeturn-effector.c   push-effector.c       zip-effector.c drop-effector.c
+ 
+ libeffectors_la_SOURCES=$(COMMON_SRCS)
+ 
+--- /dev/null
++++ b/src/effector/drop-effector.c
+@@ -0,0 +1,119 @@
++#include "mgeff.h"
++#include "effector.h"
++#include "eff-common.h"
++#include "common-effector.h"
++#ifdef _MGEFF_DROPEFFECTOR
++
++typedef struct _EffMECtxt {
++    float prev_reach;
++} EffMECtxt;
++
++static void eff_get_rect (HDC hdc, RECT * rect);
++static MGEFF_EFFECTOR effdropeffector_init (MGEFF_EFFECTOR effector);
++static void effdropeffector_finalize (MGEFF_EFFECTOR effector);
++static void effdropeffector_ondraw (MGEFF_ANIMATION anim,
++                                   MGEFF_EFFECTOR effector, HDC sink_dc,
++                                   intptr_t id, void *value);
++static void effdropeffector_begindraw (MGEFF_ANIMATION anim,
++                                      MGEFF_EFFECTOR effector);
++
++static void eff_get_rect (HDC hdc, RECT * rect)
++{
++    rect->left = 0;
++    rect->top = 0;
++
++    rect->right = GetGDCapability (hdc, GDCAP_MAXX) + 1;
++    rect->bottom = GetGDCapability (hdc, GDCAP_MAXY) + 1;
++}
++static MGEFF_EFFECTOR effdropeffector_init (MGEFF_EFFECTOR effector)
++{
++    EffMECtxt *context;
++
++    context = (EffMECtxt *) calloc (1, sizeof (EffMECtxt));
++
++    context->prev_reach = 0;
++
++    mGEffEffectorSetContext (effector, context);
++
++    return effector;
++}
++
++static void effdropeffector_finalize (MGEFF_EFFECTOR effector)
++{
++    EffMECtxt *context;
++
++    context = (EffMECtxt *) mGEffEffectorGetContext (effector);
++
++    free (context);
++}
++
++static void effdropeffector_ondraw (MGEFF_ANIMATION anim,
++                                   MGEFF_EFFECTOR effector, HDC sink_dc,
++                                   intptr_t id, void *value)
++{
++    EffMECtxt *context;
++    MGEFF_SOURCE src1, src2;
++
++    HDC src1_dc, src2_dc;
++    RECT rc1, rc2, rc_sink;
++
++    int reach1, reach2;
++
++
++    context = (EffMECtxt *) mGEffEffectorGetContext (effector);
++
++    src1 = mGEffEffectorGetSource (effector, 0);
++    src2 = mGEffEffectorGetSource (effector, 1);
++
++    src1_dc = mGEffGetSourceDC (src1);
++    src2_dc = mGEffGetSourceDC (src2);
++
++    eff_get_rect (src1_dc, &rc1);
++    eff_get_rect (src2_dc, &rc2);
++    eff_get_rect (sink_dc, &rc_sink);
++
++    reach2 = RECTH (rc2) * (*(float *) value);
++    BitBlt (src2_dc, rc2.left, reach2, RECTW (rc2), rc2.bottom, sink_dc,
++            0, 0, 0);
++
++    if (context->prev_reach < reach2) {
++        reach1 = RECTH (rc1) - reach2;
++
++        BitBlt (src1_dc, rc1.left, reach1, RECTW (rc1), rc1.bottom,
++                sink_dc, 0, reach1, 0);
++    }
++
++    context->prev_reach = reach2;
++}
++
++static void effdropeffector_begindraw (MGEFF_ANIMATION anim,
++                                      MGEFF_EFFECTOR effector)
++{
++    EffMECtxt *context;
++
++    float s = 1.0;
++    float e = 0.0;
++
++
++    context = (EffMECtxt *) mGEffEffectorGetContext (effector);
++
++    context->prev_reach = s;
++
++    mGEffAnimationSetStartValue (anim, &s);
++    mGEffAnimationSetEndValue (anim, &e);
++
++    mGEffAnimationSetCurve (anim, OutBounce);
++}
++MGEFF_EFFECTOROPS dropeffector =
++{
++	MGEFF_MINOR_drop,
++	MGEFF_FLOAT,
++	effdropeffector_init,
++	effdropeffector_finalize,
++	effdropeffector_ondraw,
++	effdropeffector_begindraw,
++	NULL,
++	NULL,
++	NULL,
++};
++#endif

@@ -1,0 +1,118 @@
+{
+    "record_pipeline" : {
+        "engine" : "alsa_src",
+        "elements" : {
+            "alsa_src" : {
+                "element_type" : "AlsaSrc",
+                "src_pads" : {
+                    "capture_both" : {
+                        "peer_element" : "converter",
+                        "peer_pad" : "from_alsa_src"
+                    }
+                },
+                "devices" : {
+                    "capture_both" : {
+                        "device" : "hw:audiocodec",
+                        "loop_frames" : 160,
+                        "access" : "RW_INTERLEAVED",
+                        "format" : "S16_LE",
+                        "rate" : 16000,
+                        "channels" : 3,
+                        "period_frames" : 1024,
+                        "periods" : 4
+                    }
+                }
+            },
+            "converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : { "from_alsa_src" : {} },
+                "src_pads" : {
+                    "common_out" : {
+                        "channels" : 2,
+                        "storage" : "noninterleaved",
+                        "peer_element" : "tutuclear",
+                        "peer_pad" : "common"
+                    },
+                    "reference_out" : {
+                        "channels" : 1,
+                        "storage" : "noninterleaved",
+                        "peer_element" : "tutuclear",
+                        "peer_pad" : "reference"
+                    }
+                },
+                "channel_map" : {
+                    "common_out.0" : "from_alsa_src.0",
+                    "common_out.1" : "from_alsa_src.1",
+                    "reference_out.0" : "from_alsa_src.2"
+                }
+            },
+            "tutuclear" : {
+                "element_type" : "TutuclearElement",
+                "sink_pads" : {
+                    "common" : { "channels" : 2 },
+                    "reference" : { "channels" : 1 }
+                },
+                "src_pads" : {
+                    "output" : {
+                        "channels" : 3,
+                        "peer_element" : "tutuclear_output_converter",
+                        "peer_pad" : "from_tutuclear"
+                    }
+                },
+                "prm_file" : "/etc/avs/tutuClearA1_ns4wakeup.prm",
+                "format" : "S16_LE",
+                "rate" : 16000,
+                "loop_frames" : 160,
+                "storage" : "noninterleaved"
+            },
+            "tutuclear_output_converter" : {
+                "element_type" : "Converter",
+                "sink_pads" : { "from_tutuclear" : {} },
+                "src_pads" : {
+                    "output" : {
+                        "channels" : 1,
+                        "format" : "S16_LE",
+                        "storage" : "interleaved",
+                        "peer_element" : "common_sink",
+                        "peer_pad" : "from_tutuclear_output_converter"
+                    }
+                },
+                "channel_map" : {
+                    "output.0" : "from_tutuclear.0"
+                }
+            },
+            "common_sink" : {
+                "element_type" : "CommonSink",
+                "sink_pads" : { "from_tutuclear_output_converter" : {} },
+                "data_got_signal" : "DataGot"
+            }
+        }
+    },
+
+    "key_manager" : {
+        "built_in_executor_threads" : 2,
+        "behaviors" : {
+            "VolumeUp" : {
+                "K4" : {
+                    "input_device" : "sunxi-keyboard",
+                    "code" : 115,
+                    "motion" : "Press"
+                }
+            },
+            "VolumeDown" : {
+                "K5" : {
+                    "input_device" : "sunxi-keyboard",
+                    "code" : 114,
+                    "motion" : "Press"
+                }
+            },
+            "Mute" : {
+                "K6" : {
+                    "input_device" : "sunxi-keyboard",
+                    "code" : 248,
+                    "motion" : "Press"
+                }
+            }
+        }
+    }
+}

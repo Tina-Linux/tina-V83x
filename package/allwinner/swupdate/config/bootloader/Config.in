@@ -1,0 +1,73 @@
+choice
+	prompt "Bootloader (U-Boot, ..)"
+	default SWUPDATE_CONFIG_UBOOT
+	help
+	  Choose the bootloader
+
+config SWUPDATE_CONFIG_BOOTLOADER_EBG
+	bool "EFI Boot Guard"
+	depends on SWUPDATE_CONFIG_HAVE_LIBEBGENV
+	depends on SWUPDATE_CONFIG_HAVE_ZLIB
+	help
+	  Support for EFI Boot Guard
+	  https://github.com/siemens/efibootguard
+
+comment "EFI Boot Guard needs libebgenv and libz"
+	depends on !SWUPDATE_CONFIG_HAVE_ZLIB || !SWUPDATE_CONFIG_HAVE_LIBEBGENV
+
+config SWUPDATE_CONFIG_UBOOT
+	bool "U-Boot"
+	depends on SWUPDATE_CONFIG_HAVE_LIBUBOOTENV
+	depends on SWUPDATE_CONFIG_HAVE_ZLIB
+	help
+	  Support for U-Boot
+	  https://www.denx.de/wiki/U-Boot
+
+config SWUPDATE_CONFIG_BOOTLOADER_NONE
+	bool "Environment in RAM"
+	help
+	  This simulates the interface to a bootloader.
+	  Bootloader environment is just maitained in RAM
+	  and lost when SWUpdate exits.
+
+config SWUPDATE_CONFIG_BOOTLOADER_GRUB
+	bool "GRUB"
+	help
+	  Support for GRUB
+	  https://www.gnu.org/software/grub/
+endchoice
+
+config SWUPDATE_CONFIG_UBOOT_FWENV
+	string "U-Boot Environment Configuration file"
+	depends on SWUPDATE_CONFIG_UBOOT
+	default SWUPDATE_DEFAULT_UBOOT_FWENV
+	help
+	  This is the file described in U-Boot documentation
+	  in the tools directory. It tells where the U-Boot
+	  environment is saved.
+
+config SWUPDATE_CONFIG_UBOOT_NEWAPI
+	bool "Link to new libubootenv API (LGPL-2.1)"
+	depends on SWUPDATE_CONFIG_UBOOT
+	help
+	  Use a replacement of tools/env from U-Boot
+	  This is to link to libubootenv
+
+comment "U-Boot support needs libubootenv, libz"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBUBOOTENV || !SWUPDATE_CONFIG_HAVE_ZLIB
+
+config SWUPDATE_CONFIG_UBOOT_DEFAULTENV
+	string "U-Boot Initial Environment file"
+	depends on SWUPDATE_CONFIG_UBOOT_NEWAPI
+	default SWUPDATE_DEFAULT_UBOOT_DEFAULTENV
+	help
+	  This is the file with the initial environment delivered
+	  with the bootloader. It is used by SWUpdate if no environment
+	  is found on the storage.
+
+config SWUPDATE_CONFIG_GRUBENV_PATH
+	string "GRUB Environment block file path"
+	depends on SWUPDATE_CONFIG_BOOTLOADER_GRUB
+	default SWUPDATE_DEFAULT_GRUBENV_PATH
+	help
+	  Provide path to GRUB environment block file

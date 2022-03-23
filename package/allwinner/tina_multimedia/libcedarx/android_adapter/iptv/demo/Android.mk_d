@@ -1,0 +1,71 @@
+LOCAL_PATH:= $(call my-dir)
+include $(CLEAR_VARS)
+
+CEDARM_PATH=$(LOCAL_PATH)/../../..
+CEDARC_PATH=$(TOP)/frameworks/av/media/libcedarc
+
+include $(CEDARM_PATH)/config.mk
+
+################################################################################
+## set flags for golobal compile and link setting.
+################################################################################
+
+CONFIG_FOR_COMPILE =
+CONFIG_FOR_LINK =
+
+LOCAL_CFLAGS += $(CONFIG_FOR_COMPILE)
+LOCAL_MODULE_TAGS := optional
+
+################################################################################
+## set the source files
+################################################################################
+## set the source path to VPATH.
+SourcePath = $(shell find $(LOCAL_PATH) -type d)
+SvnPath = $(shell find $(LOCAL_PATH) -type d | grep ".svn")
+SourcePath := $(filter-out $(SvnPath), $(SourcePath))
+
+
+## set the source files.
+tmpSourceFiles  = $(foreach dir,$(SourcePath),$(wildcard $(dir)/*.cpp))
+SourceFiles  = $(foreach file,$(tmpSourceFiles),$(subst $(LOCAL_PATH)/,,$(file)))
+
+## set the include path for compile flags.
+LOCAL_SRC_FILES:= $(SourceFiles)
+LOCAL_C_INCLUDES := $(SourcePath)                               \
+                    $(LOCAL_PATH)/../../                        \
+                    $(CEDARM_PATH)/                            \
+                    $(CEDARM_PATH)/libcore/playback/include    \
+                    $(CEDARM_PATH)/libcore/include             \
+                    $(CEDARM_PATH)/libcore/parser/include             \
+                    $(CEDARM_PATH)/libcore/base/include             \
+                    $(CEDARM_PATH)/libcore/stream/include             \
+                    $(CEDARM_PATH)/libcore/common/plugin/include        \
+                    $(CEDARM_PATH)/libcore/common/iniparser/include     \
+                    $(CEDARM_PATH)/external/include/adecoder/           \
+                    $(CEDARC_PATH)/include                              \
+                    $(CEDARC_PATH)/vdecoder/include                     \
+                    $(CEDARC_PATH)/adecoder/include                     \
+                    $(CEDARC_PATH)/sdecoder/include                     \
+                    $(LOCAL_PATH)/../demo/CTC_wrapper    \
+					$(LOCAL_PATH)/../include    \
+
+
+LOCAL_SHARED_LIBRARIES := \
+            libcutils       \
+            libutils        \
+            libcdx_playback \
+            libadecoder     \
+            libsdecoder     \
+            libcdx_base     \
+            libcdx_stream   \
+            libcdx_parser   \
+            libVE           \
+            libMemAdapter\
+			libCTC_MediaProcessor\
+			libgui\
+			libbinder\
+
+#libve
+LOCAL_MODULE:= demoIPTVPlayer
+
+include $(BUILD_EXECUTABLE)

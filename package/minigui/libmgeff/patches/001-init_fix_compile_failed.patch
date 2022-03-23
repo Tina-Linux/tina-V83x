@@ -1,0 +1,30 @@
+--- a/src/animation.c
++++ b/src/animation.c
+@@ -5,6 +5,7 @@
+ #include <stdlib.h>
+ #include <minigui/common.h>
+ #include <minigui/gdi.h>
++#include <minigui/minigui.h>
+ #include <minigui/window.h>
+ 
+ #include "mgeff.h"
+--- a/src/schedular.c
++++ b/src/schedular.c
+@@ -11,6 +11,7 @@
+ 
+ #include <minigui/common.h>
+ #include <minigui/gdi.h>
++#include <minigui/minigui.h>
+ #include <minigui/window.h>
+ 
+ #include "mgeff.h"
+--- a/src/window-animation.c
++++ b/src/window-animation.c
+@@ -15,6 +15,7 @@
+ 
+ #include <minigui/common.h>
+ #include <minigui/gdi.h>
++#include <minigui/minigui.h>
+ #include <minigui/window.h>
+ 
+ #include "mgeff.h"

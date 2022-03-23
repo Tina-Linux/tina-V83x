@@ -1,0 +1,24 @@
+From 73fb61036e358481a1534f8a87d7377d8fd71139 Mon Sep 17 00:00:00 2001
+From: Khem Raj <raj.khem@gmail.com>
+Date: Sat, 12 Sep 2015 20:46:07 +0000
+Subject: [PATCH 30/31] include sys/types.h for ssize_t definition
+
+Avoids errors like
+
+src/shared/strbuf.h:54:1: error: unknown type name 'ssize_t'
+
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+---
+ src/basic/strbuf.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/src/basic/strbuf.h
++++ b/src/basic/strbuf.h
+@@ -22,6 +22,7 @@
+ ***/
+ 
+ #include <stdint.h>
++#include <sys/types.h>
+ 
+ struct strbuf {
+         char *buf;

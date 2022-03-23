@@ -1,0 +1,27 @@
+diff --git a/tools/hciconfig.c b/tools/hciconfig.c
+index 9029f7d..a73b2e1 100644
+--- a/tools/hciconfig.c
++++ b/tools/hciconfig.c
+@@ -301,6 +301,8 @@ done:
+ 								hdev, status);
+ 		exit(1);
+ 	}
++
++	printf("LE set advertise enable successful!\n");
+ }
+ 
+ static void cmd_no_le_adv(int ctl, int hdev, char *opt)
+@@ -340,10 +342,12 @@ static void cmd_no_le_adv(int ctl, int hdev, char *opt)
+ 	}
+ 
+ 	if (status) {
+-		fprintf(stderr, "LE set advertise enable on hci%d returned status %d\n",
++		fprintf(stderr, "LE set advertise disable on hci%d returned status %d\n",
+ 						hdev, status);
+ 		exit(1);
+ 	}
++
++	printf("LE set advertise disable successful!\n");
+ }
+ 
+ static void cmd_le_states(int ctl, int hdev, char *opt)

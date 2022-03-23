@@ -1,0 +1,11 @@
+--- a/setup.py	2018-11-24 17:20:06.000000000 +0800
++++ b/setup.py	2019-01-29 14:52:24.226286504 +0800
+@@ -110,7 +110,7 @@
+     from distutils.spawn import find_executable
+     from distutils.sysconfig import get_python_inc
+     pgen = find_executable(
+-        'pgen', os.pathsep.join([os.environ['PATH'], os.path.join(get_python_inc(), '..', 'Parser')]))
++        'pgen2', os.pathsep.join([os.environ['PATH'], os.path.join(get_python_inc(), '..', 'Parser')]))
+     if not pgen:
+         sys.stderr.write("Unable to find pgen, not compiling formal grammar.\n")
+     else:

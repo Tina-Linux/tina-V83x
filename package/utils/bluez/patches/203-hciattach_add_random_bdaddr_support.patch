@@ -1,0 +1,134 @@
+diff --git a/tools/hciattach_xradio.c b/tools/hciattach_xradio.c
+index a0ae7e3..ef5f9f6 100644
+--- a/tools/hciattach_xradio.c
++++ b/tools/hciattach_xradio.c
+@@ -48,6 +48,10 @@
+ #define BT_FW_PATH_NAME "/etc/bluetooth/firmware/fw_xr829_bt.bin"
+ #endif
+ 
++#ifndef XR_BT_CONF_PATH_NAME
++#define XR_BT_CONF_PATH_NAME "/etc/bluetooth/xr_bt.conf"
++#endif
++
+ #define UNUSED(x)	(void)(x)
+ 
+ #define SHOW_LOG		0
+@@ -342,13 +346,13 @@ static unsigned int g_dump_debug = 1;
+ static unsigned int g_hciup_flag = 1;
+ static unsigned int g_startup_reset_flag =1;
+ static unsigned int g_update_hcirate_flag = 1;
+-static unsigned int g_bdaddr_flag = 0;
++static unsigned int g_bdaddr_flag = 1;
+ 
+ static unsigned char g_trans_buf[1024];
+ 
+ static unsigned char hci_reset[] = { 0x01, 0x03, 0x0c, 0x00 };
+ static unsigned char hci_update_baud_rate[] = { 0x01, 0x18, 0xfc, 0x04, 0x60, 0xE3, 0x16, 0x00};
+-static unsigned char hci_write_bd_addr[] = { 0x01, 0x32, 0xfc, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
++static unsigned char hci_write_bd_addr[] = { 0x01, 0x0a, 0xfc, 0x09, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+ 
+ static void proc_btwrite_timeout(union sigval arg)
+ {
+@@ -697,6 +701,82 @@ static void xradio_hci_send_cmd(int fd, unsigned char *buf, int len)
+ 	write(fd, buf, len);
+ }
+ 
++/*
++ * buf[0] - buf[6] contains the command header
++ * buf[7] - buf[12] contains the bdaddr, LSB - MSB
++ *
++ * The reserved LAP addresses are 0x9E8B00-0x9E8B3F
++ *
++ * return 1 if valid, 0 if not
++ */
++static int check_bdaddr_valid(unsigned char *buf)
++{
++	if (buf[9] == 0x9e && buf[8] == 0x8b
++			&& (buf[7] & ~(0x3f)) == 0) {
++		printf("bdaddr is not valid\n");
++		return 0;
++	}
++
++	return 1;
++}
++
++/*
++ * buf[0] - buf[6] contains the command header
++ * buf[7] - buf[12] contains the bdaddr, LSB - MSB
++ */
++static int xradio_generate_bdaddr(unsigned char *buf)
++{
++	int fd;
++	FILE* conf_fd = NULL;
++	unsigned mac_hex;
++	int i = 12; /* from MSB to LSB*/
++
++	conf_fd = fopen(XR_BT_CONF_PATH_NAME, "r");
++	if(conf_fd) {
++		fscanf(conf_fd, "%x", &mac_hex);
++		while (!feof(conf_fd)) {
++			buf[i--] = mac_hex;
++			fscanf(conf_fd, "%x", &mac_hex);
++		}
++
++		fclose(conf_fd);
++
++		if (check_bdaddr_valid(buf))
++			return 0;
++	}
++
++	printf("generating random bdaddr...\n");
++
++	/* for Xradio, NAP is {0x22, 0x22}*/
++	buf[12] = 0x22;
++	buf[11] = 0x22;
++
++	srand(time(0));
++
++	do {
++		/* generating UAP - buf[10] */
++		buf[10] = rand() % (0xff + 1);
++
++		/* generating LAP[2] - buf[9] */
++		buf[9] = rand() % (0xff + 1);
++
++		/* generating LAP[1] - buf[8] */
++		buf[8] = rand() % (0xff + 1);
++
++		/* generating LAP[0] - buf[7] */
++		buf[7] = rand() % (0xff + 1);
++	} while (!check_bdaddr_valid(buf));
++
++	conf_fd = fopen(XR_BT_CONF_PATH_NAME, "w");
++	if (conf_fd) {
++		for (i = 12; i >=7; i--)
++			fprintf(conf_fd, "%02x ", buf[i]);
++		fclose(conf_fd);
++	}
++
++	return 0;
++}
++
+ static void proc_reset(int fd)
+ {
+ 	/* signal(SIGALRM, expired); */
+@@ -724,6 +804,11 @@ static void proc_baudrate(int fd, int speed)
+ 
+ static void proc_bdaddr(int fd)
+ {
++	if (xradio_generate_bdaddr(hci_write_bd_addr) < 0) {
++		fprintf(stderr, "generate random bdaddr failed, using the default address...\n");
++		return;
++	}
++
+ 	xradio_hci_send_cmd(fd, hci_write_bd_addr, sizeof(hci_write_bd_addr));
+ 
+ 	read_event(fd, g_trans_buf);
+@@ -1372,6 +1457,7 @@ int xradio_init(int fd, int def_speed, int speed, struct termios *ti,
+ 	if (g_bdaddr_flag) {
+ 		printf("[%s] set bdaddr...\n", __FUNCTION__);
+ 		proc_bdaddr(fd);
++		proc_reset(fd);
+ 	}
+ 
+ 	if (g_hciup_flag) {

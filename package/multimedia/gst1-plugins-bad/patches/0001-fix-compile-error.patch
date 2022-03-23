@@ -1,0 +1,30 @@
+From 13a1354dfbb13c3b6a19c073c1ab1108c5e3e9b5 Mon Sep 17 00:00:00 2001
+From: xiebin <xiebin@allwinnertech.com>
+Date: Thu, 8 Mar 2018 13:56:20 +0800
+Subject: [PATCH 2/2] fix compile error
+
+---
+ Makefile.am | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 0783edf..215cf64 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -2,11 +2,11 @@ DISTCHECK_CONFIGURE_FLAGS=--enable-gtk-doc
+
+ SUBDIRS = \
+ 	gst-libs gst sys ext pkgconfig \
+-	m4 common docs tests po tools
++	m4 common docs tests tools
+
+ DIST_SUBDIRS = \
+ 	gst gst-libs sys ext pkgconfig \
+-	m4 common docs tests po tools
++	m4 common docs tests tools
+
+ EXTRA_DIST = \
+ 	depcomp \
+--
+2.7.4
+

@@ -1,0 +1,15 @@
+--- a/include/window.h
++++ b/include/window.h
+@@ -2197,6 +2197,12 @@
+  */
+ #define MSG_USER            0x0800
+ 
++#define MOUSE_UP         0x0001
++#define MOUSE_DOWN       0x0002
++#define MOUSE_LEFT       0x0003
++#define MOUSE_RIGHT      0x0004
++#define MSG_MOUSE_FLING      (MSG_USER+100)
++#define MSG_MOUSE_SCROLL     (MSG_USER+101)
+ #define MSG_LASTUSERMSG     0xEFFF
+ 
+     /** @} end of user_msgs */

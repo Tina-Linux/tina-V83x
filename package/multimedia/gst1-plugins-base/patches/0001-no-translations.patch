@@ -1,0 +1,46 @@
+From d21fa7022d70b10ee9b822e8af013465e83217fc Mon Sep 17 00:00:00 2001
+From: houxiaoni <houxiaoni@allwinnertech.com>
+Date: Fri, 27 Jul 2018 10:55:00 +0800
+Subject: [PATCH] no translations
+
+Signed-off-by: houxiaoni <houxiaoni@allwinnertech.com>
+---
+ Makefile.am  | 2 --
+ configure.ac | 1 -
+ 2 files changed, 3 deletions(-)
+
+diff --git a/Makefile.am b/Makefile.am
+index 020e2e6..a16410c 100755
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -13,7 +13,6 @@ SUBDIRS = 			\
+ 	tools 			\
+ 	tests 			\
+ 	docs			\
+-	po 			\
+ 	common 			\
+ 	m4
+ 
+@@ -24,7 +23,6 @@ DIST_SUBDIRS = 			\
+ 	gst sys ext		\
+ 	tools 			\
+ 	tests 			\
+-	po 			\
+ 	common 			\
+ 	m4
+ 
+diff --git a/configure.ac b/configure.ac
+index 12807bc..15cf710 100755
+--- a/configure.ac
++++ b/configure.ac
+@@ -1030,7 +1030,6 @@ docs/Makefile
+ docs/libs/Makefile
+ docs/plugins/Makefile
+ docs/version.entities
+-po/Makefile.in
+ common/Makefile
+ common/m4/Makefile
+ m4/Makefile
+-- 
+1.9.1
+

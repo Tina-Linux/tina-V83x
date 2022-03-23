@@ -1,0 +1,14 @@
+--- a/image_view/CMakeLists.txt	2018-05-10 20:52:54.000000000 +0800
++++ b/image_view/CMakeLists.txt	2019-01-16 13:54:27.064292227 +0800
+@@ -38,6 +38,11 @@
+   return()
+ endif()
+
++# Deal with the GUI's
++if(TINA)
++  return()
++endif()
++
+ find_package(GTK2)
+ add_definitions(-DHAVE_GTK)
+ include_directories(${GTK2_INCLUDE_DIRS})

@@ -1,0 +1,35 @@
+Commit information:
+ge8300: support opencl
+
+MD5 Information:
+742edf3b70e0f5da5c295a5448ec2311 lib/libEGL.so
+4e3b3071f9d0f3946b8df7cae9512ba7 lib/libGLES_CM.so
+09113ad18c0b3c2628d6a04e2a0a0434 lib/libGLESv2.so
+10829402bdc838bdce85c7739586bc0c lib/libglslcompiler.so
+d9bcc554d844ab1d9d80936b9370c615 lib/libIMGegl.so
+82b6230cf9b0c51fa9dfca6d8d13a716 lib/libpvrNULL_WSEGL.so
+664543e91f600476d67f1d28e0231d68 lib/libPVROCL.so
+18ec06577b5c3f85095f01e37e17f4a3 lib/libPVRScopeServices.so
+151c03fb1da1ad24eec1d18b565277f1 lib/libsrv_um.so
+adf307fe8c617936d3d17603d3ad16b0 lib/libtqvalidate.so
+c94725eb6d4b4e3850e82a83a4b94326 lib/libusc.so
+6e60a6b3a87b98265b148ebf6d656dc7 bin/pvrsrvctl
+
+Toolchain information:
+Reading specs from /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/specs
+COLLECT_GCC=aarch64-openwrt-linux-musl-gcc.bin
+COLLECT_LTO_WRAPPER=/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../libexec/gcc/aarch64-openwrt-linux-musl/6.4.1/lto-wrapper
+Target: aarch64-openwrt-linux-musl
+Configured with: /home/caiyongheng/tina/out/tulip-noma/compile_dir/toolchain/gcc-linaro-6.4-2017.11/configure --with-bugurl=https://dev.openwrt.org/ --with-pkgversion='OpenWrt/Linaro GCC 6.4-2017.11 2017-11' --prefix=/home/caiyongheng/tina/out/tulip-noma/staging_dir/toolchain --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=aarch64-openwrt-linux-musl --with-gnu-ld --enable-target-optspace --enable-libgomp --disable-libmudflap --disable-multilib --disable-nls --without-isl --without-cloog --with-host-libstdcxx=-lstdc++ --with-gmp=/home/caiyongheng/tina/out/host --with-mpfr=/home/caiyongheng/tina/out/host --with-mpc=/home/caiyongheng/tina/out/host --disable-decimal-float --with-diagnostics-color=auto-if-env --disable-libssp --enable-fix-cortex-a53-835769 --enable-fix-cortex-a53-843419 --enable-__cxa_atexit --with-headers=/home/caiyongheng/tina/out/tulip-noma/staging_dir/toolchain/include --disable-libsanitizer --enable-languages=c,c++ --enable-shared --enable-threads --with-slibdir=/home/caiyongheng/tina/out/tulip-noma/staging_dir/toolchain/lib --enable-lto --with-libelf=/home/caiyongheng/tina/out/host
+Thread model: posix
+gcc version 6.4.1 (OpenWrt/Linaro GCC 6.4-2017.11 2017-11) 
+COMPILER_PATH=/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../libexec/gcc/aarch64-openwrt-linux-musl/6.4.1/:/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../libexec/gcc/:/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/../../../../aarch64-openwrt-linux-musl/bin/
+LIBRARY_PATH=/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/:/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/:/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/../../../../aarch64-openwrt-linux-musl/lib/
+aarch64-openwrt-linux-musl-gcc.bin: warning: environment variable 'STAGING_DIR' not defined
+aarch64-openwrt-linux-musl-gcc.bin: warning: environment variable 'STAGING_DIR' not defined
+COLLECT_GCC_OPTIONS='-v' '-mlittle-endian' '-mabi=lp64'
+ /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../libexec/gcc/aarch64-openwrt-linux-musl/6.4.1/collect2 -plugin /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../libexec/gcc/aarch64-openwrt-linux-musl/6.4.1/liblto_plugin.so -plugin-opt=/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../libexec/gcc/aarch64-openwrt-linux-musl/6.4.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccyvBBaS.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin//../.. --eh-frame-hdr -dynamic-linker /lib/ld-musl-aarch64.so.1 -X -EL -maarch64linux --fix-cortex-a53-835769 --fix-cortex-a53-843419 /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/../../../../aarch64-openwrt-linux-musl/lib/crt1.o /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/../../../../aarch64-openwrt-linux-musl/lib/crti.o /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/crtbegin.o -L /usr/lib -rpath-link /usr/lib -L/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1 -L/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc -L/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/../../../../aarch64-openwrt-linux-musl/lib -rpath=/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin//../../lib:/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin//../../usr/lib -lssp_nonshared -lgcc_s -lc -lgcc_s /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/crtend.o /home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/../../../../aarch64-openwrt-linux-musl/lib/crtn.o
+/home/yuxyun/gpu-src/tools/toolchains/aarch64-openwrt-linux-musl/bin/../lib/gcc/aarch64-openwrt-linux-musl/6.4.1/../../../../aarch64-openwrt-linux-musl/lib/crt1.o: In function `_start_c':
+/home/caiyongheng/tina/out/tulip-noma/compile_dir/toolchain/musl-1.1.16/crt/crt1.c:17: undefined reference to `main'
+/home/caiyongheng/tina/out/tulip-noma/compile_dir/toolchain/musl-1.1.16/crt/crt1.c:17: undefined reference to `main'
+collect2: error: ld returned 1 exit status

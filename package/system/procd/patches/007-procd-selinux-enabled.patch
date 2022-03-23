@@ -1,0 +1,159 @@
+--- a/CMakeLists.txt	2017-11-27 20:08:14.961623274 +0800
++++ b/CMakeLists.txt	2017-11-27 15:13:34.564869828 +0800
+@@ -45,6 +45,10 @@
+   add_subdirectory(upgraded)
+ ENDIF()
+
++IF(SELINUX_ENABLED)
++  ADD_DEFINITIONS(-DSELINUX_ENABLED)
++ENDIF()
++
+ ADD_EXECUTABLE(procd ${SOURCES})
+ TARGET_LINK_LIBRARIES(procd ${LIBS})
+ INSTALL(TARGETS procd
+--- a/initd/init.c	2018-02-09 09:50:41.744091527 +0800
++++ b/initd/init.c	2018-02-09 09:52:41.000000000 +0800
+@@ -29,6 +29,13 @@
+ #include <unistd.h>
+ #include <stdio.h>
+
++#if SELINUX_ENABLED
++#include <selinux/selinux.h>
++#include <selinux/label.h>
++#include <selinux/restorecon.h>
++#include <ftw.h>
++#endif
++
+ #include "../utils/utils.h"
+ #include "init.h"
+ #include "../watchdog.h"
+@@ -67,6 +74,92 @@
+	}
+ }
+
++#if SELINUX_ENABLED
++static const struct selinux_opt se_opts[] = {
++	{ SELABEL_OPT_PATH, "/etc/selinux/targeted/contexts/files/file_contexts" },
++	{ 0, NULL } };
++
++struct selabel_handle *sehandle = NULL;
++
++static int restorecon(const char *pathname)
++{
++	char *secontext = NULL;
++	struct stat sb;
++
++	if (is_selinux_enabled() <= 0 || !sehandle)
++		return 0;
++
++	if (lstat(pathname, &sb) < 0) {
++		return -errno;
++	}
++	if (selabel_lookup(sehandle, &secontext, pathname, sb.st_mode) < 0)
++		return -errno;
++	if (lsetfilecon(pathname, secontext) < 0) {
++		freecon(secontext);
++		return -errno;
++	}
++
++	freecon(secontext);
++	return 0;
++}
++
++static int nftw_restorecon(const char* filename, const struct stat* statptr,
++	int fileflags, struct FTW* pftw)
++{
++	restorecon(filename);
++	return 0;
++}
++
++int restorecon_recursive(const char* pathname)
++{
++	int fd_limit = 20;
++	int flags = FTW_DEPTH | FTW_MOUNT | FTW_PHYS;
++	return nftw(pathname, nftw_restorecon, fd_limit, flags);
++}
++
++static int procd_selinux_init()
++{
++	int enforce = 0;
++	int ret = 0;
++	if (getenv("SELINUX_INIT") == NULL) {
++		putenv((char*)"SELINUX_INIT=YES");
++
++		// load policy
++		if (selinux_init_load_policy(&enforce) == 0)
++			fprintf(stdout, "SELinux policy load success!\n");
++		else if (enforce > 0) {
++			/* SELinux in enforcing mode but load_policy failed */
++			fprintf(stderr, "can't load SELinux Policy. "
++				"Machine is in enforcing mode. Halting now.\n");
++			return EXIT_FAILURE;
++		}
++
++		// set init process security context to u:r:init:s0
++		if (setcon("u:r:init:s0") == 0)
++			fprintf(stdout, "set init context success!\n");
++		else
++			fprintf(stderr, "set init context error!");
++
++		// load file_contexts
++		sehandle = selabel_open(SELABEL_CTX_FILE, se_opts, 1);
++		if (!sehandle)
++			fprintf(stderr, "Error getting file context handle\n");
++		else
++			fprintf(stdout, "%s load success!\n", se_opts[0].value);
++
++		// restore contexts
++		ret = selinux_restorecon("/dev", SELINUX_RESTORECON_RECURSE | \
++					SELINUX_RESTORECON_PROGRESS | \
++					SELINUX_RESTORECON_MASS_RELABEL | \
++					SELINUX_RESTORECON_IGNORE_NOENTRY);
++		if (ret < 0)
++			fprintf(stdout, "selinux_restorecon /dev failed\n");
++	}
++
++	return 0;
++}
++#endif
++
+ int
+ main(int argc, char **argv)
+ {
+@@ -80,6 +173,11 @@
+	cmdline();
+	watchdog_init(1);
+
++#if SELINUX_ENABLED
++	if (procd_selinux_init() != 0)
++		return EXIT_FAILURE;
++#endif
++
+	uloop_init();
+	preinit();
+	uloop_run();
+diff -Naur a/initd/init.h b/initd/init.h
+--- a/initd/init.h	2016-02-24 14:42:23.000000000 +0800
++++ b/initd/init.h	2018-02-09 09:54:11.000000000 +0800
+@@ -33,4 +33,9 @@
+	return -ENOSYS;
+ }
+ #endif
++
++#if SELINUX_ENABLED
++int restorecon_recursive(const char* pathname);
++#endif
++
+ #endif
+diff -Naur a/initd/preinit.c b/initd/preinit.c
+--- a/initd/preinit.c	2018-02-09 09:50:41.744091527 +0800
++++ b/initd/preinit.c	2018-02-09 09:53:33.000000000 +0800
+@@ -82,6 +82,9 @@
+ static void
+ kmodloader_cb(struct uloop_process *proc, int ret)
+ {
++#if SELINUX_ENABLED
++	restorecon_recursive("/dev");
++#endif
+ #if BOOT_PLAY == 2
+	char *boot_play_cmd[] = {"/sbin/boot-play", "boot", NULL};

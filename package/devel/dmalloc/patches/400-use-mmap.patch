@@ -1,0 +1,25 @@
+diff -Naur dmalloc-5.5.2/conf.h.in dmalloc-5.5.2-new/conf.h.in
+--- dmalloc-5.5.2/conf.h.in	2007-05-15 01:26:14.000000000 +0800
++++ dmalloc-5.5.2-new/conf.h.in	2018-05-12 17:24:51.394776858 +0800
+@@ -59,7 +59,7 @@
+  * settings.h file which is created from the settings.dist file.
+  */
+ #define HAVE_MMAP 0
+-#define USE_MMAP 0
++#define USE_MMAP 1
+
+ /*
+  * This is the basic block size in bits.  If possible, the configure
+diff -Naur dmalloc-5.5.2/configure.ac dmalloc-5.5.2-new/configure.ac
+--- dmalloc-5.5.2/configure.ac	2007-05-15 01:26:14.000000000 +0800
++++ dmalloc-5.5.2-new/configure.ac	2018-05-12 17:04:29.878724804 +0800
+@@ -338,8 +338,8 @@
+ }
+ ]])],
+ [ AC_DEFINE(USE_MMAP, 1) ac_cv_use_mmap=yes],
+-[ AC_DEFINE(USE_MMAP, 0) ac_cv_use_mmap=no],
+-[ AC_DEFINE(USE_MMAP, 0) ac_cv_use_mmap=no]
++[ AC_DEFINE(USE_MMAP, 1) ac_cv_use_mmap=yes],
++[ AC_DEFINE(USE_MMAP, 1) ac_cv_use_mmap=yes]
+ )
+ AC_MSG_RESULT([$ac_cv_use_mmap])

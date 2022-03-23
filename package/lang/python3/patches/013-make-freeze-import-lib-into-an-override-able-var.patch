@@ -1,0 +1,27 @@
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index ce2c0aa..7df56bf 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -683,6 +683,8 @@
+ ############################################################################
+ # Importlib
+ 
++FREEZE_IMPORTLIB ?= ./Programs/_freeze_importlib
++
+ Programs/_freeze_importlib.o: Programs/_freeze_importlib.c Makefile
+ 
+ Programs/_freeze_importlib: Programs/_freeze_importlib.o $(LIBRARY_OBJS_OMIT_FROZEN)
+@@ -692,12 +694,12 @@
+ regen-importlib: Programs/_freeze_importlib
+	# Regenerate Python/importlib_external.h
+	# from Lib/importlib/_bootstrap_external.py using _freeze_importlib
+-	./Programs/_freeze_importlib \
++	$(FREEZE_IMPORTLIB) \
+	    $(srcdir)/Lib/importlib/_bootstrap_external.py \
+	    $(srcdir)/Python/importlib_external.h
+	# Regenerate Python/importlib.h from Lib/importlib/_bootstrap.py
+	# using _freeze_importlib
+-	./Programs/_freeze_importlib \
++	$(FREEZE_IMPORTLIB) \
+	    $(srcdir)/Lib/importlib/_bootstrap.py \
+	    $(srcdir)/Python/importlib.h

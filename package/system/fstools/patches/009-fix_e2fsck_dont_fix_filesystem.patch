@@ -1,0 +1,13 @@
+diff --git a/block.c b/block.c
+index 61cc994..5d15d37 100644
+--- a/block.c
++++ b/block.c
+@@ -647,7 +647,7 @@ static void check_filesystem(struct blkid_struct_probe *pr)
+ 
+ 	pid = fork();
+ 	if (!pid) {
+-		execl(e2fsck, e2fsck, "-p", pr->dev, NULL);
++		execl(e2fsck, e2fsck, "-y", pr->dev, NULL);
+ 		exit(-1);
+ 	} else if (pid > 0) {
+ 		int status;

@@ -1,0 +1,14 @@
+menuconfig TINATEST_SYS_GLOBAL_INFO_COLLECTD_MEMORY_ENABLE
+    bool "collectd_memory"
+    select PACKAGE_collectd-mod-memory
+    default n
+
+if TINATEST_SYS_GLOBAL_INFO_COLLECTD_MEMORY_ENABLE
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_MEMORY_REPORT_TO_ABSOLUTE
+        bool "report_to_absolute"
+        default n
+
+    config TINATEST_SYS_GLOBAL_INFO_COLLECTD_MEMORY_REPORT_TO_PERCENTAGE
+        bool "report_to_percentage"
+        default y
+endif

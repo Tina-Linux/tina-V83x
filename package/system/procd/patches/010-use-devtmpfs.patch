@@ -1,0 +1,43 @@
+diff -Naur procd-2016-02-08-old/CMakeLists.txt procd-2016-02-08/CMakeLists.txt
+--- procd-2016-02-08-old/CMakeLists.txt	2018-10-24 16:30:34.682634039 +0800
++++ procd-2016-02-08/CMakeLists.txt	2018-10-24 16:31:56.030637506 +0800
+@@ -17,6 +17,9 @@
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+ )
+
++IF(DEVTMPFS_ENABLED)
++  ADD_DEFINITIONS(-DDEVTMPFS_ENABLED)
++ENDIF()
+
+ SET(SOURCES procd.c signal.c watchdog.c state.c	inittab.c rcS.c	ubus.c system.c
+	service/service.c service/instance.c service/validate.c service/trigger.c service/watch.c
+diff -Naur procd-2016-02-08-old/initd/early.c procd-2016-02-08/initd/early.c
+--- procd-2016-02-08-old/initd/early.c	2018-10-24 10:22:44.777693536 +0800
++++ procd-2016-02-08/initd/early.c	2018-10-24 10:27:38.021706032 +0800
+@@ -88,7 +88,11 @@
+	}
+
+	if (exist == 0)
++#if DEVTMPFS_ENABLED
++		mount("devtmpfs", "/dev", "devtmpfs", MS_NOSUID, "mode=0755,size=512K");
++#else
+		mount("tmpfs", "/dev", "tmpfs", MS_NOATIME | MS_NOSUID, "mode=0755,size=512K");
++#endif
+	return;
+ }
+
+diff -Naur procd-2016-02-08-old/plug/coldplug.c procd-2016-02-08/plug/coldplug.c
+--- procd-2016-02-08-old/plug/coldplug.c	2018-10-24 10:22:44.777693536 +0800
++++ procd-2016-02-08/plug/coldplug.c	2018-10-24 10:28:43.969708843 +0800
+@@ -45,7 +45,11 @@
+
+	umount2("/dev/pts", MNT_DETACH);
+	umount2("/dev/", MNT_DETACH);
++#if DEVTMPFS_ENABLED
++	mount("devtmpfs", "/dev", "devtmpfs", MS_NOSUID, "mode=0755,size=512K");
++#else
+	mount("tmpfs", "/dev", "tmpfs", MS_NOSUID, "mode=0755,size=512K");
++#endif
+	ignore(symlink("/tmp/shm", "/dev/shm"));
+	mkdir("/dev/pts", 0755);
+	umask(oldumask);

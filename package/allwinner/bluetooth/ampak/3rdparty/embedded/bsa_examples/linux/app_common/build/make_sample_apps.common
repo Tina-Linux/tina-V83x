@@ -1,0 +1,113 @@
+# When including this file, the following variables must be defined in the environment:
+#  - CPU : mips or arm otherwise, defaults x86
+#  - bluetooth_app : path to the application to build
+#  - objlist : list of the object files to link
+#  - builddir : directory where the bluetooth_app should be compiled
+#  - objdir : directory where the object files should be compiled
+#  - bsalibincdir : directory where the BSA library was archived
+#  - bsasharedlib : directory containing the libbsa shared lib
+#  - bsastaticlib : directory containing the libbsa static lib
+#  - appsources
+#  - srcdirs
+#  - $(BLUETOOTH_3RD_DIR)/$(customer)/$(project) : information to point to sample application
+#  - DELIVERY_CURRENT_FOLDER :
+#  - DELIVERIES_MAIN_FOLDER :
+
+# When not specified, search the files in the source directories
+vpath %.c $(srcdirs)
+vpath %.s $(srcdirs)
+
+# Sample applications also need to include the exported BSA headers
+incdirs += $(bsalibincdir)
+
+#######################################
+#
+# BSA client library
+#
+#######################################
+ifeq ($(BSASHAREDLIB), TRUE)
+bsalib := $(bsasharedlib)
+else
+bsalib := $(bsastaticlib)
+endif
+
+#######################################
+#
+# Objects
+#
+#######################################
+c_objs := $(patsubst %.c,$(objdir)/%.o,$(appsources))
+app_objs := $(patsubst %.s,$(objdir)/%.o,$(c_objs))
+
+objlist := $(app_objs)
+
+#######################################
+#
+# Targets
+#
+#######################################
+
+.PHONY: all clean delivery
+
+all: $(bluetooth_app)
+	@$(ECHO) Done building $@
+
+%.s:%.S
+
+$(builddir):
+	@$(ECHO) Creating application directory '$(builddir)'.
+	-@$(MKDIR) -p $(builddir)
+
+$(objdir):
+	@$(ECHO) Creating object directory '$(objdir)'.
+	-@$(MKDIR) -p $(objdir)
+
+$(objdir)/%.o: %.c
+	@$(ECHO) Compiling [$(CC)] $<
+	@$(CC) -c -MD $(CCFLAGS) $(GLOBAL_DEFINE) $(TARGET_DEF) $(CCINC) -o $@ $<
+
+# include the dependencies (if they exist)
+-include $(objlist:.o=.d)
+
+$(bluetooth_app): $(builddir) $(objdir) $(objlist) $(bsalib)
+ifneq ($(strip $(bsalib)),)
+	@$(ECHO) Linking application $@ with $(notdir $(bsalib))
+	@$(LINK) $(LINKFLAGS) -L $(dir $(bsalib)) $(TARGET_LINK_FLAGS) -o $@ $(objlist) -lbsa $(LINKLIBS)
+else
+	@$(ECHO) Linking application $@
+	@$(LINK) $(LINKFLAGS) $(TARGET_LINK_FLAGS) -o $@ $(objlist) $(LINKLIBS)
+endif
+
+clean:
+	@$(ECHO) Cleaning up : $(objdir) $(builddir)
+	@$(RM) -rf $(objdir) $(builddir)
+	@$(ECHO) Finished cleaning up
+
+delivery:
+	@$(ECHO) Creating Delivery in $(DELIVERY_CURRENT_FOLDER)
+	@$(MKDIR) -p $(DELIVERIES_MAIN_FOLDER)
+	@$(MKDIR) -p $(DELIVERY_CURRENT_FOLDER)
+	@$(MKDIR) -p $(DELIVERY_CURRENT_FOLDER)/3rdparty/embedded/$(customer)/$(project)
+	@$(CP) -r --remove-destination $(BLUETOOTH_3RD_DIR)/embedded/$(customer)/$(project)/$(application) $(DELIVERY_CURRENT_FOLDER)/3rdparty/embedded/$(customer)/$(project)/$(application)
+	@find $(DELIVERY_CURRENT_FOLDER) -name "*.o" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name "*.d" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name ".copyarea.db" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name "*~" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name "core" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name ".*.cmd" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name "*.ko" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name "*.mod.c" | xargs rm -f
+	@find $(DELIVERY_CURRENT_FOLDER) -name ".tmp_versions" | xargs rm -f -r
+	@find $(DELIVERY_CURRENT_FOLDER) -name "Module.markers" | xargs rm -f -r
+	@find $(DELIVERY_CURRENT_FOLDER) -name "Module.symvers" | xargs rm -f -r
+	@find $(DELIVERY_CURRENT_FOLDER) -name "modules.order" | xargs rm -f -r
+	@$(MKDIR) -p $(DELIVERY_CURRENT_FOLDER)/release_notes
+	@$(MKDIR) -p $(DELIVERY_CURRENT_FOLDER)/release_notes/$(customer)
+	@if [ -f $(GLOBALPATH)/release_notes/$(customer)/Release_$(application).txt ]; then \
+		$(CP) $(GLOBALPATH)/release_notes/$(customer)/Release_$(application).txt $(DELIVERY_CURRENT_FOLDER)/release_notes/$(customer); \
+	elif [ -f $(DELIVERY_CURRENT_FOLDER)/3rdparty/embedded/$(customer)/$(project)/$(application)/build/Release_$(application).txt ]; then \
+		$(MV) $(DELIVERY_CURRENT_FOLDER)/3rdparty/embedded/$(customer)/$(project)/$(application)/build/Release_$(application).txt $(DELIVERY_CURRENT_FOLDER)/release_notes/$(customer); \
+	else \
+		echo "    Nothing to do for release notes"; \
+	fi
+	@$(ECHO) Delivery done

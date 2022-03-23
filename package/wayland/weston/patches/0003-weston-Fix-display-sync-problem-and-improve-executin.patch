@@ -1,0 +1,119 @@
+From 1aa62252500c6fb706bd4284e755abda726d24e7 Mon Sep 17 00:00:00 2001
+From: dengbo <dengbo@allwinnertech.com>
+Date: Fri, 12 May 2017 18:04:02 +0800
+Subject: [PATCH 2/8] weston: Fix display sync problem and improve executing
+ efficiency
+
+Bind all the sprites(fbs) in one vblank, when you finish one frame, you should
+release all the sprites(fbs) in this frame, then the weston do next frame rendering;
+---
+ libweston/compositor-drm.c | 62 +++++++++++++++++++++++++++-------------------
+ 1 file changed, 37 insertions(+), 25 deletions(-)
+
+diff --git a/libweston/compositor-drm.c b/libweston/compositor-drm.c
+index 7a1a092..a5afe76 100644
+--- a/libweston/compositor-drm.c
++++ b/libweston/compositor-drm.c
+@@ -708,6 +708,12 @@ drm_output_repaint(struct weston_output *output_base,
+ 	struct drm_mode *mode;
+ 	int ret = 0;
+ 
++	uint32_t flags = 0, fb_id = 0;
++	drmVBlank vbl = {
++		.request.type = DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT,
++		.request.sequence = 1,
++	};
++
+ 	drmModeObjectPropertiesPtr plane_prop_ptr;
+ 	uint32_t i = 0;
+ 	drmModePropertyPtr prop_ptr;
+@@ -752,12 +758,6 @@ drm_output_repaint(struct weston_output *output_base,
+ 	 * Now, update all the sprite surfaces
+ 	 */
+ 	wl_list_for_each(s, &backend->sprite_list, link) {
+-		uint32_t flags = 0, fb_id = 0;
+-		drmVBlank vbl = {
+-			.request.type = DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT,
+-			.request.sequence = 1,
+-		};
+-
+ 		if ((!s->current && !s->next) ||
+ 		    !drm_sprite_crtc_supported(output, s))
+ 			continue;
+@@ -827,23 +827,24 @@ drm_output_repaint(struct weston_output *output_base,
+ 		}
+ 		drmModeFreeObjectProperties(plane_prop_ptr);
+ 
+-		vbl.request.type |= drm_waitvblank_pipe(output);
+-
+-		/*
+-		 * Queue a vblank signal so we know when the surface
+-		 * becomes active on the display or has been replaced.
+-		 */
+-		vbl.request.signal = (unsigned long)s;
+-		ret = drmWaitVBlank(backend->drm.fd, &vbl);
+-		if (ret) {
+-			weston_log("vblank event request failed: %d: %s\n",
+-				ret, strerror(errno));
+-		}
+-
+ 		s->output = output;
+ 		output->vblank_pending = 1;
+ 	}
+ 
++	vbl.request.type |= drm_waitvblank_pipe(output);
++
++	/*
++	 * Queue a vblank signal so we know when the surface
++	 * becomes active on the display or has been replaced.
++	 */
++	vbl.request.signal = (unsigned long)output;
++	ret = drmWaitVBlank(backend->drm.fd, &vbl);
++	if (ret) {
++		weston_log("vblank event request failed: %d: %s\n",
++			ret, strerror(errno));
++		goto err_pageflip;
++	}
++
+ 	return 0;
+ 
+ err_pageflip:
+@@ -942,18 +943,29 @@ static void
+ vblank_handler(int fd, unsigned int frame, unsigned int sec, unsigned int usec,
+ 	       void *data)
+ {
+-	struct drm_sprite *s = (struct drm_sprite *)data;
+-	struct drm_output *output = s->output;
++	struct drm_output *output = (struct drm_output *)data;
++	struct drm_backend *backend =
++		to_drm_backend(output->base.compositor);
++	struct drm_sprite *s = NULL;
+ 	struct timespec ts;
+ 	uint32_t flags = WP_PRESENTATION_FEEDBACK_KIND_HW_COMPLETION |
+ 			 WP_PRESENTATION_FEEDBACK_KIND_HW_CLOCK;
+ 
+ 	drm_output_update_msc(output, frame);
+-	output->vblank_pending = 0;
+ 
+-	drm_output_release_fb(output, s->current);
+-	s->current = s->next;
+-	s->next = NULL;
++	/*
++	 * Now, update all the sprite surfaces
++	 */
++	wl_list_for_each(s, &backend->sprite_list, link) {
++		if ((!s->current && !s->next) ||
++		    !drm_sprite_crtc_supported(output, s->possible_crtcs))
++			continue;
++
++		drm_output_release_fb(output, s->current);
++		s->current = s->next;
++		s->next = NULL;
++	}
++	output->vblank_pending = 0;
+ 
+ 	if (!output->page_flip_pending) {
+ 		ts.tv_sec = sec;
+-- 
+1.9.1
+

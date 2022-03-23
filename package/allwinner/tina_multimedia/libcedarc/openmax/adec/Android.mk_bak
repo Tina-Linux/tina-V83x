@@ -1,0 +1,36 @@
+LOCAL_PATH:= $(call my-dir)
+include $(CLEAR_VARS)
+
+MOD_TOP=$(LOCAL_PATH)/../..
+include $(MOD_TOP)/config.mk
+
+LOCAL_CFLAGS += $(AW_OMX_EXT_CFLAGS)
+LOCAL_MODULE_TAGS := optional
+
+LOCAL_SRC_FILES:= omx_adec.cpp
+
+LOCAL_C_INCLUDES := \
+	$(LOCAL_PATH)/../omxcore/inc/ \
+	$(TOP)/frameworks/native/include/     \
+	$(TOP)/frameworks/native/include/media/hardware \
+	$(CEDARC_PATH)/include \
+	$(MOD_TOP)/memory/include \
+	$(MOD_TOP)/include \
+	$(MOD_TOP)/base/include \
+	$(MOD_TOP)/ \
+	$(MOD_TOP)/adecoder/include \
+
+LOCAL_SHARED_LIBRARIES := \
+	libcutils \
+	libutils \
+	libbinder \
+	libui       \
+	libdl \
+	libadecoder \
+	libMemAdapter \
+
+
+#libvdecoder
+LOCAL_MODULE:= libOmxAdec
+
+include $(BUILD_SHARED_LIBRARY)

@@ -1,0 +1,14 @@
+--- a/src/kernel/init.c
++++ b/src/kernel/init.c
+@@ -173,8 +173,10 @@
+     while (__mg_quiting_stage > _MG_QUITING_STAGE_EVENT) {
+         event = IAL_WaitEvent (IAL_MOUSEEVENT | IAL_KEYEVENT, 0,
+                         NULL, NULL, NULL, (void*)&__mg_event_timeout);
+-        if (event < 0)
++        if (event < 0) {
++			usleep(10*1000); /*reduce the CPU usage frequency*/
+             continue;
++        }
+ 
+         lwe.status = 0L;
+         lwe.data.me.status = 0;

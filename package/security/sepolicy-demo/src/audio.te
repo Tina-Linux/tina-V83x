@@ -1,0 +1,32 @@
+type audio, domain;
+type audio_exec, exec_type, file_type;
+# permissive audio;
+domain_auto_trans(audio,busybox_exec,busybox)
+domain_auto_trans(audio,shell_exec,shell)
+domain_auto_trans(init,audio_exec,audio)
+
+allow audio audio_exec:file { open read write execute execute_no_trans getattr };
+
+allow audio audio_device:dir rw_dir_perms;
+allow audio audio_device:chr_file rw_file_perms;
+allow audio console_device:chr_file rw_file_perms;
+
+allow audio self:capability { sys_resource setgid setuid };
+
+allow audio etc_passwd:file r_file_perms;
+
+allow audio tmpfs:dir create_dir_perms;
+allow audio tmpfs:file create_file_perms;
+allow audio tmpfs:sock_file create_file_perms;
+
+# allow audio rcinit:fd use;
+
+# allow audio shell_exec:lnk_file r_file_perms;
+# allow audio shell_exec:file rx_file_perms;
+
+allow audio init:fifo_file { write ioctl };
+allow audio shell:fd use;
+
+# allow logd etc_selinux:dir { search open read getattr };
+# allow logd etc_selinux:{ file lnk_file } { open read getattr };
+

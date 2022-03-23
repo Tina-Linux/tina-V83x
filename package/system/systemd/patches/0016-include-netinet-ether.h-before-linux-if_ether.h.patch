@@ -1,0 +1,56 @@
+From 39cefed677d5084d3af206badbe9800e8817724a Mon Sep 17 00:00:00 2001
+From: Khem Raj <raj.khem@gmail.com>
+Date: Sat, 12 Sep 2015 18:02:07 +0000
+Subject: [PATCH 16/31] include netinet/ether.h before linux/if_ether.h
+
+musl does not include OS specific defines like uclibc/glibc
+so we changed the linux kernel headers such that if userspace
+if_ether.h is included then we avoid the duplicate defines in kernel
+headers. But the logic is defeated if linux/if_ether.h is included
+before netinet/ether.h, so lets change the order
+
+usr/include/netinet/if_ether.h:96:8: error: redefinition of 'struct
+ethhdr'
+
+include wait.h for WEXITED definition
+
+src/libsystemd/sd-event/test-event.c:101:77: error: 'WEXITED' undeclared
+(first use in this function)
+
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+---
+ src/libsystemd-network/lldp-network.c | 1 +
+ src/libsystemd-network/sd-pppoe.c     | 1 +
+ src/libsystemd/sd-event/test-event.c  | 1 +
+ 3 files changed, 3 insertions(+)
+
+--- a/src/libsystemd-network/lldp-network.c
++++ b/src/libsystemd-network/lldp-network.c
+@@ -21,6 +21,7 @@
+ ***/
+ 
+ #include <linux/filter.h>
++#include <netinet/ether.h>
+ #include <linux/if_ether.h>
+ 
+ #include "socket-util.h"
+--- a/src/libsystemd-network/sd-pppoe.c
++++ b/src/libsystemd-network/sd-pppoe.c
+@@ -26,6 +26,7 @@
+ #include <linux/ppp-ioctl.h>
+ #include <net/if.h>
+ #include <netinet/in.h>
++#include <netinet/ether.h>
+ #include <linux/if_pppox.h>
+ 
+ #include "sd-pppoe.h"
+--- a/src/libsystemd/sd-event/test-event.c
++++ b/src/libsystemd/sd-event/test-event.c
+@@ -19,6 +19,7 @@
+   along with systemd; If not, see <http://www.gnu.org/licenses/>.
+ ***/
+ 
++#include <wait.h>
+ #include "sd-event.h"
+ #include "log.h"
+ #include "util.h"

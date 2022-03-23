@@ -1,0 +1,7 @@
+menuconfig TINATEST_SPEC
+    bool 'spec'
+
+if TINATEST_SPEC
+    source benchmarks/Config.in
+    source storage/Config.in
+endif

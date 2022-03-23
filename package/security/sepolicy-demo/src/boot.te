@@ -1,0 +1,38 @@
+type boot, domain, mlstrustedsubject;
+type boot_exec, exec_type, file_type;
+# permissive boot;
+domain_auto_trans(init,boot_exec,boot)
+# domain_auto_trans(boot,kmodloader_exec,kmodloader)
+# domain_auto_trans(boot,busybox_exec,busybox)
+# domain_auto_trans(boot,shell_exec,shell)
+# domain_auto_trans(boot,ubusd_exec,ubusd)
+
+# allow boot init:fifo_file { read write };
+
+# # allow boot self:system module_load;
+# allow boot self:capability { sys_module sys_admin dac_override dac_read_search };
+
+# allow boot self:process setfscreate;
+
+# allow boot device:dir rw_dir_perms;
+# allow boot device:lnk_file create_file_perms;
+# allow boot console_device:chr_file r_file_perms;
+# allow boot serial_device:chr_file r_file_perms;
+
+# allow boot system_file:file { execute execute_no_trans open execmod };
+# # allow boot shell:file { execute execute_no_trans open execmod };
+
+# allow boot { mount_exec temp_exec }:file {read getattr execute execute_no_trans open execmod};
+# allow boot { mount_exec temp_exec }:lnk_file { getattr open read execute };
+
+# allow boot tmpfs:dir create_dir_perms;
+# allow boot tmpfs:file create_file_perms;
+# allow boot tmpfs:lnk_file create;
+# allow boot shell_tmpfs:file r_file_perms;
+
+# allow boot sysfs:dir mounton;
+# allow boot debugfs:filesystem mount;
+
+# allow boot { etc_selinux etc_initd }:dir { search open read getattr };
+# allow boot etc_passwd:file r_file_perms;
+# allow boot etc_shadow:file r_file_perms;

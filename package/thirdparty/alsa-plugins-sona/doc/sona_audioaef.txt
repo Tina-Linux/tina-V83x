@@ -1,0 +1,52 @@
+Sona Audio Effect Plugin
+========================
+
+This plugin provides a processing of an audio stream using Sona libAudioEffect
+API. You can use the plugin with the plugin type "sona_audioaef" like below:
+
+    pcm.my_pcm {
+        type sona_audioaef
+        slave.pcm "hw:0,0"
+    }
+
+NOTE:
+    For compatibility, this plugin supports only a mono stream with format S16_LE.
+
+The following parameters can be set optionally:
+
+- config_file
+
+  The path of the audio effect configuration file. Default is
+  "/etc/sona_audioaef.conf".
+
+- max_frames
+
+  The max frames of the internal buffer in libAudioEffect. It determines how
+  much data can be processed in libAudioEffect each time. Default is equal to
+  period_size in hw_params.
+
+- runtime_config
+
+  A boolean value to enable/disable the configuring function via RPC. Default is
+  false.
+
+- save_runtime_config
+
+  A boolean value to enable/disable saving runtime configuration function. If it
+  is true, when the save command from network arrives, runtime configuration
+  will be saved to the path of "config_file", otherwise do nothing. Default is
+  false.
+
+For example, you can use the plugin like this:
+
+    pcm.my_pcm {
+        type sona_audioaef
+        slave.pcm "hw:0,0"
+        config_file "/etc/sona_audioaef.conf"  # optional
+        max_frames 1024                        # optional
+        runtime_config true                    # optional
+        save_runtime_config true               # optional
+    }
+
+To know more about the parameters in the audio effect configuration file,
+please refer to sona_audioaef.conf_example.

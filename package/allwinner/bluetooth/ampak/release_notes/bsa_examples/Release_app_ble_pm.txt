@@ -1,0 +1,18 @@
+
+This package contains the Bluetooth Application Manager (app_ble_pm) on Linux.
+
+To compile the Bluetooth application Manager have to type:
+> cd 3rdparty/embedded/bsa_examples/linux/app_ble_pm/build
+> make              <= For PC/Linux target (default)
+> make CPU=mips     <= For STB/Linux target
+
+For PC/Linux target, the application executable is located in build/x86 folder.
+To execute it, you have to go in the folder used to start the server application:
+> cd  ../../server/build/
+> ../../app_ble_pm/build/x86/app_ble_pm
+
+In fact both server and applications need to access the named socket file (bt-daemon-socket),
+which is created when the server is started.
+
+For STB target, the application executable is located in build/mips folder.
+To execute it, you have to copy and to execute it on the STB platform (from the same location used to execute the bt_server).

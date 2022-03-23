@@ -1,0 +1,32 @@
+menuconfig TINATEST_BASE_PRODUCTION
+    bool "production"
+    default y
+
+if TINATEST_BASE_PRODUCTION
+    source otgtester/Config.in
+    source hosttester/Config.in
+    source ethtester/Config.in
+    source mictester/Config.in
+    source sdcardtester/Config.in
+    source nandtester/Config.in
+    source nortester/Config.in
+    source tptester/Config.in
+    source pmutester/Config.in
+    source udisktester/Config.in
+    source keytester/Config.in
+    source powerkeytester/Config.in
+    source rtctester/Config.in
+    source emmctester/Config.in
+    source excodectester/Config.in
+    source headphonetester/Config.in
+    source satatester/Config.in
+    source batterytester/Config.in
+    source lineintester/Config.in
+    source ledarraytester/Config.in
+    source displaytester/Config.in
+    source ledstester/Config.in
+    source cameratester/Config.in
+    source bt1120tester/Config.in
+    source wifi/Config.in
+    source testtrecorder/Config.in
+endif

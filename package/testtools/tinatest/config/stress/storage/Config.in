@@ -1,0 +1,8 @@
+menuconfig TINATEST_STRESS_STORAGE
+    bool "storage"
+
+if TINATEST_STRESS_STORAGE
+    source fulldisk/Config.in
+    source power-fail/Config.in
+    source throughput/Config.in
+endif

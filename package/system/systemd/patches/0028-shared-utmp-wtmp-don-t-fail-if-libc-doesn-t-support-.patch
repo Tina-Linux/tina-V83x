@@ -1,0 +1,47 @@
+From 1355580c0954c071e4a1733fa444cdf3171bf4f5 Mon Sep 17 00:00:00 2001
+From: Emil Renner Berthing <systemd@esmil.dk>
+Date: Thu, 18 Sep 2014 15:24:51 +0200
+Subject: [PATCH 28/31] shared/utmp-wtmp: don't fail if libc doesn't support
+ utmpx/wtmpx
+
+I'd like to make utmp/wtmp handling a configure option, but for
+now this is the minimal change needed to make it compile with musl.
+The musl utmp/wtmp functions doesn't do anything anyway.
+---
+ src/shared/utmp-wtmp.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+--- a/src/shared/utmp-wtmp.c
++++ b/src/shared/utmp-wtmp.c
+@@ -64,8 +64,10 @@ int utmp_get_runlevel(int *runlevel, int
+                 return 0;
+         }
+ 
++#ifdef _PATH_UTMPX
+         if (utmpxname(_PATH_UTMPX) < 0)
+                 return -errno;
++#endif
+ 
+         setutxent();
+ 
+@@ -123,8 +125,10 @@ static int write_entry_utmp(const struct
+          * each entry type resp. user; i.e. basically a key/value
+          * table. */
+ 
++#ifdef _PATH_UTMPX
+         if (utmpxname(_PATH_UTMPX) < 0)
+                 return -errno;
++#endif
+ 
+         setutxent();
+ 
+@@ -145,7 +149,9 @@ static int write_entry_wtmp(const struct
+         simply appended to the end; i.e. basically a log. */
+ 
+         errno = 0;
++#ifdef _PATH_WTMPX
+         updwtmpx(_PATH_WTMPX, store);
++#endif
+         return -errno;
+ }
+ 

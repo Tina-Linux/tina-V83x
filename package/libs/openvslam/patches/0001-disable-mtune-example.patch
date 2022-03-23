@@ -1,0 +1,24 @@
+--- a/CMakeLists.txt	2019-11-07 13:06:03.000000000 +0800
++++ b/CMakeLists.txt	2019-11-14 17:19:27.709533421 +0800
+@@ -90,6 +90,8 @@
+     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native -march=native")
+     set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native -march=native")
+     message(STATUS "Architecture-aware optimization (-march=native): ENABLED")
++elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
++    message(STATUS "ARM: architecture-aware optimization (-march=native): DISABLED")
+ else()
+     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
+     set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -mtune=native")
+@@ -291,7 +293,11 @@
+ ###################
+ 
+ add_subdirectory(src)
+-add_subdirectory(example)
++
++set(BUILD_EXAMPLE OFF CACHE BOOL "Build example")
++if(BUILD_EXAMPLE)
++    add_subdirectory(example)
++endif()
+ 
+ set(BUILD_TESTS OFF CACHE BOOL "Build tests")
+ if(BUILD_TESTS)

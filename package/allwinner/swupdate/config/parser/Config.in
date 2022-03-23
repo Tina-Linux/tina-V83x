@@ -1,0 +1,71 @@
+menu "Parser Features"
+
+config SWUPDATE_CONFIG_LIBCONFIG
+	bool "libconfig"
+	default SWUPDATE_DEFAULT_LIBCONFIG
+	depends on SWUPDATE_CONFIG_HAVE_LIBCONFIG
+	help
+	  Use libconfig to parse the configuration file.
+	  This is the default parser.
+
+comment "Default config parser support needs libconfig"
+	depends on !SWUPDATE_CONFIG_HAVE_LIBCONFIG
+
+config SWUPDATE_CONFIG_PARSERROOT
+	string "Name of root node"
+	depends on SWUPDATE_CONFIG_LIBCONFIG || SWUPDATE_CONFIG_JSON
+	help
+	  For compatibility reasons, the root node
+	  can be set to something else as "software".
+	  In most case you do not need to set it.
+
+config SWUPDATE_CONFIG_JSON
+	bool "libjson"
+	default SWUPDATE_DEFAULT_JSON
+	depends on SWUPDATE_CONFIG_HAVE_JSON_C
+	help
+	  Use json-c to parse the configuration file.
+	  Also required for suricatta's hawkBit Server support.
+
+comment "JSON config parser support needs json-c"
+	depends on !SWUPDATE_CONFIG_HAVE_JSON_C
+
+config SWUPDATE_CONFIG_LUAEXTERNAL
+	bool "lua"
+	depends on SWUPDATE_CONFIG_LUA
+	default SWUPDATE_DEFAULT_LUAEXTERNAL
+	help
+	  call an external parser written in Lua.
+
+config SWUPDATE_CONFIG_SETEXTPARSERNAME
+	bool "Set external parser name"
+	depends on SWUPDATE_CONFIG_LUAEXTERNAL
+	default SWUPDATE_DEFAULT_SETEXTPARSERNAME
+	help
+	  Set to define own path and filename for the
+	  external parser, else default lua-tools/extparser.lua
+	  will be used.
+
+config SWUPDATE_CONFIG_EXTPARSERNAME
+	string "External parser file name"
+	depends on SWUPDATE_CONFIG_SETEXTPARSERNAME
+	help
+	  Lua script to be executed for parsing
+	  the sw-description file.
+
+config SWUPDATE_CONFIG_SETSWDESCRIPTION
+	bool "set file description name"
+	default SWUPDATE_DEFAULT_SETSWDESCRIPTION
+	help
+	  Set it if you want to change the name of
+	  the default software descritpion file.
+	  If not set, default file name is "sw-description"
+
+config SWUPDATE_CONFIG_SWDESCRIPTION
+	string "description file"
+	depends on SWUPDATE_CONFIG_SETSWDESCRIPTION
+	help
+	   File extracted from the image containing
+	   the description (meta) of the images.
+	   This file, after extraction, is passed to the parser.
+endmenu

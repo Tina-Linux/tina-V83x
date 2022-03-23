@@ -1,0 +1,8 @@
+menuconfig TINATEST_SYS_GLOBAL
+    bool "global"
+    default y
+
+if TINATEST_SYS_GLOBAL
+    source info/Config.in
+    source limit/Config.in
+endif

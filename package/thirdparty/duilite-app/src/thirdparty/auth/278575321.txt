@@ -1,0 +1,5 @@
+"deviceSignature":"7c670d2b402b86b7b96d9dbe279e6efffd6a4ea9081c5dcc22e08fde3a94255f4be7e7a0b237becc6d0a649ab5446c021aebe368c7fc1ccce49f9fd1ba752c0f",
+"uid":	"76c23363802cfdbbefd296a69b21c2e4",
+"productId":	"278575321",
+"productSecret":"e45533043787b058fe6cfd7b4a7fe20a",
+"productKey":	"a827678a335380d416301fc824749da1"

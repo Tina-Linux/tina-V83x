@@ -1,0 +1,8 @@
+--- a/autogen.sh
++++ b/autogen.sh
+@@ -5,4 +5,4 @@
+ autoheader
+ autoconf
+ automake --add-missing 
+-
++automake

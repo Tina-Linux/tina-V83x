@@ -1,0 +1,35 @@
+From 887293b033f91e019782ac8ff9fad333c0b9fff2 Mon Sep 17 00:00:00 2001
+From: Khem Raj <raj.khem@gmail.com>
+Date: Sat, 12 Sep 2015 20:30:25 +0000
+Subject: [PATCH 27/31] Include sys/file.h for LOCK_* defines
+
+Fixes errors like
+
+error: 'LOCK_EX' undeclared
+
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+---
+ src/shared/machine-image.c | 1 +
+ src/shared/machine-pool.c  | 1 +
+ 2 files changed, 2 insertions(+)
+
+--- a/src/shared/machine-image.c
++++ b/src/shared/machine-image.c
+@@ -30,6 +30,7 @@
+ #include "mkdir.h"
+ #include "rm-rf.h"
+ #include "machine-image.h"
++#include <sys/file.h>
+ 
+ static const char image_search_path[] =
+         "/var/lib/machines\0"
+--- a/src/shared/machine-pool.c
++++ b/src/shared/machine-pool.c
+@@ -23,6 +23,7 @@
+ #include <sys/vfs.h>
+ #include <sys/statvfs.h>
+ #include <sys/mount.h>
++#include <sys/file.h>
+ 
+ #include "util.h"
+ #include "process-util.h"

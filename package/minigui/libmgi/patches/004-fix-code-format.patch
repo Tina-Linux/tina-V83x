@@ -1,0 +1,2196 @@
+--- a/src/ime_pinyin.c	2009-12-25 15:50:01.000000000 +0800
++++ b/src/ime_pinyin.c	2018-10-10 19:43:42.000000000 +0800
+@@ -3,7 +3,7 @@
+ #include <string.h>
+ #include <ctype.h>
+ 
+-#include <minigui/common.h> 
++#include <minigui/common.h>
+ #include <minigui/minigui.h>
+ #include <minigui/gdi.h>
+ #include <minigui/window.h>
+@@ -28,11 +28,11 @@
+    /* Input key buffer */
+ static int InputCount,InputMatch, StartKey,EndKey;
+ static int WORK_TIM;
+-static int save_StartKey,save_EndKey, save_MultiPageMode, 
++static int save_StartKey,save_EndKey, save_MultiPageMode,
+            save_NextPageIndex, save_CurrentPageIndex;
+ static int NextPageIndex,CurrentPageIndex,MultiPageMode;
+ /* When enter MultiPageMode:
+-   StartKey .... CurrentPageIndex .... NextPageIndex .... EndKey 
++   StartKey .... CurrentPageIndex .... NextPageIndex .... EndKey
+ */
+ static unsigned long val1, val2,key1,key2;
+ static int IsAssociateMode;
+@@ -55,7 +55,7 @@
+ /* 6 bit a key mask */
+ static const unsigned long mask[]=
+ {
+-  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 
++  0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+   0x3F000000, 0x3FFC0000, 0x3FFFF000, 0x3FFFFFC0, 0x3FFFFFFF, 0x3FFFFFFF,
+   0x3FFFFFFF, 0x3FFFFFFF, 0x3FFFFFFF, 0x3FFFFFFF, 0x3FFFFFFF, 0x3FFFFFFF
+ };
+@@ -67,172 +67,172 @@
+ static ime_input_table* load_input_method (void)
+ {
+ #if MGUI_BYTEORDER == MGUI_BIG_ENDIAN
+-	int i;
++    int i;
+ #endif
+ 
+-	ime_input_table *table;
+-	table= (ime_input_table*)ime_tab;
+-	table->item=(ITEM*)(table+1);
++    ime_input_table *table;
++    table= (ime_input_table*)ime_tab;
++    table->item=(ITEM*)(table+1);
+ 
+ #if MGUI_BYTEORDER == MGUI_BIG_ENDIAN
+ 
+-	table->TotalKey = ArchSwap32(table->TotalKey);
+-	table->MaxPress = ArchSwap32(table->MaxPress);
+-	table->MaxDupSel= ArchSwap32(table->MaxDupSel);
+-	table->TotalChar= ArchSwap32(table->TotalChar);
+-	table->PhraseNum= ArchSwap32(table->PhraseNum);
+-
+-	for (i = 0; i < 64; i++) 
+-	{
+-		table->KeyIndex [i] = ArchSwap16(table->KeyIndex[i]);
+-	}
++    table->TotalKey = ArchSwap32(table->TotalKey);
++    table->MaxPress = ArchSwap32(table->MaxPress);
++    table->MaxDupSel= ArchSwap32(table->MaxDupSel);
++    table->TotalChar= ArchSwap32(table->TotalChar);
++    table->PhraseNum= ArchSwap32(table->PhraseNum);
++
++    for (i = 0; i < 64; i++)
++    {
++        table->KeyIndex [i] = ArchSwap16(table->KeyIndex[i]);
++    }
+ 
+ #endif
+ 
+-	if( strcmp(MAGIC_NUMBER, table->magic_number) )
+-	{
+-    	goto fail;
+-	}
++    if( strcmp(MAGIC_NUMBER, table->magic_number) )
++    {
++        goto fail;
++    }
+ 
+ #if MGUI_BYTEORDER == MGUI_BIG_ENDIAN
+-	for (i = 0; i < table->TotalChar; i++)
+-	{
+-		table->item[i].key1 = ArchSwap32(table->item[i].key1);
+-		table->item[i].key2 = ArchSwap32(table->item[i].key2);
+-		table->item[i].frequency = ArchSwap16(table->item[i].frequency);
+-	}
++    for (i = 0; i < table->TotalChar; i++)
++    {
++        table->item[i].key1 = ArchSwap32(table->item[i].key1);
++        table->item[i].key2 = ArchSwap32(table->item[i].key2);
++        table->item[i].frequency = ArchSwap16(table->item[i].frequency);
++    }
+ 
+ #endif
+-	table->PhraseFile =(FILE *) ime_tab_phr;
+-	table->AssocFile  =(FILE *)ime_tab_lx;
+-	return table;
++    table->PhraseFile =(FILE *) ime_tab_phr;
++    table->AssocFile  =(FILE *)ime_tab_lx;
++    return table;
+ 
+ fail:
+-	return NULL;
++    return NULL;
+ }
+ 
+ 
+ static void ClrIn (void)
+ {
+-	memset (InpKey, 0, sizeof ( InpKey)); 
+-	memset ( seltab, 0, sizeof ( seltab));
++    memset (InpKey, 0, sizeof ( InpKey));
++    memset ( seltab, 0, sizeof ( seltab));
+ 
+-	MultiPageMode    = 0;
+-	NextPageIndex    = 0;
+-	CurrentPageIndex = 0;
+-	CurSelNum        = 0;
+-	InputCount       = 0;
+-	InputMatch       = 0;
+-	IsAssociateMode  = 0;   /* lian xiang */
++    MultiPageMode    = 0;
++    NextPageIndex    = 0;
++    CurrentPageIndex = 0;
++    CurSelNum        = 0;
++    InputCount       = 0;
++    InputMatch       = 0;
++    IsAssociateMode  = 0;   /* lian xiang */
+ }
+ 
+ static void FindAssociateKey (int index)
+ {
+-	char *fp =(char*)cur_table->AssocFile;
+-	int  ofs[2], offset;
+-   
+-	if (index < 0xB0A1) 
+-	{
+-		StartKey = EndKey = 0;
+-		return;  /* no match */
+-	}  
+-   
+-	offset = (index / 256 - 0xB0) * 94 + index % 256 - 0xA1; 
+-	fp    +=(offset *sizeof (int));
+-	memcpy (ofs, fp, (sizeof (int)*2));
++    char *fp =(char*)cur_table->AssocFile;
++    int  ofs[2], offset;
++
++    if (index < 0xB0A1)
++    {
++        StartKey = EndKey = 0;
++        return;  /* no match */
++    }
++
++    offset = (index / 256 - 0xB0) * 94 + index % 256 - 0xA1;
++    fp    +=(offset *sizeof (int));
++    memcpy (ofs, fp, (sizeof (int)*2));
+ 
+ #if MGUI_BYTEORDER == MGUI_BIG_ENDIAN
+-	ofs[0] = ArchSwap32(ofs[0]);
+-	ofs[1] = ArchSwap32(ofs[1]);
++    ofs[0] = ArchSwap32(ofs[0]);
++    ofs[1] = ArchSwap32(ofs[1]);
+ #endif
+ 
+-	StartKey = 72 * 94 + 1 + ofs[0];
+-	EndKey = 72 * 94 + 1 + ofs[1];
++    StartKey = 72 * 94 + 1 + ofs[0];
++    EndKey = 72 * 94 + 1 + ofs[1];
+ }
+ 
+ static void load_phrase (int phrno, char *tt)
+ {
+-	char *fp =(char*)cur_table->PhraseFile;
+-	int  ofs[2], len;
++    char *fp =(char*)cur_table->PhraseFile;
++    int  ofs[2], len;
+ 
+-	fp +=((phrno +1)<<2);
+-	memcpy (ofs, fp, (sizeof(int)*2));
++    fp +=((phrno +1)<<2);
++    memcpy (ofs, fp, (sizeof(int)*2));
+ 
+ #if MGUI_BYTEORDER == MGUI_BIG_ENDIAN
+-	ofs[0] = ArchSwap32(ofs[0]);
+-	ofs[1] = ArchSwap32(ofs[1]);
++    ofs[0] = ArchSwap32(ofs[0]);
++    ofs[1] = ArchSwap32(ofs[1]);
+ #endif
+-	len =ofs[1] -ofs[0];
++    len =ofs[1] -ofs[0];
+ 
+-	if (len > 128 || len <= 0 )
+-	{
+-		strcpy( tt, "error" );
+-		return;
+-	}
++    if (len > 128 || len <= 0 )
++    {
++        strcpy( tt, "error" );
++        return;
++    }
+ 
+-	ofs[0] +=( cur_table->PhraseNum + 1)<< 2;
++    ofs[0] +=( cur_table->PhraseNum + 1)<< 2;
+  /* Add the index area length */
+-	fp     =(char*)cur_table->PhraseFile;
+-	fp    +=ofs[0];
+-	memcpy (tt, fp, len);
++    fp     =(char*)cur_table->PhraseFile;
++    fp    +=ofs[0];
++    memcpy (tt, fp, len);
+ 
+-	tt[len] = 0;
++    tt[len] = 0;
+ }
+ 
+ static void putstr (unsigned char *p)
+ {
+-	int index,len =strlen(( char*)p);
++    int index,len =strlen(( char*)p);
+ //    printf ("++++++%s\n", p);
+-	if (InputCount <= InputMatch)  /* All Match */
+-	{
+-		index = (int)p[len-2] * 256 + p[len-1]; 
+-		ClrIn();
+-
+-		if (UseAssociateMode)
+-		{
+-			FindAssociateKey(index); 
+-			CurrentPageIndex = StartKey;
+-			MultiPageMode = 0;
+-			FillAssociateChars(StartKey);  
+-
+-			if (CurSelNum > 0)
+-			{
+-				IsAssociateMode = 1;
+-			}
+-		}
+-	}else
+-	{
+-		int nCount = InputCount - InputMatch,nMatch = InputMatch,i;
+-		MultiPageMode = NextPageIndex = CurrentPageIndex = 0;
+-		InputCount = InputMatch = 0;
+-
+-		for (i =0; i <nCount; i++)
+-			save_InpKey[i] =InpKey[nMatch+i];
+-
+-		memset (InpKey, 0, sizeof(InpKey));
+-
+-		for (i =1; i <=nCount; i++)  /* feed the additional keys */
+-		{
+-			InpKey[InputCount] =save_InpKey[InputCount];
+-			InputCount++;
+-
+-			if (InputCount <=InputMatch+1)
+-			{
+-				FindMatchKey ();
+-				MultiPageMode    =0;
+-				CurrentPageIndex =StartKey;
+-				FillMatchChars (StartKey);
+-			} 
+-
+-		}
+-
+-		if (InputMatch ==0)    /* left key has no match, delete */
+-		{
+-			ClrIn(); 
+-			return;
+-		}
++    if (InputCount <= InputMatch)  /* All Match */
++    {
++        index = (int)p[len-2] * 256 + p[len-1];
++        ClrIn();
++
++        if (UseAssociateMode)
++        {
++            FindAssociateKey(index);
++            CurrentPageIndex = StartKey;
++            MultiPageMode = 0;
++            FillAssociateChars(StartKey);
++
++            if (CurSelNum > 0)
++            {
++                IsAssociateMode = 1;
++            }
++        }
++    }else
++    {
++        int nCount = InputCount - InputMatch,nMatch = InputMatch,i;
++        MultiPageMode = NextPageIndex = CurrentPageIndex = 0;
++        InputCount = InputMatch = 0;
++
++        for (i =0; i <nCount; i++)
++            save_InpKey[i] =InpKey[nMatch+i];
++
++        memset (InpKey, 0, sizeof(InpKey));
++
++        for (i =1; i <=nCount; i++)  /* feed the additional keys */
++        {
++            InpKey[InputCount] =save_InpKey[InputCount];
++            InputCount++;
+ 
+-	}
++            if (InputCount <=InputMatch+1)
++            {
++                FindMatchKey ();
++                MultiPageMode    =0;
++                CurrentPageIndex =StartKey;
++                FillMatchChars (StartKey);
++            }
++
++        }
++
++        if (InputMatch ==0)    /* left key has no match, delete */
++        {
++            ClrIn();
++            return;
++        }
++
++    }
+ }
+ 
+ 
+@@ -242,91 +242,91 @@
+ */
+ static void FindMatchKey (void)
+ {
+-//	save_StartKey 		  = StartKey;
+-//	save_EndKey           = EndKey;
+-//	save_MultiPageMode    = MultiPageMode;
+-//	save_NextPageIndex    = NextPageIndex;
+-//	save_CurrentPageIndex = CurrentPageIndex;
+-
+-	save_StartKey 		  = 0;
+-	save_EndKey           = 0;
+-	save_MultiPageMode    = 0;
+-	save_NextPageIndex    = 0;
+-	save_CurrentPageIndex = 0;
+-
+-	val1 = InpKey[4] | (InpKey[3]<<6) | (InpKey[2]<<12) | (InpKey[1]<<18) | (InpKey[0]<<24);
+-	val2 = InpKey[9] | (InpKey[8]<<6) | (InpKey[7]<<12) | (InpKey[6]<<18) | (InpKey[5]<<24);
+-
+-	if (InputCount == 1)
+-		StartKey = cur_table->KeyIndex[InpKey[0]];
+-	else
+-		StartKey = CharIndex[InputCount-1];
+-
+-	EndKey = cur_table->KeyIndex[InpKey[0]+1];
+-
+-	for (; StartKey <EndKey; StartKey++)
+-	{
+-		key1 = (cur_table->item[StartKey].key1 & mask[InputCount+5]);
+-		key2 = (cur_table->item[StartKey].key2 & mask[InputCount]);
+-
+-		if (key1 > val1) break;
+-		if (key1 < val1) continue;
+-		if (key2 < val2) continue;
+-		break;
+-	}
+-	CharIndex[InputCount] = StartKey;
++//  save_StartKey         = StartKey;
++//  save_EndKey           = EndKey;
++//  save_MultiPageMode    = MultiPageMode;
++//  save_NextPageIndex    = NextPageIndex;
++//  save_CurrentPageIndex = CurrentPageIndex;
++
++    save_StartKey         = 0;
++    save_EndKey           = 0;
++    save_MultiPageMode    = 0;
++    save_NextPageIndex    = 0;
++    save_CurrentPageIndex = 0;
++
++    val1 = InpKey[4] | (InpKey[3]<<6) | (InpKey[2]<<12) | (InpKey[1]<<18) | (InpKey[0]<<24);
++    val2 = InpKey[9] | (InpKey[8]<<6) | (InpKey[7]<<12) | (InpKey[6]<<18) | (InpKey[5]<<24);
++
++    if (InputCount == 1)
++        StartKey = cur_table->KeyIndex[InpKey[0]];
++    else
++        StartKey = CharIndex[InputCount-1];
++
++    EndKey = cur_table->KeyIndex[InpKey[0]+1];
++
++    for (; StartKey <EndKey; StartKey++)
++    {
++        key1 = (cur_table->item[StartKey].key1 & mask[InputCount+5]);
++        key2 = (cur_table->item[StartKey].key2 & mask[InputCount]);
++
++        if (key1 > val1) break;
++        if (key1 < val1) continue;
++        if (key2 < val2) continue;
++        break;
++    }
++    CharIndex[InputCount] = StartKey;
+ }
+ 
+ /*  Find the matched chars/phrases and fill it into SelTab
+-    The starting checked index is j 
+- 
++    The starting checked index is j
++
+     The Selection Line 1xxx 2xxx,  80-20=60 60/2=30 chinese chars only
+     0-9 Selection can contain only 30 chinese chars
+ */
+ 
+ static void FillAssociateChars (int index)
+ {
+-	unsigned char str[25];
+-	int PhraseNo, CurLen = 0;
+-	char *fp =(char*)cur_table->AssocFile; 
+-   
+-	CurSelNum = 0; 
+-
+-	while ( CurSelNum < cur_table->MaxDupSel && index < EndKey && CurLen < MAX_SEL_LENGTH)
+-	{
+-		fp =(char*)cur_table->AssocFile;
+-		fp +=(index<<2);
+-		memcpy (&PhraseNo, fp, sizeof (int));
++    unsigned char str[25];
++    int PhraseNo, CurLen = 0;
++    char *fp =(char*)cur_table->AssocFile;
++
++    CurSelNum = 0;
++
++    while ( CurSelNum < cur_table->MaxDupSel && index < EndKey && CurLen < MAX_SEL_LENGTH)
++    {
++        fp =(char*)cur_table->AssocFile;
++        fp +=(index<<2);
++        memcpy (&PhraseNo, fp, sizeof (int));
+ #if MGUI_BYTEORDER == MGUI_BIG_ENDIAN
+-		PhraseNo = ArchSwap32(PhraseNo);
++        PhraseNo = ArchSwap32(PhraseNo);
+ #endif
+-		load_phrase( PhraseNo, (char *)str );
+-		strcpy(seltab[CurSelNum],(char *)(str+2));
+-		CurLen += strlen(seltab[CurSelNum++]);
+-		index++;
+-	}
++        load_phrase( PhraseNo, (char *)str );
++        strcpy(seltab[CurSelNum],(char *)(str+2));
++        CurLen += strlen(seltab[CurSelNum++]);
++        index++;
++    }
+ 
+     /* check if more than one page */
+-	if ( index < EndKey && CurSelNum == cur_table->MaxDupSel )
+-	{
++    if ( index < EndKey && CurSelNum == cur_table->MaxDupSel )
++    {
+       /* has another matched key, so enter MultiPageMode, has more pages */
+-		NextPageIndex = index;
+-		MultiPageMode = 1;
+-	}
+-	else if (MultiPageMode)
+-	{
+-		NextPageIndex = StartKey; /* rotate selection */
+-	}
+-	else
+-		MultiPageMode = 0;
+-	}
++        NextPageIndex = index;
++        MultiPageMode = 1;
++    }
++    else if (MultiPageMode)
++    {
++        NextPageIndex = StartKey; /* rotate selection */
++    }
++    else
++        MultiPageMode = 0;
++    }
+ 
+ int pinyin_predict_pord(void *method, const char *lookfor, char * buffer, int buffer_len, int index)
+ {
+     int    lenth = 0;
+-    static char lookfor_bk[4]; 
++    static char lookfor_bk[4];
+     static int  page =0;
+-    
++
+ 
+     lenth =0;
+     {
+@@ -337,9 +337,9 @@
+     }
+ 
+     buffer[0] = 0;
+-    while (1) 
++    while (1)
+     {
+-        FillAssociateChars (StartKey+index/10 *10); 
++        FillAssociateChars (StartKey+index/10 *10);
+ 
+         lenth +=(strlen (seltab[index])+1);
+         if (0==strlen (seltab[index]))
+@@ -347,75 +347,75 @@
+ 
+         if (lenth>=buffer_len )
+             return index;
+-		strcat (buffer, seltab[index]);
++        strcat (buffer, seltab[index]);
+         strcat (buffer, " ");
+         index++;
+     }
+     return -1;
+ 
+-     
+-}    
++
++}
+ static void FillMatchChars (int j)
+ {
+-	int SelNum = 0, CurLen = 0;
++    int SelNum = 0, CurLen = 0;
+     //bzero( seltab, sizeof( seltab ) );
+ 
+-	while ((cur_table->item[j].key1 & mask[InputCount+5])==val1&&
++    while ((cur_table->item[j].key1 & mask[InputCount+5])==val1&&
+            (cur_table->item[j].key2 & mask[InputCount])==val2&&
+-           SelNum <cur_table->MaxDupSel&&j<EndKey&& 
++           SelNum <cur_table->MaxDupSel&&j<EndKey&&
+            CurLen < MAX_SEL_LENGTH
+-		  )
+-	{
+-		unsigned short ch = cur_table->item[j].ch;
++          )
++    {
++        unsigned short ch = cur_table->item[j].ch;
+ #if MGUI_BYTEORDER == MGUI_BIG_ENDIAN
+-		ch = ArchSwap16 (ch);
++        ch = ArchSwap16 (ch);
+ #endif
+ 
+-		if (ch < 0xA1A1)
+-			load_phrase (ch, seltab[SelNum]);
+-		else
+-		{
+-			memcpy (&seltab[SelNum], &(cur_table->item[j].ch), 2);
+-			seltab [SelNum][2] = '\0';
+-		}
+-
+-		CurLen += strlen(seltab[SelNum++]);
+-		j++;
+-	}
+-    
+-	if (SelNum == 0)  /* some match found */
+-	{
+-		StartKey = save_StartKey;
+-		EndKey = save_EndKey;
+-		MultiPageMode = save_MultiPageMode;
+-		NextPageIndex = save_NextPageIndex;
+-		CurrentPageIndex = save_CurrentPageIndex;
+-		return;    /* keep the original selection */
+-	}
++        if (ch < 0xA1A1)
++            load_phrase (ch, seltab[SelNum]);
++        else
++        {
++            memcpy (&seltab[SelNum], &(cur_table->item[j].ch), 2);
++            seltab [SelNum][2] = '\0';
++        }
++
++        CurLen += strlen(seltab[SelNum++]);
++        j++;
++    }
++
++    if (SelNum == 0)  /* some match found */
++    {
++        StartKey = save_StartKey;
++        EndKey = save_EndKey;
++        MultiPageMode = save_MultiPageMode;
++        NextPageIndex = save_NextPageIndex;
++        CurrentPageIndex = save_CurrentPageIndex;
++        return;    /* keep the original selection */
++    }
+ 
+-	CurSelNum = SelNum;
++    CurSelNum = SelNum;
+ 
+-	for (SelNum = CurSelNum; SelNum < 16; SelNum++)
+-		seltab[SelNum][0] = '\0';  /* zero out the unused area */
++    for (SelNum = CurSelNum; SelNum < 16; SelNum++)
++        seltab[SelNum][0] = '\0';  /* zero out the unused area */
+ 
+-	InputMatch = InputCount; /* until now we have some matches */
++    InputMatch = InputCount; /* until now we have some matches */
+ 
+     /* check if more than one page */
+-	if (j < EndKey && (cur_table->item[j].key1 & mask[InputCount+5]) == val1 &&
++    if (j < EndKey && (cur_table->item[j].key1 & mask[InputCount+5]) == val1 &&
+         (cur_table->item[j].key2 & mask[InputCount] ) == val2 &&
+         CurSelNum == cur_table->MaxDupSel
+        )
+-	{
++    {
+       /* has another matched key, so enter MultiPageMode, has more pages */
+-		NextPageIndex = j;
+-		MultiPageMode = 1;
+-	}  
+-	else if (MultiPageMode)
+-	{
+-		NextPageIndex = StartKey; /* rotate selection */
+-	}
+-	else
+-		MultiPageMode = 0;
++        NextPageIndex = j;
++        MultiPageMode = 1;
++    }
++    else if (MultiPageMode)
++    {
++        NextPageIndex = StartKey; /* rotate selection */
++    }
++    else
++        MultiPageMode = 0;
+ }
+ 
+ int pinyin_match_keystokes (void *method, const char* keystokes, char* buff, int buffer_len, int cursor);
+@@ -433,7 +433,7 @@
+ 
+     for (idex=0; idex<len; idex++)
+     {
+-       key =(char)(cur_table->KeyMap[(int)(*(match+idex))]); 
++       key =(char)(cur_table->KeyMap[(int)(*(match+idex))]);
+        InpKey[InputCount++] = key;
+     }
+ 
+@@ -450,44 +450,44 @@
+     {
+        return TRUE;
+     }
+-       
++
+ }
+ int pinyin_translate_word(void *method, const char *strokes, char *buffer, int buffer_len, int index)
+ {
+-	static char strokes_bk[32];
+-	static int  length = 0;
+-	static int  page = 0;
+-	int         idex, key;
++    static char strokes_bk[32];
++    static int  length = 0;
++    static int  page = 0;
++    int         idex, key;
+     int         lensum;
+-	int         len;
++    int         len;
+ 
+-	if(index < 0) 
+-		return -1;
++    if(index < 0)
++        return -1;
+ 
+-	len = strlen(strokes);
+-	if (len != length || 0!=bcmp (strokes_bk, strokes, length)||WORK_TIM || page!=index/10)
+-	{
+-		sprintf (strokes_bk, "%s", strokes);
++    len = strlen(strokes);
++    if (len != length || 0!=bcmp (strokes_bk, strokes, length)||WORK_TIM || page!=index/10)
++    {
++        sprintf (strokes_bk, "%s", strokes);
+         WORK_TIM = FALSE;
+         page = 0;
+-		length = len;
+-		ClrIn ();
+-		
+-		for (idex = 0; idex<length && idex < MAX_INPUT_LENGTH ; idex++)
+-		{
+-			key = cur_table->KeyMap[(int)(*(strokes+idex))];
+-			InpKey [InputCount++] = key;
+-		}
+-
+-		FindMatchKey ();
+-    	CurrentPageIndex = StartKey;
+-    	MultiPageMode    = 1;
+-    	FillMatchChars(StartKey);
+-    	if (InputMatch<InputCount)
+-       		return -1;
++        length = len;
++        ClrIn ();
++
++        for (idex = 0; idex<length && idex < MAX_INPUT_LENGTH ; idex++)
++        {
++            key = cur_table->KeyMap[(int)(*(strokes+idex))];
++            InpKey [InputCount++] = key;
++        }
++
++        FindMatchKey ();
++        CurrentPageIndex = StartKey;
++        MultiPageMode    = 1;
++        FillMatchChars(StartKey);
++        if (InputMatch<InputCount)
++            return -1;
+     }
+-    
+-    lensum  =0; 
++
++    lensum  =0;
+     buffer[0] =0;
+     MultiPageMode =1;
+ 
+@@ -496,24 +496,24 @@
+         if (page!=index/10)
+         {
+             page= index/10;
+-            FillMatchChars (StartKey+page*10); 
++            FillMatchChars (StartKey+page*10);
+         }
+ 
+-    	if (InputMatch<InputCount)
+-       		return -1;
++        if (InputMatch<InputCount)
++            return -1;
+         lensum+=(strlen(seltab[index%10])+1);
+ 
+         if (lensum>buffer_len)
+-           return index; 
++           return index;
+         if (0==strlen (seltab[index%10]))
+             break;
+         strcat (buffer, seltab[index%10]);
+         strcat (buffer, " ");
+         index++;
+-        
++
+     }
+    return -1;
+-  
++
+ }
+ 
+ int pinyin_match_keystokes (void *method, const char* keystokes, char* buff, int buffer_len, int cursor)
+@@ -524,15 +524,15 @@
+     static int  max = 1;
+     int    idex, idex1, idex2, idex3;
+     char   *keys;
+-    
++
+ 
+     if (cursor == -1)
+         return -1;
+-    
++
+     WORK_TIM = TRUE;
+     len =strlen (keystokes);
+     bzero (match_buff, 2*100*20);
+-        
++
+     idex2 = 0;
+     idex3 = 0;
+     match_idex = 0;
+@@ -541,7 +541,7 @@
+     for (idex = 0; idex < len; idex++)
+     {
+         keys = key_map[*(keystokes+idex)-'2'];
+-          
++
+         for (idex1 = 0; idex1<max; idex1++)
+         {
+             for (idex2 = 0; idex2<strlen (keys); idex2++)
+@@ -557,13 +557,13 @@
+     }
+ 
+ 
+-	{
++    {
+         int lensum =0;
+         buff[0]    =0;
+ 
+         while (cursor<max)
+         {
+-            lensum+=(strlen (match_buff[match_idex][cursor++])+1); 
++            lensum+=(strlen (match_buff[match_idex][cursor++])+1);
+             if (lensum>buffer_len)
+             {
+                 return (cursor-1);
+@@ -572,51 +572,51 @@
+             strcat (buff, " ");
+         }
+         return -1;
+-	}
++    }
+     return -1;
+-     
++
+ }
+ 
+ BOOL ime_pinyin_init (void)
+ {
+-	CurIME          = 1;
+-	input_table[0]  = IntCode_Init();
+-	input_table [1] = load_input_method();
+-	cur_table       = input_table [1];
+-	return TRUE;
++    CurIME          = 1;
++    input_table[0]  = IntCode_Init();
++    input_table [1] = load_input_method();
++    cur_table       = input_table [1];
++    return TRUE;
+ }
+ 
+ 
+ static ime_input_table *IntCode_Init (void)
+ {
+-	ime_input_table *table;
+-	static
+-	ime_input_table my_table;
+-	int i,index;
+-
+-	UseAssociateMode = 1;  /* force to no associate */
+-	table            = &my_table;
+-      
++    ime_input_table *table;
++    static
++    ime_input_table my_table;
++    int i,index;
++
++    UseAssociateMode = 1;  /* force to no associate */
++    table            = &my_table;
++
+    /* reset to zero. */
+-	memset (table, 0, sizeof (ime_input_table));
+-	strcpy(table->magic_number,MAGIC_NUMBER);
+-	strcpy(table->ename, "IntCode");
+-	strcpy(table->cname, "¡¾ÄÚÂë¡¿");
+-	strcpy(table->selkey, "0123456789abcdef");
+-	table->last_full = 1;
+-
+-	for(i = 0; i < 128; i++)
+-	{
+-		table->KeyMap[i] = 0;
+-
+-		if ((i >= '0' && i <= '9') || (i >= 'a' && i <= 'f'))
+-		{
+-			if (i >= '0' && i <= '9')
+-				index = i - '0';
+-			else index = i -'a' + 10;
+-				table->KeyMap[i] = index;
+-			table->KeyName[index] = toupper(i);
+-		}
+-	}    
+-	return table;
++    memset (table, 0, sizeof (ime_input_table));
++    strcpy(table->magic_number,MAGIC_NUMBER);
++    strcpy(table->ename, "IntCode");
++    strcpy(table->cname, "¡¾ÄÚÂë¡¿");
++    strcpy(table->selkey, "0123456789abcdef");
++    table->last_full = 1;
++
++    for(i = 0; i < 128; i++)
++    {
++        table->KeyMap[i] = 0;
++
++        if ((i >= '0' && i <= '9') || (i >= 'a' && i <= 'f'))
++        {
++            if (i >= '0' && i <= '9')
++                index = i - '0';
++            else index = i -'a' + 10;
++                table->KeyMap[i] = index;
++            table->KeyName[index] = toupper(i);
++        }
++    }
++    return table;
+ }
+--- a/src/softkeyboard/softkeyboard/en_kbd.c	2018-10-10 19:41:54.000000000 +0800
++++ b/src/softkeyboard/softkeyboard/en_kbd.c	2018-10-10 19:45:20.000000000 +0800
+@@ -1,7 +1,7 @@
+ /*
+ ** $Id$
+ **
+-** en_kbd.c: This file include english soft keyboard code. 
++** en_kbd.c: This file include english soft keyboard code.
+ **
+ ** Copyright (C) 2003 ~ 2008 Feynman Software.
+ ** Copyright (C) 1999 ~ 2002 Wei Yongming.
+@@ -22,30 +22,30 @@
+ static void make_font(void)
+ {
+ #if 0
+-	static DEVFONT *devfont;
+-	int i;
+-	int j;
++    static DEVFONT *devfont;
++    int i;
++    int j;
+ 
+ 
+ #if (MINIGUI_MAJOR_VERSION > 2)
+     InitFreetypeLibrary ();
+-	devfont = LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
+-			"ttf-fonts/cn.ttf");
++    devfont = LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
++            "ttf-fonts/cn.ttf");
+ #else
+-	InitFreeTypeFonts();
+-	LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
+-			"ttf-fonts/en.ttf", &devfont);
++    InitFreeTypeFonts();
++    LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
++            "ttf-fonts/en.ttf", &devfont);
+ #endif
+ 
+-	if(devfont && devfont->name) {
+-		for(i=0; devfont->name[i] != '-' 
+-				&& devfont->name[i] != 0; i++);
+-
+-		for(i++, j=0; devfont->name[i] != '-' 
+-				&& devfont->name[i] != 0; i++,j++) {
+-			fontname[j] = devfont->name[i];
+-		}
+-	}
++    if(devfont && devfont->name) {
++        for(i=0; devfont->name[i] != '-'
++                && devfont->name[i] != 0; i++);
++
++        for(i++, j=0; devfont->name[i] != '-'
++                && devfont->name[i] != 0; i++,j++) {
++            fontname[j] = devfont->name[i];
++        }
++    }
+ #endif
+ }
+ 
+@@ -156,38 +156,38 @@
+ 
+ static void vw_update(view_window_t *vw, HWND hWnd, vw_element_t* element)
+ {
+-	int i;
+-	RECT r;
++    int i;
++    RECT r;
+     PBITMAP pbmp;
+-	static int old_style = 0;
+-	HDC hdc = GetDC(hWnd);
+-	RECT rc;
++    static int old_style = 0;
++    HDC hdc = GetDC(hWnd);
++    RECT rc;
+     PLOGFONT oldfont;
+ 
+-	r.left = vw->key_pg_up.right;
+-	r.top  = vw->bound.top;
+-	r.right = vw->key_pg_down.left;
+-	r.bottom = vw->bound.bottom;
+-
+-	oldfont = SelectFont(hdc, vw->view_font);
+-	SetBkMode(hdc, BM_TRANSPARENT);
+-	if (vw->style & VW_DRAW_ELMTS) {
+-		if (element == NULL) {
+-			element = vw->elements;
++    r.left = vw->key_pg_up.right;
++    r.top  = vw->bound.top;
++    r.right = vw->key_pg_down.left;
++    r.bottom = vw->bound.bottom;
++
++    oldfont = SelectFont(hdc, vw->view_font);
++    SetBkMode(hdc, BM_TRANSPARENT);
++    if (vw->style & VW_DRAW_ELMTS) {
++        if (element == NULL) {
++            element = vw->elements;
+             EraseBbGround(hWnd, &r);
+-            //FillBox(hdc,r.left, r.top, RECTW(r), RECTH(r)); 
++            //FillBox(hdc,r.left, r.top, RECTW(r), RECTH(r));
++
++            for(i=0; i<vw->element_num; i++) {
++#ifndef __FILL_DIRECT__
++                SetTextColor(hdc, RGB2Pixel(hdc, 190, 190, 190));
++                DrawText(hdc, element[i].string, -1, &element[i].bound, 0);
+ 
+-			for(i=0; i<vw->element_num; i++) {
+-#ifndef __FILL_DIRECT__ 
+-				SetTextColor(hdc, RGB2Pixel(hdc, 190, 190, 190));
+-				DrawText(hdc, element[i].string, -1, &element[i].bound, 0);
+-
+-				rc = element[i].bound;
+-				rc.top --; 
+-				rc.bottom --;
+-				rc.left --; 
+-				rc.right --;
+-				SetTextColor(hdc, RGB2Pixel(hdc, 155, 50, 155));
++                rc = element[i].bound;
++                rc.top --;
++                rc.bottom --;
++                rc.left --;
++                rc.right --;
++                SetTextColor(hdc, RGB2Pixel(hdc, 155, 50, 155));
+                 DrawText(hdc, element[i].string, -1, &rc, 0);
+ #else
+                 //printf("element[i].string=%s\n", element[i].string);
+@@ -195,66 +195,66 @@
+                 //    element[i].bound.top, element[i].bound.right, element[i].bound.bottom);
+                 DrawText(hdc, element[i].string, -1, &element[i].bound, 0);
+ #endif
+-			}
+-		} else {
+-			if(vw->style & VW_EL_PRESSED) {
++            }
++        } else {
++            if(vw->style & VW_EL_PRESSED) {
+                 if (vw->data)
+ #ifdef __FILL_DIRECT__
+-	#if 0
+-                    FillBoxWithBitmap(hdc,element->bound.left, 
+-							element->bound.top,
++    #if 0
++                    FillBoxWithBitmap(hdc,element->bound.left,
++                            element->bound.top,
+                             element->bound.right - element->bound.left,
+                             element->bound.bottom - element->bound.top,
+                             &(VIEWWIN_DATA_PTR(vw)->sel_bk) );
+-	#else
+-				//SetBrushColor(hdc, RGB2Pixel(hdc, 120, 187, 255));
+-				SetBrushColor(hdc, RGB2Pixel(hdc, 61, 89, 160));
++    #else
++                //SetBrushColor(hdc, RGB2Pixel(hdc, 120, 187, 255));
++                SetBrushColor(hdc, RGB2Pixel(hdc, 61, 89, 160));
+                 FillBox(hdc,element->bound.left, element->bound.top,
+                             element->bound.right - element->bound.left,
+                             element->bound.bottom - element->bound.top);
+-	#endif
+-				SetTextColor(hdc, COLOR_lightwhite);
++    #endif
++                SetTextColor(hdc, COLOR_lightwhite);
+                 DrawText(hdc, element->string, -1, &element->bound, 0);
+ #else
+-				rc = element->bound;
+-				rc.top --; 
+-				rc.left --; 
++                rc = element->bound;
++                rc.top --;
++                rc.left --;
+                 EraseBbGround(hWnd, &rc);
+-				rc.top += 2; 
+-				rc.left += 2; 
+-				rc.bottom ++;
+-				rc.right ++;
+-				SetTextColor(hdc, RGB2Pixel(hdc, 100, 50, 100));
++                rc.top += 2;
++                rc.left += 2;
++                rc.bottom ++;
++                rc.right ++;
++                SetTextColor(hdc, RGB2Pixel(hdc, 100, 50, 100));
+                 DrawText(hdc, element->string, -1, &rc, 0);
+ #endif
+             } else
+                 EraseBbGround(hWnd, &vw->bound);
+-		}
++        }
+     } else if (old_style & VW_DRAW_ELMTS)
+         EraseBbGround(hWnd, &r);
+ 
+     EraseBbGround(hWnd, &vw->key_pg_up);
+-	if (vw->style & VW_SHOW_PU) {
+-		if (vw->style & VW_PU_PRESSED)
++    if (vw->style & VW_SHOW_PU) {
++        if (vw->style & VW_PU_PRESSED)
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pu_press);
+-		else
++        else
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pu_normal);
+         FillBoxWithBitmap(hdc, vw->key_pg_up.left, vw->key_pg_up.top,
+                 vw->key_pg_up.right-vw->key_pg_up.left,
+                 vw->key_pg_up.bottom-vw->key_pg_up.top, pbmp);
+-	}
++    }
+ 
+     EraseBbGround(hWnd, &vw->key_pg_down);
+     if (vw->style & VW_SHOW_PD) {
+-		if (vw->style & VW_PD_PRESSED)
++        if (vw->style & VW_PD_PRESSED)
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pd_press);
+-		else
++        else
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pd_normal);
+         FillBoxWithBitmap(hdc, vw->key_pg_down.left, vw->key_pg_down.top,
+                 vw->key_pg_down.right-vw->key_pg_down.left,
+                 vw->key_pg_down.bottom-vw->key_pg_down.top, pbmp);
+-	}
+-	
++    }
++
+     old_style = vw->style;
+     SelectFont(hdc, oldfont);
+     ReleaseDC(hdc);
+@@ -263,84 +263,84 @@
+ static int en_proc_msg(key_board_t* key_board, HWND hwnd, int message, WPARAM wParam, LPARAM lParam)
+ {
+     static md_key_t* key_down;
+-	static int lbuttondown = 0;
+-	static POINT p;
++    static int lbuttondown = 0;
++    static POINT p;
+     md_key_t *key;
+ 
+-	switch (message) {
+-		case MSG_LBUTTONDOWN:
+-			p.x = LOSWORD(lParam);
+-			p.y = HISWORD(lParam);
+-			lbuttondown = 1;
+-			key_board->action.operation = AC_NULL; 
+-
+-			if (PtInRect(&key_board->view_window->bound, p.x, p.y)) {
+-				vw_proceed_hit(hwnd, key_board->view_window,
+-						key_board->stroke_window, &key_board->action,
+-						TRUE, p, CN, key_board->ime);
+-				break;
+-			}
+-
+-			if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
+-				key = key_board->key_window->get_key(key_board->key_window, p);
+-				if (key == NULL) {
+-					key_board->action.operation = AC_NULL; 
+-					break;
+-				}
+-                
++    switch (message) {
++        case MSG_LBUTTONDOWN:
++            p.x = LOSWORD(lParam);
++            p.y = HISWORD(lParam);
++            lbuttondown = 1;
++            key_board->action.operation = AC_NULL;
++
++            if (PtInRect(&key_board->view_window->bound, p.x, p.y)) {
++                vw_proceed_hit(hwnd, key_board->view_window,
++                        key_board->stroke_window, &key_board->action,
++                        TRUE, p, CN, key_board->ime);
++                break;
++            }
++
++            if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
++                key = key_board->key_window->get_key(key_board->key_window, p);
++                if (key == NULL) {
++                    key_board->action.operation = AC_NULL;
++                    break;
++                }
++
+                 kw_proceed_hit(hwnd, key_board->view_window,
+-						key_board->stroke_window, key, &key_board->action,
+-						TRUE, p, EN, key_board->ime, wParam, lParam);
++                        key_board->stroke_window, key, &key_board->action,
++                        TRUE, p, EN, key_board->ime, wParam, lParam);
+                 key_down = key;
+                 break;
+-			}
++            }
+ 
+-			break;
+-		case MSG_LBUTTONUP: 
+-			if (lbuttondown == 0) {
+-				key_board->action.operation = AC_NULL; 
+-				break; 
+-			}
+-
+-			lbuttondown = 0;
+-			p.x = LOSWORD(lParam);
+-			p.y = HISWORD(lParam);
++            break;
++        case MSG_LBUTTONUP:
++            if (lbuttondown == 0) {
++                key_board->action.operation = AC_NULL;
++                break;
++            }
+ 
+-			if (PtInRect(&key_board->close_rc, p.x, p.y)) {
+-				key_board->action.operation = AC_NULL; 
++            lbuttondown = 0;
++            p.x = LOSWORD(lParam);
++            p.y = HISWORD(lParam);
++
++            if (PtInRect(&key_board->close_rc, p.x, p.y)) {
++                key_board->action.operation = AC_NULL;
+                 SendMessage (hwnd, MSG_IME_CLOSE, 0, 0);
+                 return AC_NULL;
+             }
+-			
++
+             if (PtInRect(&key_board->view_window->bound, p.x, p.y)) {
+-				vw_proceed_hit(hwnd, key_board->view_window,
+-						key_board->stroke_window, &key_board->action,
+-						FALSE, p, EN, key_board->ime);
+-				break;
+-			} 
+-			
+-			if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
+-				key = key_board->key_window->get_key(key_board->key_window, p);
+-				if (key == NULL) {
+-					key_board->action.operation = AC_NULL; 
+-					break;
+-				}
++                vw_proceed_hit(hwnd, key_board->view_window,
++                        key_board->stroke_window, &key_board->action,
++                        FALSE, p, EN, key_board->ime);
++                break;
++            }
++
++            if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
++                key = key_board->key_window->get_key(key_board->key_window, p);
++                if (key == NULL) {
++                    key_board->action.operation = AC_NULL;
++                    break;
++                }
+ 
+-				kw_proceed_hit(hwnd, key_board->view_window, key_board->stroke_window,
++                kw_proceed_hit(hwnd, key_board->view_window, key_board->stroke_window,
+                         key, &key_board->action, FALSE, p, EN, key_board->ime,
+                         wParam, lParam);
+-				break;
+-			}
++                break;
++            }
+             key_down = NULL;
+-			break;
+-		case MSG_MOUSEMOVE:
+-			p.x = LOSWORD(lParam);
+-			p.y = HISWORD(lParam);
++            break;
++        case MSG_MOUSEMOVE:
++            p.x = LOSWORD(lParam);
++            p.y = HISWORD(lParam);
+             proceed_move(hwnd, key_board, lbuttondown, p, EN);
+             break;
+         case MSG_NCMOUSEMOVE:
+             if(key_down && HT_OUT == wParam) {
+-                key_board->action.operation = AC_NULL; 
++                key_board->action.operation = AC_NULL;
+                 key_down->style &= ~KEY_PAD_PRESSED;
+                 key_down->update(key_down, hwnd);
+ #ifdef KBD_TOOLTIP
+@@ -350,23 +350,23 @@
+                 key_down = NULL;
+             }
+             return AC_NULL;
+-	}
+-	return key_board->action.operation;
++    }
++    return key_board->action.operation;
+ }
+ 
+ static void en_kb_update(key_board_t *kb, HWND hWnd, WPARAM wParam, RECT* rect)
+ {
+-    HDC hdc; 
++    HDC hdc;
+ 
+     if (kb->data) {
+ #if 0
+         hdc = GetDC (hWnd);
+-		if(rect != NULL) {
++        if(rect != NULL) {
+             RECT rcTemp = *rect;
+-            ScreenToClient (hWnd, &rcTemp.left, &rcTemp.top);                 
++            ScreenToClient (hWnd, &rcTemp.left, &rcTemp.top);
+             ScreenToClient (hWnd, &rcTemp.right, &rcTemp.bottom);
+-			SelectClipRect(hdc, &rcTemp);
+-		}
++            SelectClipRect(hdc, &rcTemp);
++        }
+         FillBoxWithBitmap (hdc, 0, 0, SKB_WIN_W, SKB_WIN_H, (PBITMAP)(kb->data));
+         ReleaseDC (hdc);
+ #else
+@@ -376,12 +376,12 @@
+             hdc = GetDC(hWnd);
+             fGetDC = TRUE;
+         }
+-		if (rect != NULL) {
++        if (rect != NULL) {
+             RECT rcTemp = *rect;
+-            ScreenToClient(hWnd, &rcTemp.left, &rcTemp.top);                 
++            ScreenToClient(hWnd, &rcTemp.left, &rcTemp.top);
+             ScreenToClient(hWnd, &rcTemp.right, &rcTemp.bottom);
+-			SelectClipRect(hdc, &rcTemp);
+-		}
++            SelectClipRect(hdc, &rcTemp);
++        }
+         FillBoxWithBitmap(hdc, 0, 0, SKB_WIN_W, SKB_WIN_H, (PBITMAP)(kb->data));
+         if (fGetDC)
+             ReleaseDC(hdc);
+@@ -395,26 +395,26 @@
+     vw->bound.top           = SKB_VW_T;
+     vw->bound.right         = SKB_VW_R;
+     vw->bound.bottom        = SKB_VW_B;
+-                                         
+-	vw->key_pg_up.left      = SKB_VW_PU_L;
+-	vw->key_pg_up.top       = SKB_VW_PU_T;
+-	vw->key_pg_up.right     = SKB_VW_PU_R;
+-	vw->key_pg_up.bottom    = SKB_VW_PU_B;
+-                                         
+-	vw->key_pg_down.left    = SKB_VW_PD_L;
+-	vw->key_pg_down.top     = SKB_VW_PD_T;
+-	vw->key_pg_down.right   = SKB_VW_PD_R;
+-	vw->key_pg_down.bottom  = SKB_VW_PD_B;
+-
+-#ifdef SOFTKBD_320_240 
+-	vw->max_str_len = 22;
+-#elif defined (SOFTKBD_480_272)   
+-	vw->max_str_len = 40;
+-#elif defined (SOFTKBD_240_320)   
+-	vw->max_str_len = 20;
++
++    vw->key_pg_up.left      = SKB_VW_PU_L;
++    vw->key_pg_up.top       = SKB_VW_PU_T;
++    vw->key_pg_up.right     = SKB_VW_PU_R;
++    vw->key_pg_up.bottom    = SKB_VW_PU_B;
++
++    vw->key_pg_down.left    = SKB_VW_PD_L;
++    vw->key_pg_down.top     = SKB_VW_PD_T;
++    vw->key_pg_down.right   = SKB_VW_PD_R;
++    vw->key_pg_down.bottom  = SKB_VW_PD_B;
++
++#ifdef SOFTKBD_320_240
++    vw->max_str_len = 22;
++#elif defined (SOFTKBD_480_272)
++    vw->max_str_len = 40;
++#elif defined (SOFTKBD_240_320)
++    vw->max_str_len = 20;
+ #elif defined (SOFTKBD_800_260)
+-	vw->max_str_len = 60;
+-#endif 
++    vw->max_str_len = 60;
++#endif
+ 
+ 
+     vw->update          = vw_update;
+@@ -422,17 +422,17 @@
+     vw->clear_elements  = vw_clear_elements;
+     vw->get_element     = vw_get_element;
+ 
+-	vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-14-ISO8859-1");
++    vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-14-ISO8859-1");
+ #if 0
+-	vw->view_font = CreateLogFont ("ttf", fontname, "ISO8859-1", 
+-			FONT_WEIGHT_REGULAR,
+-			FONT_SLANT_ROMAN,
+-			FONT_FLIP_NIL,
+-			FONT_OTHER_NIL, 
+-			FONT_UNDERLINE_NONE, 
+-			FONT_STRUCKOUT_NONE, 
+-			12, 0);
+-#endif 
++    vw->view_font = CreateLogFont ("ttf", fontname, "ISO8859-1",
++            FONT_WEIGHT_REGULAR,
++            FONT_SLANT_ROMAN,
++            FONT_FLIP_NIL,
++            FONT_OTHER_NIL,
++            FONT_UNDERLINE_NONE,
++            FONT_STRUCKOUT_NONE,
++            12, 0);
++#endif
+     if (NULL == vw->view_font){
+         _MY_PRINTF("create logfont for view window error.\n");
+         return -1;
+@@ -442,34 +442,34 @@
+         _MY_PRINTF("no memory for key window add data.\n");
+         return -1;
+     }
+-    
++
+     if (get_kbd_bitmap(HDC_SCREEN, &(VIEWWIN_DATA_PTR(vw)->pu_normal),
+-				LEFT_ARROW_ENABLE)) {
++                LEFT_ARROW_ENABLE)) {
+         _MY_PRINTF ("Fail to get page-up mask bitmap.\n");
+         return -1;
+     }
+ 
+     if (get_kbd_bitmap(HDC_SCREEN, &(VIEWWIN_DATA_PTR(vw)->pu_press),
+-				LEFT_ARROW_DISABLE)) {
++                LEFT_ARROW_DISABLE)) {
+         _MY_PRINTF ("Fail to get page-up mask bitmap.\n");
+         return -1;
+     }
+ 
+     if (get_kbd_bitmap(HDC_SCREEN, &(VIEWWIN_DATA_PTR(vw)->pd_normal),
+-				RIGHT_ARROW_ENABLE)) {
++                RIGHT_ARROW_ENABLE)) {
+         _MY_PRINTF ("Fail to get page-down mask bitmap.\n");
+         return -1;
+     }
+ 
+     if (get_kbd_bitmap(HDC_SCREEN, &(VIEWWIN_DATA_PTR(vw)->pd_press),
+-				RIGHT_ARROW_DISABLE)) {
++                RIGHT_ARROW_DISABLE)) {
+         _MY_PRINTF ("Fail to get page-down mask bitmap.\n");
+         return -1;
+     }
+ /*
+-    if (get_kbd_bitmap(HDC_SCREEN, 
++    if (get_kbd_bitmap(HDC_SCREEN,
+                 &(VIEWWIN_DATA_PTR(vw)->sel_bk),
+-				SELECT_TEXT_BKGND)) {
++                SELECT_TEXT_BKGND)) {
+         _MY_PRINTF ("Fail to get sellect text bkgnd bitmap.\n");
+         return -1;
+     }
+@@ -487,9 +487,9 @@
+         release_kbd_bitmap(&(VIEWWIN_DATA_PTR(vw)->sel_bk));
+         free(vw->data);
+     }
+-    
++
+     if (vw->view_font)
+-        DestroyLogFont(vw->view_font);	
++        DestroyLogFont(vw->view_font);
+ }
+ 
+ static int init_en_stroke_window (HWND hWnd, stroke_window_t *sw)
+@@ -501,12 +501,12 @@
+ 
+     memset(sw->str, 0, SW_STR_LEN);
+ 
+-	sw->stroke_font = CreateLogFontByName ("*-fixed-rrncnn-*-9-ISO8859-1");
++    sw->stroke_font = CreateLogFontByName ("*-fixed-rrncnn-*-9-ISO8859-1");
+ #if 0
+-    sw->stroke_font = CreateLogFont ("rbf", "fixed", "ISO8859-1", 
+-                        FONT_WEIGHT_REGULAR, FONT_SLANT_ROMAN, 
+-                        FONT_FLIP_NIL, FONT_OTHER_NIL, 
+-                        FONT_UNDERLINE_NONE, FONT_STRUCKOUT_NONE, 
++    sw->stroke_font = CreateLogFont ("rbf", "fixed", "ISO8859-1",
++                        FONT_WEIGHT_REGULAR, FONT_SLANT_ROMAN,
++                        FONT_FLIP_NIL, FONT_OTHER_NIL,
++                        FONT_UNDERLINE_NONE, FONT_STRUCKOUT_NONE,
+                         8, 0);
+ #endif
+     if (NULL == sw->stroke_font){
+@@ -530,7 +530,7 @@
+ {
+     int i;
+     md_key_t *key;
+-    
++
+     kw->bound.left   = SKB_KW_L;
+     kw->bound.top    = SKB_KW_T;
+     kw->bound.right  = SKB_KW_R;
+@@ -548,19 +548,19 @@
+         _MY_PRINTF("no memory for key window add data.\n");
+         return -1;
+     }
+-    
++
+     if (get_kbd_bitmap(HDC_SCREEN, &(KEYWIN_DATA_PTR(kw)->char_key_press),
+-				CHAR_KEY_MASK)) {
++                CHAR_KEY_MASK)) {
+         _MY_PRINTF ("Fail to get en char key mask bitmap.\n");
+         return -1;
+     }
+ 
+     if (get_kbd_bitmap(HDC_SCREEN, &(KEYWIN_DATA_PTR(kw)->func_key_press),
+-				FUNC_KEY_MASK)) {
++                FUNC_KEY_MASK)) {
+         _MY_PRINTF ("Fail to get en func key mask bitmap.\n");
+         return -1;
+     }
+-    
++
+     //kw->update = kw_update;
+     kw->update = NULL;
+ 
+@@ -569,10 +569,10 @@
+     for (i = 0; i < kw->key_num; i++){
+         if (key->style & KEY_PAD_CHAR)
+             key->data = &(KEYWIN_DATA_PTR(kw)->char_key_press);
+-        else 
++        else
+             key->data = &(KEYWIN_DATA_PTR(kw)->func_key_press);
+         key++;
+-    } 
++    }
+     return 0;
+ }
+ 
+@@ -587,7 +587,7 @@
+ 
+ int init_en_keyboard(HWND hWnd, key_board_t *kb)
+ {
+-	make_font();
++    make_font();
+ 
+     kb->close_rc.left   = SKB_CLOSE_L;
+     kb->close_rc.top    = SKB_CLOSE_T;
+@@ -604,7 +604,7 @@
+         _MY_PRINTF("error for initalizing view window.\n");
+         return -1;
+     }
+-    
++
+     /*initalize for stroke window.*/
+     kb->stroke_window = (stroke_window_t *)calloc(1, sizeof(stroke_window_t));
+     if(kb->stroke_window == NULL){
+@@ -615,7 +615,7 @@
+         _MY_PRINTF("error for initalizing stroke window.\n");
+         return -1;
+     }
+-    
++
+     /*initalize for key window.*/
+     kb->key_window = (key_window_t *)calloc(1, sizeof(key_window_t));
+     if(kb->key_window == NULL){
+@@ -627,7 +627,7 @@
+         _MY_PRINTF("error for initalizing key window.\n");
+         return -1;
+     }
+-   
++
+     /*initalize for bk image.*/
+     kb->data = calloc (1, sizeof(BITMAP));
+     if (kb->data == NULL){
+@@ -645,7 +645,7 @@
+     kb->update = en_kb_update;
+     kb->ime = &en_ime;
+     kb->proceed_msg = en_proc_msg;
+-	kb->clear = clear_keyboard;
++    kb->clear = clear_keyboard;
+ 
+     return 0;
+ }
+--- a/src/softkeyboard/softkeyboard/pinyin_kbd.c	2018-10-10 19:41:54.000000000 +0800
++++ b/src/softkeyboard/softkeyboard/pinyin_kbd.c	2018-10-10 19:46:59.000000000 +0800
+@@ -1,7 +1,7 @@
+ /*
+ ** $Id: pinyin_kbd.c 429 2008-07-21 07:28:44Z xkwu $
+ **
+-** pinyin.c: This file include pinyin soft keyboard code. 
++** pinyin.c: This file include pinyin soft keyboard code.
+ **
+ ** Copyright (C) 2003 ~ 2008 Feynman Software.
+ ** Copyright (C) 1999 ~ 2002 Wei Yongming.
+@@ -23,34 +23,34 @@
+ static void make_font(void)
+ {
+ #if 0
+-	static DEVFONT *devfont;
+-	int i;
+-	int j;
++    static DEVFONT *devfont;
++    int i;
++    int j;
+ 
+ 
+ #if (MINIGUI_MAJOR_VERSION > 2)
+     InitFreetypeLibrary ();
+-	devfont = LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
+-			"ttf-fonts/cn.ttf");
++    devfont = LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
++            "ttf-fonts/cn.ttf");
+ #else
+-	InitFreeTypeFonts ();
+-	LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
+-			"ttf-fonts/cn.ttf", &devfont);
++    InitFreeTypeFonts ();
++    LoadDevFontFromFile("ttf-noname-rrncnn-0-0-ISO8859-1",
++            "ttf-fonts/cn.ttf", &devfont);
+ #endif
+-	
+-	if(devfont && devfont->name) {
+-		for(i=0; devfont->name[i] != '-' 
+-				&& devfont->name[i] != 0; i++);
+-
+-		for(i++, j=0; devfont->name[i] != '-' 
+-				&& devfont->name[i] != 0; i++,j++) {
+-			fontname[j] = devfont->name[i];
+-		}
+-	}
++
++    if(devfont && devfont->name) {
++        for(i=0; devfont->name[i] != '-'
++                && devfont->name[i] != 0; i++);
++
++        for(i++, j=0; devfont->name[i] != '-'
++                && devfont->name[i] != 0; i++,j++) {
++            fontname[j] = devfont->name[i];
++        }
++    }
+ #endif
+ }
+ 
+-static md_key_t py_key_pads[] = { 
++static md_key_t py_key_pads[] = {
+     { RECT_EN_KEY_1 , 'q', SCANCODE_Q,          KEY_PAD_CHAR, NULL, share_key_update},
+     { RECT_EN_KEY_2 , 'w', SCANCODE_W,          KEY_PAD_CHAR, NULL, share_key_update},
+     { RECT_EN_KEY_3 , 'e', SCANCODE_E,          KEY_PAD_CHAR, NULL, share_key_update},
+@@ -89,9 +89,9 @@
+     100,
+     "pinyin",
+     NULL,
+-	cb_pinyin_translate_word,
+-	cb_pinyin_predict_word,
+-	cb_pinyin_init
++    cb_pinyin_translate_word,
++    cb_pinyin_predict_word,
++    cb_pinyin_init
+ };
+ 
+ static md_key_t* get_py_key(key_window_t *kw, POINT p)
+@@ -122,207 +122,207 @@
+     EraseBbGround(hWnd, &sw->bound);
+     if (strlen(sw->str) != 0) {
+         hdc = GetDC(hWnd);
+-        
++
+         SetBkMode(hdc, BM_TRANSPARENT);
+         old_tecolor = SetTextColor(hdc, PIXEL_lightwhite);
+         old_font = SelectFont(hdc, sw->stroke_font);
+         DrawText(hdc, sw->str, -1, &(sw->bound), DT_LEFT);
+         SelectFont(hdc, old_font);
+         SetTextColor(hdc, old_tecolor);
+-        
++
+         ReleaseDC(hdc);
+     }
+ }
+ 
+ static void vw_update(view_window_t *vw, HWND hWnd, vw_element_t* element)
+ {
+-	int i;
+-	RECT r, rc;
++    int i;
++    RECT r, rc;
+     PBITMAP pbmp;
+-	static int old_style = 0;
+-	HDC hdc = GetDC(hWnd);
++    static int old_style = 0;
++    HDC hdc = GetDC(hWnd);
+     PLOGFONT oldfont;
+ 
+-	r.left = vw->key_pg_up.right;
+-	r.top  = vw->bound.top;
+-	r.right = vw->key_pg_down.left;
+-	r.bottom = vw->bound.bottom;
+-
+-	oldfont = SelectFont(hdc, vw->view_font);
+-	SetBkMode (hdc, BM_TRANSPARENT);
+-	if(vw->style & VW_DRAW_ELMTS) {
+-		if(element == NULL) {
+-			element = vw->elements;
++    r.left = vw->key_pg_up.right;
++    r.top  = vw->bound.top;
++    r.right = vw->key_pg_down.left;
++    r.bottom = vw->bound.bottom;
++
++    oldfont = SelectFont(hdc, vw->view_font);
++    SetBkMode (hdc, BM_TRANSPARENT);
++    if(vw->style & VW_DRAW_ELMTS) {
++        if(element == NULL) {
++            element = vw->elements;
+             EraseBbGround(hWnd, &r);
+-			for (i=0; i<vw->element_num; i++) {
+-#ifndef __FILL_DIRECT__ 
+-				SetTextColor(hdc, RGB2Pixel(hdc, 190, 190, 190));
+-				DrawText(hdc, element[i].string, -1, &element[i].bound, 0);
+-
+-				rc = element[i].bound;
+-				rc.top --; 
+-				rc.bottom --;
+-				rc.left --; 
+-				rc.right --;
+-				SetTextColor(hdc, RGB2Pixel(hdc, 155, 50, 155));
++            for (i=0; i<vw->element_num; i++) {
++#ifndef __FILL_DIRECT__
++                SetTextColor(hdc, RGB2Pixel(hdc, 190, 190, 190));
++                DrawText(hdc, element[i].string, -1, &element[i].bound, 0);
++
++                rc = element[i].bound;
++                rc.top --;
++                rc.bottom --;
++                rc.left --;
++                rc.right --;
++                SetTextColor(hdc, RGB2Pixel(hdc, 155, 50, 155));
+                 DrawText(hdc, element[i].string, -1, &rc, 0);
+ #else
+                 DrawText(hdc, element[i].string, -1, &element[i].bound, 0);
+ #endif
+-			}
+-		} else {
+-			if(vw->style & VW_EL_PRESSED) {
++            }
++        } else {
++            if(vw->style & VW_EL_PRESSED) {
+                 if (vw->data)
+ #ifdef __FILL_DIRECT__
+-	#if 0
+-                    FillBoxWithBitmap(hdc,element->bound.left, 
+-							element->bound.top,
++    #if 0
++                    FillBoxWithBitmap(hdc,element->bound.left,
++                            element->bound.top,
+                             element->bound.right - element->bound.left,
+                             element->bound.bottom - element->bound.top,
+                             &(VIEWWIN_DATA_PTR(vw)->sel_bk) );
+-	#else
+-				//SetBrushColor(hdc, RGB2Pixel(hdc, 120, 187, 250));
+-				SetBrushColor(hdc, RGB2Pixel(hdc, 61, 89, 160));
++    #else
++                //SetBrushColor(hdc, RGB2Pixel(hdc, 120, 187, 250));
++                SetBrushColor(hdc, RGB2Pixel(hdc, 61, 89, 160));
+                 FillBox(hdc,element->bound.left, element->bound.top,
+                             element->bound.right - element->bound.left,
+                             element->bound.bottom - element->bound.top);
+-	#endif
+-				SetTextColor(hdc, COLOR_lightwhite);
++    #endif
++                SetTextColor(hdc, COLOR_lightwhite);
+                 DrawText(hdc, element->string, -1, &element->bound, 0);
+ #else
+-				rc = element->bound;
+-				rc.top --; 
+-				rc.left --; 
++                rc = element->bound;
++                rc.top --;
++                rc.left --;
+                 EraseBbGround(hWnd, &rc);
+-				rc.top += 2; 
+-				rc.left += 2; 
+-				rc.bottom ++;
+-				rc.right ++;
+-				SetTextColor(hdc, RGB2Pixel(hdc, 100, 50, 100));
++                rc.top += 2;
++                rc.left += 2;
++                rc.bottom ++;
++                rc.right ++;
++                SetTextColor(hdc, RGB2Pixel(hdc, 100, 50, 100));
+                 DrawText(hdc, element->string, -1, &rc, 0);
+ #endif
+-			} else {
++            } else {
+                 EraseBbGround(hWnd, &vw->bound);
+-			}
++            }
+ 
+-		}
++        }
+     } else if(old_style & VW_DRAW_ELMTS) {
+         EraseBbGround(hWnd, &r);
+     }
+ 
+     EraseBbGround(hWnd, &vw->key_pg_up);
+ 
+-	if(vw->style & VW_SHOW_PU) {
+-		if(vw->style & VW_PU_PRESSED) {
++    if(vw->style & VW_SHOW_PU) {
++        if(vw->style & VW_PU_PRESSED) {
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pu_press);
+-		} else {
++        } else {
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pu_normal);
+-		}
++        }
+         FillBoxWithBitmap (hdc, vw->key_pg_up.left, vw->key_pg_up.top,
+                 vw->key_pg_up.right-vw->key_pg_up.left,
+                 vw->key_pg_up.bottom-vw->key_pg_up.top, pbmp);
+-	}
+-    
++    }
++
+     EraseBbGround(hWnd, &vw->key_pg_down);
+-	
++
+     if(vw->style & VW_SHOW_PD) {
+-		if(vw->style & VW_PD_PRESSED) {
++        if(vw->style & VW_PD_PRESSED) {
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pd_press);
+-		} else {
++        } else {
+             pbmp = &(VIEWWIN_DATA_PTR(vw)->pd_normal);
+-		}
++        }
+         FillBoxWithBitmap (hdc, vw->key_pg_down.left, vw->key_pg_down.top,
+                 vw->key_pg_down.right-vw->key_pg_down.left,
+                 vw->key_pg_down.bottom-vw->key_pg_down.top, pbmp);
+-	}
+-	
++    }
++
+     old_style = vw->style;
+-	//SelectFont(hdc, oldfont);
+-	ReleaseDC(hdc);
++    //SelectFont(hdc, oldfont);
++    ReleaseDC(hdc);
+ }
+ 
+ int pinyin_proceed_msg(key_board_t* key_board, HWND hwnd,
+-		int message, WPARAM wParam, LPARAM lParam) 
++        int message, WPARAM wParam, LPARAM lParam)
+ {
+-	static RECT old_hit_rect; 
+-	static int lbuttondown = 0;
+-	static POINT p;
++    static RECT old_hit_rect;
++    static int lbuttondown = 0;
++    static POINT p;
+     static md_key_t *key = NULL;
+ 
+-	switch(message) {
+-		case MSG_LBUTTONDOWN:
+-			p.x = LOSWORD(lParam);
+-			p.y = HISWORD(lParam);
+-			lbuttondown = 1;
+-			key_board->action.operation = AC_NULL; 
+-
+-			if (PtInRect(&key_board->view_window->bound, p.x, p.y)) {
+-				vw_proceed_hit(hwnd, key_board->view_window,
+-						key_board->stroke_window, &key_board->action,
+-						TRUE, p, CN, key_board->ime);
+-				break;
+-			}
+-
+-			if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
+-				key = key_board->key_window->get_key
+-					(key_board->key_window, p);
+-				if(key == NULL) {
+-					key_board->action.operation = AC_NULL; 
+-					break;
+-				}
+-
+-				kw_proceed_hit(hwnd, key_board->view_window,
+-						key_board->stroke_window, key, &key_board->action,
+-						TRUE, p, CN, key_board->ime, wParam, lParam);
+-
+-				break;
+-			}
+-
+-			break;
+-		case MSG_LBUTTONUP: 
+-			if (lbuttondown == 0) {
+-				key_board->action.operation = AC_NULL; 
+-				break; 
+-			}
+-
+-			lbuttondown = 0;
+-			p.x = LOSWORD(lParam);
+-			p.y = HISWORD(lParam);
++    switch(message) {
++        case MSG_LBUTTONDOWN:
++            p.x = LOSWORD(lParam);
++            p.y = HISWORD(lParam);
++            lbuttondown = 1;
++            key_board->action.operation = AC_NULL;
++
++            if (PtInRect(&key_board->view_window->bound, p.x, p.y)) {
++                vw_proceed_hit(hwnd, key_board->view_window,
++                        key_board->stroke_window, &key_board->action,
++                        TRUE, p, CN, key_board->ime);
++                break;
++            }
++
++            if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
++                key = key_board->key_window->get_key
++                    (key_board->key_window, p);
++                if(key == NULL) {
++                    key_board->action.operation = AC_NULL;
++                    break;
++                }
++
++                kw_proceed_hit(hwnd, key_board->view_window,
++                        key_board->stroke_window, key, &key_board->action,
++                        TRUE, p, CN, key_board->ime, wParam, lParam);
+ 
+-			if (PtInRect(&key_board->close_rc, p.x, p.y)) {
+-				key_board->action.operation = AC_NULL; 
++                break;
++            }
++
++            break;
++        case MSG_LBUTTONUP:
++            if (lbuttondown == 0) {
++                key_board->action.operation = AC_NULL;
++                break;
++            }
++
++            lbuttondown = 0;
++            p.x = LOSWORD(lParam);
++            p.y = HISWORD(lParam);
++
++            if (PtInRect(&key_board->close_rc, p.x, p.y)) {
++                key_board->action.operation = AC_NULL;
+                 SendMessage (hwnd, MSG_IME_CLOSE, 0, 0);
+                 return AC_NULL;
+             }
+-			
+-			if (PtInRect(&key_board->view_window->bound, p.x, p.y)) {
+-				vw_proceed_hit(hwnd, key_board->view_window,
+-						key_board->stroke_window, &key_board->action,
+-						FALSE, p, CN, key_board->ime);
+-				break;
+-			} 
+-			
+-			if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
+-				 key = key_board->key_window->get_key
+-					(key_board->key_window, p);
+-				if(key == NULL) {
+-					key_board->action.operation = AC_NULL; 
+-					break;
+-				}
+-
+-				kw_proceed_hit(hwnd, key_board->view_window,
+-						key_board->stroke_window, key, &key_board->action,
+-						FALSE, p, CN, key_board->ime, wParam, lParam);
+-
+-				break;
+-			}
+-			break;
+-
+-		case MSG_MOUSEMOVE:
+-			p.x = LOSWORD(lParam);
+-			p.y = HISWORD(lParam);
+-			proceed_move(hwnd, key_board, lbuttondown, p, EN);
+-			break;
++
++            if (PtInRect(&key_board->view_window->bound, p.x, p.y)) {
++                vw_proceed_hit(hwnd, key_board->view_window,
++                        key_board->stroke_window, &key_board->action,
++                        FALSE, p, CN, key_board->ime);
++                break;
++            }
++
++            if (PtInRect(&key_board->key_window->bound, p.x, p.y)) {
++                 key = key_board->key_window->get_key
++                    (key_board->key_window, p);
++                if(key == NULL) {
++                    key_board->action.operation = AC_NULL;
++                    break;
++                }
++
++                kw_proceed_hit(hwnd, key_board->view_window,
++                        key_board->stroke_window, key, &key_board->action,
++                        FALSE, p, CN, key_board->ime, wParam, lParam);
++
++                break;
++            }
++            break;
++
++        case MSG_MOUSEMOVE:
++            p.x = LOSWORD(lParam);
++            p.y = HISWORD(lParam);
++            proceed_move(hwnd, key_board, lbuttondown, p, EN);
++            break;
+         case MSG_NCMOUSEMOVE:
+             if(key && HT_OUT == wParam) {
+                 key->style &= ~KEY_PAD_PRESSED;
+@@ -335,9 +335,9 @@
+             }
+             return AC_NULL;
+ 
+-	}
++    }
+ 
+-	return key_board->action.operation; 
++    return key_board->action.operation;
+ }
+ 
+ static int init_py_view_window (HWND hWnd, view_window_t *vw)
+@@ -346,26 +346,26 @@
+     vw->bound.top           = SKB_VW_T + 2;
+     vw->bound.right         = SKB_VW_R   ;
+     vw->bound.bottom        = SKB_VW_B   ;
+-                                         
+-	vw->key_pg_up.left      = SKB_VW_PU_L;
+-	vw->key_pg_up.top       = SKB_VW_PU_T;
+-	vw->key_pg_up.right     = SKB_VW_PU_R;
+-	vw->key_pg_up.bottom    = SKB_VW_PU_B;
+-                                         
+-	vw->key_pg_down.left    = SKB_VW_PD_L;
+-	vw->key_pg_down.top     = SKB_VW_PD_T;
+-	vw->key_pg_down.right   = SKB_VW_PD_R;
+-	vw->key_pg_down.bottom  = SKB_VW_PD_B;
+-	
+-#ifdef SOFTKBD_320_240 
+-	vw->max_str_len = 22;
+-#elif defined (SOFTKBD_480_272)   
+-	vw->max_str_len = 40;
+-#elif defined (SOFTKBD_240_320)   
+-	vw->max_str_len = 20;
++
++    vw->key_pg_up.left      = SKB_VW_PU_L;
++    vw->key_pg_up.top       = SKB_VW_PU_T;
++    vw->key_pg_up.right     = SKB_VW_PU_R;
++    vw->key_pg_up.bottom    = SKB_VW_PU_B;
++
++    vw->key_pg_down.left    = SKB_VW_PD_L;
++    vw->key_pg_down.top     = SKB_VW_PD_T;
++    vw->key_pg_down.right   = SKB_VW_PD_R;
++    vw->key_pg_down.bottom  = SKB_VW_PD_B;
++
++#ifdef SOFTKBD_320_240
++    vw->max_str_len = 22;
++#elif defined (SOFTKBD_480_272)
++    vw->max_str_len = 40;
++#elif defined (SOFTKBD_240_320)
++    vw->max_str_len = 20;
+ #elif defined (SOFTKBD_800_260)
+-	vw->max_str_len = 40;
+-#endif 
++    vw->max_str_len = 40;
++#endif
+ 
+     vw->update = vw_update;
+     vw->set_elements = vw_set_elements;
+@@ -373,16 +373,16 @@
+     vw->get_element = vw_get_element;
+ 
+ 
+-	vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-12-GB2312");
++    vw->view_font = CreateLogFontByName ("*-fixed-rrncnn-*-12-GB2312");
+ #if 0
+-	vw->view_font = CreateLogFontByName (NULL, fontname, "GB2312",
+-			FONT_WEIGHT_BOLD,
+-			FONT_SLANT_ROMAN,
+-			FONT_FLIP_NIL,
+-			FONT_OTHER_NIL, 
+-			FONT_UNDERLINE_NONE, 
+-			FONT_STRUCKOUT_NONE, 
+-			12, 0);
++    vw->view_font = CreateLogFontByName (NULL, fontname, "GB2312",
++            FONT_WEIGHT_BOLD,
++            FONT_SLANT_ROMAN,
++            FONT_FLIP_NIL,
++            FONT_OTHER_NIL,
++            FONT_UNDERLINE_NONE,
++            FONT_STRUCKOUT_NONE,
++            12, 0);
+ #endif
+     if (NULL == vw->view_font){
+         _MY_PRINTF("create logfont for view window error.\n");
+@@ -393,38 +393,38 @@
+         _MY_PRINTF("no memory for key window add data.\n");
+         return -1;
+     }
+-    
+-    if (get_kbd_bitmap(HDC_SCREEN, 
++
++    if (get_kbd_bitmap(HDC_SCREEN,
+                 &(VIEWWIN_DATA_PTR(vw)->pu_normal),
+-				LEFT_ARROW_ENABLE)) {
++                LEFT_ARROW_ENABLE)) {
+         _MY_PRINTF ("Fail to get page-up mask bitmap.\n");
+         return -1;
+     }
+ 
+-    if (get_kbd_bitmap(HDC_SCREEN, 
++    if (get_kbd_bitmap(HDC_SCREEN,
+                 &(VIEWWIN_DATA_PTR(vw)->pu_press),
+-				LEFT_ARROW_DISABLE)) {
++                LEFT_ARROW_DISABLE)) {
+         _MY_PRINTF ("Fail to get page-up mask bitmap.\n");
+         return -1;
+     }
+ 
+-    if (get_kbd_bitmap(HDC_SCREEN, 
++    if (get_kbd_bitmap(HDC_SCREEN,
+                 &(VIEWWIN_DATA_PTR(vw)->pd_normal),
+-				RIGHT_ARROW_ENABLE)) {
++                RIGHT_ARROW_ENABLE)) {
+         _MY_PRINTF ("Fail to get page-down mask bitmap.\n");
+         return -1;
+     }
+ 
+-    if (get_kbd_bitmap(HDC_SCREEN, 
++    if (get_kbd_bitmap(HDC_SCREEN,
+                 &(VIEWWIN_DATA_PTR(vw)->pd_press),
+-				RIGHT_ARROW_DISABLE)) {
++                RIGHT_ARROW_DISABLE)) {
+         _MY_PRINTF ("Fail to get page-down mask bitmap.\n");
+         return -1;
+     }
+ /*
+-    if (get_kbd_bitmap(HDC_SCREEN, 
+-                &(VIEWWIN_DATA_PTR(vw)->sel_bk), 
+-				SELECT_TEXT_BKGND)) {
++    if (get_kbd_bitmap(HDC_SCREEN,
++                &(VIEWWIN_DATA_PTR(vw)->sel_bk),
++                SELECT_TEXT_BKGND)) {
+         _MY_PRINTF ("Fail to get sellect text bkgnd bitmap.\n");
+         return -1;
+     }
+@@ -445,7 +445,7 @@
+     }
+ 
+     if (vw->view_font)
+-        DestroyLogFont(vw->view_font);	
++        DestroyLogFont(vw->view_font);
+ }
+ 
+ static int init_py_stroke_window(HWND hWnd, stroke_window_t *sw)
+@@ -454,17 +454,17 @@
+     sw->bound.top    = SKB_SW_T;
+     sw->bound.right  = SKB_SW_R;
+     sw->bound.bottom = SKB_SW_B;
+-    
++
+     memset(sw->str, 0, SW_STR_LEN);
+ 
+ #if 0
+-    sw->stroke_font = CreateLogFont (NULL, "times", "ISO8859-1", 
+-                        FONT_WEIGHT_BOOK, FONT_SLANT_ROMAN, 
+-                        FONT_SETWIDTH_NORMAL, FONT_OTHER_NIL, 
+-                        FONT_UNDERLINE_NONE, FONT_STRUCKOUT_NONE, 
++    sw->stroke_font = CreateLogFont (NULL, "times", "ISO8859-1",
++                        FONT_WEIGHT_BOOK, FONT_SLANT_ROMAN,
++                        FONT_SETWIDTH_NORMAL, FONT_OTHER_NIL,
++                        FONT_UNDERLINE_NONE, FONT_STRUCKOUT_NONE,
+                         9, 0);
+ #endif
+-	sw->stroke_font = CreateLogFontByName ("*-times-rrncnn-*-9-ISO8859-1");
++    sw->stroke_font = CreateLogFontByName ("*-times-rrncnn-*-9-ISO8859-1");
+     if (NULL == sw->stroke_font){
+         _MY_PRINTF("create logfont for stroke window error.\n");
+         return -1;
+@@ -490,7 +490,7 @@
+     kw->bound.top    = SKB_KW_T;
+     kw->bound.right  = SKB_KW_R;
+     kw->bound.bottom = SKB_KW_B;
+-    
++
+     kw->press.x = 0;
+     kw->press.y = 0;
+ 
+@@ -504,16 +504,16 @@
+         return -1;
+     }
+ 
+-    if (get_kbd_bitmap(HDC_SCREEN, 
++    if (get_kbd_bitmap(HDC_SCREEN,
+                 &(KEYWIN_DATA_PTR(kw)->char_key_press),
+-				CHAR_KEY_MASK)) {
++                CHAR_KEY_MASK)) {
+         _MY_PRINTF ("Fail to get py char key mask bitmap.\n");
+         return -1;
+     }
+ 
+-    if (get_kbd_bitmap(HDC_SCREEN, 
++    if (get_kbd_bitmap(HDC_SCREEN,
+                 &(KEYWIN_DATA_PTR(kw)->func_key_press),
+-				FUNC_KEY_MASK)) {
++                FUNC_KEY_MASK)) {
+         _MY_PRINTF ("Fail to get py func key mask bitmap.\n");
+         return -1;
+     }
+@@ -528,7 +528,7 @@
+         else
+             key->data = &(KEYWIN_DATA_PTR(kw)->func_key_press);
+         key++;
+-    } 
++    }
+     return 0;
+ }
+ 
+@@ -543,7 +543,7 @@
+ 
+ int init_py_keyboard(HWND hWnd, key_board_t *kb)
+ {
+-	make_font();
++    make_font();
+ 
+     kb->close_rc.left   = SKB_CLOSE_L;
+     kb->close_rc.top    = SKB_CLOSE_T;
+@@ -560,7 +560,7 @@
+         _MY_PRINTF("error for initalizing view window.\n");
+         return -1;
+     }
+-    
++
+     /*initalize for stroke window.*/
+     kb->stroke_window = (stroke_window_t *)calloc(1, sizeof(stroke_window_t));
+     if (kb->stroke_window == NULL){
+@@ -572,7 +572,7 @@
+         _MY_PRINTF("error for initalizing stroke window.\n");
+         return -1;
+     }
+-    
++
+     /*initalize for key window.*/
+     kb->key_window = (key_window_t *)calloc(1, sizeof(key_window_t));
+     if (kb->key_window == NULL){
+@@ -583,7 +583,7 @@
+         _MY_PRINTF("error for initalizing key window.\n");
+         return -1;
+     }
+-   
++
+     /*initalize for bk image.*/
+     kb->data = calloc(1, sizeof(BITMAP));
+     if (kb->data == NULL) {
+@@ -599,12 +599,12 @@
+     kb->update = keyboard_update;
+ 
+     kb->ime = &py_ime;
+-	kb->ime->init(NULL);
++    kb->ime->init(NULL);
+ 
+     memset (&(kb->action), 0, sizeof(action_t));
+-    
++
+     kb->proceed_msg = pinyin_proceed_msg;
+-	kb->clear = clear_keyboard;
++    kb->clear = clear_keyboard;
+ 
+     return 0;
+ }

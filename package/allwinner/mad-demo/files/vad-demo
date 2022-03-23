@@ -1,0 +1,36 @@
+#!/bin/sh
+
+device="hw:audiocodec"
+#根据实际使能相关ADC,例如使能Left/Right ADC
+amixer -D $device cset name='Left Input Mixer MIC1 Boost Switch' 1
+amixer -D $device cset name='Right Input Mixer MIC2 Boost Switch' 1
+amixer -D $device cset name='Xadc Input Mixer MIC3 Boost Switch' 1
+amixer -D $device cset name='MIC1 gain volume' 4
+amixer -D $device cset name='MIC2 gain volume' 4
+
+#vad需要使用一路i2s,这里指定使用i2s1
+amixer -D$device cset name='codec I2S Port'  2
+#使能mad,绑定mad到audiocodec中
+amixer -D$device cset name='sndcodec bind mad Function' 1
+[ $? != 0 ] && {
+    echo "set mixer failed. no such sound card or mad not enable."
+    exit
+}
+
+#device=capture4ch
+if [ $# = 1 ]; then
+    [ $1 = "dump" ] && {
+	mad-capture -D$device -f S16_LE -r 16000 -c 4 -d 2 /mnt/UDISK/vad-test.wav
+    }
+    [ $1 = "pause" ] && {
+	mad-capture -D$device -f S16_LE -r 16000 -c 4 -d 2 -t 2 /mnt/UDISK/vad-test.wav
+    }
+    [ $1 = "kill" ] && {
+        killall mad-capture
+    }
+    [ $1 = "standby" ] && {
+	kill -s SIGUSR1 `ps |grep mad-capture |grep -v grep | awk '{print $1}'`
+    }
+else
+    mad-capture -D$device -f S16_LE -r 16000 -c 4 -d 5
+fi

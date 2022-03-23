@@ -1,0 +1,24 @@
+diff --git a/src/ial/ial.c b/src/ial/ial.c
+index 1495c00..83e08ba 100644
+--- a/src/ial/ial.c
++++ b/src/ial/ial.c
+@@ -269,7 +273,18 @@ int mg_InitIAL (void)
+ 
+     if (!IAL_InitInput (__mg_cur_input, mdev, mtype)) {
+         fprintf (stderr, "IAL: Init IAL engine failure.\n");
+-        return ERR_INPUT_ENGINE;
++        for (i = 0; i < NR_INPUTS; i++) {
++            if (strncmp ("dummy", inputs[i].id, LEN_ENGINE_NAME) == 0) {
++                __mg_cur_input = inputs + i;
++                break;
++            }
++        }
++        strcpy (__mg_cur_input->mdev, mdev);
++        fprintf (stderr, "IAL: Use the dummy engine: %s\n", __mg_cur_input->id);
++        if (!IAL_InitInput (__mg_cur_input, mdev, mtype)) {
++        	fprintf (stderr, "IAL: Init IAL engine failure.\n");
++        	return ERR_INPUT_ENGINE;
++        }
+     }
+ 
+ #ifdef _DEBUG

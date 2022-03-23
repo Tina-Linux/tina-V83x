@@ -1,0 +1,127 @@
+{
+	"func":{
+		"auth":{
+		    "deviceProfile":{
+			"productId": "278570028",
+			"savedProfile": "third/res/auth/278570028.txt",
+			"deviceProfile": "xxxx"
+		    },
+
+		    "apiKey":{
+			"productId": "xxxx",
+			"savedProfile": "xxxx",
+			"apiKey": "xxxx",
+			"sCode": "xxxx",
+			"devInfo":{
+			    "deviceId": "xxxx",
+			    "packageName": "xxxx"
+			}
+		    },
+
+		    "oldauth":{
+			"appKey": "xxxx",
+			"secretKey": "xxxx",
+			"deviceId": "1234abcd",
+			"provision": "./provision.file",
+			"serialNumber": "./serial.file"
+		    }
+		 },
+
+		"vad":{
+		    "cfg":{
+			"resBinPath": "./res/vad_aihome_v0.7.bin",
+			"pauseTime": 500
+		    }
+		 },
+
+		"echo":{
+		    "cfg":{
+			"resBinPath": "./third/res/echo/AEC_ch2-2-ch1_1ref_com_20171227_v0.8.5.bin",
+			"channels": 2,
+			"micNum": 1,
+			"sampleFormat": 16
+		    }
+		},
+
+		"wakeup":{
+		    "cfg":{
+			"resBinPath":"./third/res/wakeup/wakeup_aifar_comm_20180104.bin"
+		    },
+		    "app":{
+			"env": "words=ni hao xiao le;thresh=0.05;major=1;"
+		    }
+		 },
+
+		"cntts":{
+		    "cfg":{
+			"resBinPath": "./third/res/cntts/zhilingf.bin",
+			"dictpath": "./third/res/cntts/aitts_sent_dict_v3.17.db"
+		    },
+		    "app":{
+			"speed": 1.0,
+			"volume": 50,
+			"lmargin": 5,
+			"rmargin": 10,
+			"useSSML": 1
+		    }
+		 },
+
+		"gram":{
+		    "cfg":{
+			"resBinPath": "./third/res/gram/ebnfc.aicar.1.1.0.bin"
+		    },
+		    "app":{
+			"outputPath": "./local.net.bin",
+			"ebnfFile": "./third/res/gram/gram.xbnf",
+			"ebnf": "xxxxx",
+		    }
+		 },
+
+		"asr":{
+		    "cfg":{
+			"resBinPath": "./third/res/asr/ebnfr.aicar.1.2.0.bin",
+			"netBinPath": "./local.net.bin"
+		    },
+		    "app":{
+			"env": "use_xbnf_rec=1;use_conf_dnn=1;use_pinyin=1;"
+		    }
+		 },
+
+		"fespl":{
+		    "cfg":{
+			"aecBinPath": "./third/res/fespl/aec.bin",
+			"wakeupBinPath": "./third/res/frespl/wakeup_aihome_tcent_ed_20170704_8bit.bin",
+			"beamformingBinPath": "./third/res/fespl/fend.bin",
+			"env": "words=xiao le;thresh=0.05;major=1;",
+			"rollBack": 1200
+		    }
+		 },
+	},
+
+	"VAD": {
+	    "debug": "on",
+	    "window": {
+		"title": "Sample Konfabulator Widget",
+		"name": "main_window",
+		"width": 500,
+		"height": 500
+	    },
+	    "image": {
+		"src": "Images/Sun.png",
+		"name": "sun1",
+		"hOffset": 250,
+		"vOffset": 250,
+		"alignment": "center"
+	    },
+	    "text": {
+		"data": "Click Here",
+		"size": 36,
+		"style": "bold",
+		"name": "text1",
+		"hOffset": 250,
+		"vOffset": 100,
+		"alignment": "center",
+		"onMouseUp": "sun1.opacity = (sun1.opacity / 100) * 90;"
+	    }
+	}
+}

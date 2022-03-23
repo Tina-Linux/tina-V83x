@@ -1,0 +1,11 @@
+--- a/watchdog.c
++++ b/watchdog.c
+@@ -119,7 +119,7 @@ void watchdog_init(int preinit)
+ 		fcntl(wdt_fd, F_SETFD, fcntl(wdt_fd, F_GETFD) | FD_CLOEXEC);
+ 
+ 	LOG("- watchdog -\n");
+-	watchdog_timeout(30);
++	watchdog_timeout(15);
+ 	watchdog_timeout_cb(&wdt_timeout);
+ 
+ 	DEBUG(4, "Opened watchdog with timeout %ds\n", watchdog_timeout(0));

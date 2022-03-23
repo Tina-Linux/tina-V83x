@@ -1,0 +1,68 @@
+type adbd, domain, mlstrustedsubject;
+type adbd_exec, exec_type, file_type;
+# permissive adbd;
+
+domain_auto_trans(init,adbd_exec,adbd)
+
+allow adbd self:capability { sys_admin net_raw dac_override dac_read_search sys_module };
+# domain_auto_trans(shell,adbd_exec,adbd)
+domain_auto_trans(adbd,busybox_exec,busybox)
+domain_auto_trans(adbd,shell_exec,shell)
+#
+# domain_auto_trans(adbd,ubusd_exec,ubusd)
+#
+# # Create and use network sockets.
+# net_domain(adbd)
+#
+# # domain_auto_trans(adbd,adbd_exec,adbd)
+# allow adbd adbd_exec:file rwx_file_perms;
+#
+# # Access /dev/android_adb or /dev/usb-ffs/adb/ep0
+# allow adbd adb_device:chr_file rw_file_perms;
+allow adbd functionfs:dir search;
+allow adbd functionfs:file rw_file_perms;
+# allow adbd functionfs:filesystem mount;
+#
+# # Use a pseudo tty.
+allow adbd devpts:chr_file rw_file_perms;
+# allow adbd device:dir create_dir_perms;
+# allow adbd device:dir mounton;
+#
+# allow adbd configfs:filesystem mount;
+allow adbd configfs:dir create_dir_perms;
+allow adbd configfs:file create_file_perms;
+allow adbd configfs:lnk_file create_file_perms;
+
+# # allow adbd self:system module_load;
+# # allow adbd self:capability sys_module;
+#
+# allow adbd console_device:chr_file rw_file_perms;
+# allow adbd serial_device:chr_file r_file_perms;
+# allow adbd init:fifo_file { read write };
+# allow adbd sysfs:dir mounton;
+# allow adbd sysfs:file rw_file_perms;
+# # domain_auto_trans(adbd,system_file,shell)
+allow adbd system_file:file { execute execute_no_trans open execmod };
+
+# # allow adbd shell:fd use;
+# # allow adbd kmsg_device:chr_file rw_file_perms;
+#
+# allow adbd etc_initd:dir search;
+# allow adbd etc_initd:file r_file_perms;
+# allow shell adbd:fifo_file rw_file_perms;
+# allow adbd temp_exec:file {read getattr execute execute_no_trans open execmod};
+# allow adbd temp_exec:lnk_file { getattr open read execute };
+# allow adbd { domain etc_selinux }:dir { search open read getattr };
+# allow adbd { domain etc_selinux }:{ file lnk_file } { open read getattr };
+# allow adbd tmpfs:dir create_dir_perms;
+# allow adbd tmpfs:file create_file_perms;
+allow adbd self:{ tcp_socket udp_socket } *;
+allow adbd port:{ tcp_socket udp_socket } name_bind;
+allow adbd port:tcp_socket name_connect;
+allow adbd node:{ tcp_socket udp_socket } node_bind;
+
+# # tmpfs_domain(adbd)
+# allow adbd tmpfs:sock_file write;
+# allow adbd tmpfs:file rw_file_perms;
+#
+# allow adbd ubusd:unix_stream_socket connectto;

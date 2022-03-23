@@ -1,0 +1,19 @@
+type led, domain, mlstrustedsubject;
+
+type led_exec, exec_type, file_type;
+# permissive led;
+#domain_auto_trans(shell,led_exec,led)
+domain_auto_trans(init,led_exec,led)
+# domain_auto_trans(led,busybox_exec,busybox)
+
+# allow led console_device:chr_file { read write };
+# allow led serial_device:chr_file rw_file_perms;
+# allow led init:fifo_file { read write };
+
+# allow led { etc_selinux etc_initd }:dir { search open read getattr };
+
+# allow led system_file:file { execute execute_no_trans open execmod };
+
+# allow led temp_exec:file {read getattr execute execute_no_trans open execmod};
+# allow led temp_exec:lnk_file { getattr open read execute };
+

@@ -1,0 +1,25 @@
+# socket ioctls allowed to unprivileged apps
+define(`unpriv_sock_ioctls', `
+{
+# all socket ioctls except:
+# 1) the Mac address SIOCGIFHWADDR 0x8927
+# 2) device private SIOCDEVPRIVATE-SIOCDEVPRIVLAST 0x89F0-0x89FF
+# 3) protocol private SIOCPROTOPRIVATE-SIOCPROTOPRIVLAST 0x89E0-0x89EF
+0x8900-0x8926 0x8928-0x89DF
+# all wireless extensions ioctls except:
+# 1) get/set essid IOCSIWESSID 0x8B1A SIOCGIWESSID 0x8B1B
+# 2) device private ioctls SIOCIWFIRSTPRIV-SIOCIWLASTPRIV 0x8BE0-0x8BFF
+0x8B00-0x8B09 0x8B1C-0x8BDF
+# commonly used TTY ioctls
+0x5411 0x5451
+}')
+
+define(`TCGETS', `0x00005401')
+define(`TIOCOUTQ', `0x00005411')
+define(`TIOCGWINSZ', `0x00005413')
+define(`TIOCSWINSZ', `0x00005414')
+define(`FIONREAD', `0x0000541b')
+define(`FIOCLEX', `0x00005451')
+
+# commonly used ioctls on unix sockets
+define(`unpriv_unix_sock_ioctls', `{ TIOCOUTQ FIOCLEX TCGETS TIOCGWINSZ TIOCSWINSZ FIONREAD }')

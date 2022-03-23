@@ -1,0 +1,26 @@
+
+This package contains the Bluetooth Application FT server (app_fts) on Linux.
+
+To compile the Bluetooth FT server application you have to type:
+> cd 3rdparty/embedded/bsa_examples/linux/app_fts/build
+> make			<= For PC/Linux target (default)
+> make CPU=mips		<= For MIPS/Linux target
+
+For PC/Linux target, the application executable is located in build/x86 folder.
+To execute it, you have to go in the folder used to start the server application:
+> cd  ../../server/build/
+> ../../app_fts/build/x86/app_fts
+
+In fact both server and applications need to access the named socket file (bt-daemon-socket),
+which is created when the server is started.
+
+For MIPS target, the application executable is located in build/mips folder.
+To execute it, you have to copy and to execute it on the MIPS platform (from the same location used to execute the bt_server).
+
+Ensure that the application side has been built with the following setting in app_fts.txt
+	BSA_FTS_INCLUDED = TRUE
+Ensure that the server side has been built with the following setting in bte_server.txt
+	BTA_FTS_INCLUDED = TRUE
+
+For testing, ensure that the folder used to start the server application contains a folder called /fts_root and that the
+permissions on this folder allow the remote device access for all operations

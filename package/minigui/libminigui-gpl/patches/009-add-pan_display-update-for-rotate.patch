@@ -1,0 +1,240 @@
+--- a/src/include/newgal.h
++++ b/src/include/newgal.h
+@@ -118,6 +118,7 @@
+ #define GAL_HWSURFACE        MEMDC_FLAG_HWSURFACE   /* Surface is in video memory */
+ #define GAL_ASYNCBLIT        0x00000004             /* Use asynchronous blits if possible */
+ /* Available for GAL_SetVideoMode() */
++#define GAL_NOTCLEAR		 0x01000000
+ #define GAL_ANYFORMAT        0x10000000             /* Allow any video depth/pixel-format */
+ #define GAL_HWPALETTE        0x20000000             /* Surface has exclusive palette */
+ #define GAL_DOUBLEBUF        0x40000000             /* Set up double-buffered video mode */
+--- a/src/newgal/newgal.c
++++ b/src/newgal/newgal.c
+@@ -120,17 +120,21 @@
+     }
+     else
+ #endif
++	if ((env_value = getenv ("MG_DEFAULTMODE"))) {
++        strncpy (mode, env_value, LEN_MODE);
++        mode [LEN_MODE] = '\0';
++    } else {
+     if (GetMgEtcValue (engine, "defaultmode", mode, LEN_MODE) < 0)
+         if (GetMgEtcValue ("system", "defaultmode", mode, LEN_MODE) < 0)
+             return ERR_CONFIG_FILE;
+-
++    }
+     if (!GAL_ParseVideoMode (mode, &w, &h, &depth)) {
+         GAL_VideoQuit ();
+         fprintf (stderr, "NEWGAL: bad video mode parameter: %s.\n", mode);
+         return ERR_CONFIG_FILE;
+     }
+ 
+-    if (!(__gal_screen = GAL_SetVideoMode (w, h, depth, GAL_HWPALETTE))) {
++    if (!(__gal_screen = GAL_SetVideoMode (w, h, depth, GAL_HWPALETTE|GAL_NOTCLEAR))) {
+         GAL_VideoQuit ();
+         fprintf (stderr, "NEWGAL: Set video mode failure.\n");
+         return ERR_GFX_ENGINE;
+--- a/src/newgal/sysvideo.h
++++ b/src/newgal/sysvideo.h
+@@ -201,6 +201,7 @@
+     /* Set surface UpdateRects*/                
+     void (*UpdateSurfaceRects) (_THIS, GAL_Surface* surface, int numrects, GAL_Rect *rects);
+ 
++	void (*VideoSync)(_THIS, void*);
+ };
+ #undef _THIS
+ 
+@@ -214,6 +215,9 @@
+ #ifdef _MGGAL_DUMMY
+ extern VideoBootStrap DUMMY_bootstrap;
+ #endif
++#ifdef _MGGAL_SUNXI
++extern VideoBootStrap SUNXI_bootstrap;
++#endif
+ #ifdef _MGGAL_FBCON
+ extern VideoBootStrap FBCON_bootstrap;
+ #endif
+--- a/src/newgal/video.c
++++ b/src/newgal/video.c
+@@ -51,6 +51,9 @@
+ #ifdef _MGGAL_DUMMY
+     &DUMMY_bootstrap,
+ #endif
++#ifdef _MGGAL_SUNXI
++	&SUNXI_bootstrap,
++#endif 
+ #ifdef _MGGAL_FBCON
+     &FBCON_bootstrap,
+ #endif
+@@ -479,7 +482,8 @@
+     int video_w;
+     int video_h;
+     int video_bpp;
+-
++	int not_clear = flags & GAL_NOTCLEAR ? 1 : 0;
++	flags = flags &~GAL_NOTCLEAR;
+     this = video = current_video;
+ 
+     /* Default to the current video bpp */
+@@ -554,6 +558,7 @@
+         if (mgIsServer) {
+ #endif
+             GAL_SetClipRect(mode, NULL);
++			if (!not_clear)
+             GAL_ClearSurface(mode);
+ #ifdef _MGRM_PROCESSES
+         }
+@@ -1216,3 +1221,12 @@
+     }
+     return surface;
+ }
++void GAL_VideoSync(void *rc)
++{
++	GAL_VideoDevice *video = current_video;
++	if (video) {
++#ifndef _MGGAL_SHADOW || _MGGAL_DFB || _MGGAL_MLSHADOW
++		video->VideoSync(video, rc);
++#endif
++	}
++}
+--- a/src/control/static.c
++++ b/src/control/static.c
+@@ -54,6 +54,7 @@
+ #include "ctrlclass.h"
+ 
+ #include "static_impl.h"
++#define SS_VCENTER		0x00000040
+ 
+ static LRESULT
+ StaticControlProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+@@ -276,6 +277,9 @@
+                 if (dwStyle & SS_NOPREFIX)
+                     uFormat |= DT_NOPREFIX;
+ 
++				if((dwStyle & SS_ALIGNMASK) == (SS_CENTER | SS_VCENTER)) {
++					uFormat |= DT_CENTER | DT_VCENTER | DT_SINGLELINE;
++				}
+                 spCaption = GetWindowCaption (hwnd);
+ 
+                 if (spCaption) {
+--- a/src/gui/window.c
++++ b/src/gui/window.c
+@@ -5090,6 +5090,12 @@
+     MG_CHECK (MG_IS_NORMAL_WINDOW(hWnd));
+     pWin = MG_GET_WINDOW_PTR (hWnd);
+ 
++	RECT rc_update;
++	GetWindowRect(hWnd, &rc_update);
++	POINT pt;
++	pt.x = 0;
++	pt.y = 0;
++	WindowToScreen(hWnd, &pt.x, &pt.y);
+     if (pWin->pMainWin->secondaryDC) {
+         if (!IsRectEmpty(&pWin->pMainWin->update_rc)) {
+             HDC real_dc = HDC_INVALID;
+@@ -5127,6 +5133,11 @@
+         ShowCaretEx (hWnd, FALSE);
+     }
+ #endif
++	rc_update.right = rc_update.right - rc_update.left;
++	rc_update.bottom = rc_update.bottom - rc_update.top;
++	rc_update.left  = pt.x;
++	rc_update.top = pt.y;
++	GAL_VideoSync((void*)&rc_update);
+ }
+ 
+ BOOL RegisterWindowClass (PWNDCLASS pWndClass)
+--- a/src/newgal/fbcon/fbvideo.c	2018-04-09 15:25:51.000000000 +0800
++++ b/src/newgal/fbcon/fbvideo.c	2018-05-09 15:52:31.174006022 +0800
+@@ -122,6 +122,53 @@
+     free(device);
+ }
+ 
++typedef struct Rect
++{
++    int x;
++    int y;
++    int w;
++    int h;
++}Rect;
++#define FBIO_CACHE_SYNC         0x4630
++static void SyncCache(_THIS, Rect *rc)
++{
++	unsigned char *mem_start = (unsigned char *)(mapped_mem+mapped_offset);
++	unsigned int bytes_per_pixel = saved_vinfo.bits_per_pixel >> 3;
++	unsigned int pitch = bytes_per_pixel * saved_vinfo.xres;
++	int x = 0;
++	int y = 0;
++	int w = saved_vinfo.xres;
++	int h = saved_vinfo.yres;
++	unsigned int args[2];
++	unsigned int dirty_rect_vir_addr_begin = (unsigned int)
++	(mem_start +  pitch*y + bytes_per_pixel*x);
++	unsigned int dirty_rect_vir_addr_end  = (unsigned int)
++	(mem_start + pitch * (y+ h));
++	args[0] = dirty_rect_vir_addr_begin;
++	args[1] = dirty_rect_vir_addr_end;
++	ioctl(console_fd, FBIO_CACHE_SYNC, args);
++}
++static void FB_VideoSync(_THIS, void *arg)
++{
++	Rect *rc = (Rect*)arg;
++	if (need_sync) {
++		struct fb_var_screeninfo var;
++		ioctl(console_fd, FBIOGET_VSCREENINFO, &var);
++#ifdef CACHE_SYNC
++		if ((rc->x + rc->w <= var.xres) &&
++			(rc->y + rc->h <= var.yres)) {
++			SyncCache(this, rc);
++		}
++#endif
++		var.yoffset = 0;
++		var.reserved[0] = rc->x;
++		var.reserved[1] = rc->y;
++		var.reserved[2] = rc->w;
++		var.reserved[3] = rc->h;
++		ioctl(console_fd, FBIOPAN_DISPLAY, &var);
++	}
++	return;
++}
+ static GAL_VideoDevice *FB_CreateDevice(int devindex)
+ {
+     GAL_VideoDevice *this;
+@@ -166,6 +213,7 @@
+     this->FreeHWSurface = FB_FreeHWSurface;
+     this->GetFBInfo = FB_GetFBInfo;
+     this->free = FB_DeleteDevice;
++    this->VideoSync = FB_VideoSync;
+ 
+     return this;
+ }
+@@ -507,7 +507,11 @@
+         pci_accel_driver = FB_ProbePCIAccelDriver (this, &finfo);
+     }
+ #endif
+-
++    need_sync = 0;
++	const char *GAL_needsync = getenv("FB_SYNC");
++    if ( GAL_needsync != NULL ) {
++        need_sync = 1;
++    }
+     /* We're done! */
+     return(0);
+ }
+--- a/src/newgal/fbcon/fbvideo.h	2018-04-09 15:25:51.000000000 +0800
++++ b/src/newgal/fbcon/fbvideo.h	2018-05-09 15:52:45.282006623 +0800
+@@ -90,6 +90,7 @@
+ 
+     void (*wait_vbl)(_THIS);
+     void (*wait_idle)(_THIS);
++    int need_sync;
+ };
+ 
+ /* Old variable names */
+@@ -116,6 +117,7 @@
+ #define surfaces_memleft    (this->hidden->surfaces_memleft)
+ #define wait_vbl            (this->hidden->wait_vbl)
+ #define wait_idle           (this->hidden->wait_idle)
++#define need_sync           (this->hidden->need_sync)
+ 
+ #ifdef _MGHAVE_PCIACCESS

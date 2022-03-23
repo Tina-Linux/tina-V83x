@@ -1,0 +1,33 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -160,11 +160,16 @@ source_group(scripts FILES ${SQLITECPP_S
+ include_directories("${PROJECT_SOURCE_DIR}/include")
+ 
+ # add sources of the wrapper as a "SQLiteCpp" static library
+-add_library(SQLiteCpp ${SQLITECPP_SRC} ${SQLITECPP_INC} ${SQLITECPP_DOC} ${SQLITECPP_SCRIPT})
+-target_include_directories(SQLiteCpp PUBLIC "${PROJECT_SOURCE_DIR}/include")
++add_library(SQLiteCpp_static STATIC ${SQLITECPP_SRC} ${SQLITECPP_INC} ${SQLITECPP_DOC} ${SQLITECPP_SCRIPT})
++add_library(SQLiteCpp_shared SHARED ${SQLITECPP_SRC} ${SQLITECPP_INC} ${SQLITECPP_DOC} ${SQLITECPP_SCRIPT})
++
++set_target_properties(SQLiteCpp_shared SQLiteCpp_static PROPERTIES OUTPUT_NAME "SQLiteCpp" OUTPUT_NAME "SQLiteCpp")
++
++target_include_directories(SQLiteCpp_shared PUBLIC "${PROJECT_SOURCE_DIR}/include")
++target_include_directories(SQLiteCpp_static PUBLIC "${PROJECT_SOURCE_DIR}/include")
+ 
+ if (UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang"))
+-    set_target_properties(SQLiteCpp PROPERTIES COMPILE_FLAGS "-fPIC")
++    set_target_properties(SQLiteCpp_static SQLiteCpp_shared PROPERTIES COMPILE_FLAGS "-fPIC" COMPILE_FLAGS "-fPIC -shared")
+ endif (UNIX AND (CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang"))
+ 
+ 
+@@ -282,3 +287,10 @@ else (SQLITECPP_BUILD_TESTS)
+     message(STATUS "SQLITECPP_BUILD_TESTS OFF")
+ endif (SQLITECPP_BUILD_TESTS)
+ 
++install (TARGETS SQLiteCpp_static SQLiteCpp_shared
++	ARCHIVE DESTINATION lib
++	LIBRARY DESTINATION lib)
++
++install (DIRECTORY include/ DESTINATION include
++	FILES_MATCHING PATTERN "*.h")
++

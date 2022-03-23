@@ -1,0 +1,26 @@
+#
+# For a description of the syntax of this configuration file,
+# see scripts/kbuild/config-language.txt.
+#
+
+menu "Reduce size"
+
+config SWUPDATE_CONFIG_REMOVE_CLIENT
+	bool "remove client"
+	default SWUPDATE_DEFAULT_REMOVE_CLIENT
+	help
+	  don't install client to rootfs
+
+config SWUPDATE_CONFIG_REMOVE_PROGRESS
+	bool "remove progress"
+	default SWUPDATE_DEFAULT_REMOVE_PROGRESS
+	help
+	  don't install progress to rootfs
+
+config SWUPDATE_CONFIG_REMOVE_AUTORUN
+	bool "remove autorun"
+	default SWUPDATE_DEFAULT_REMOVE_AUTORUN
+	help
+	  don't install autorun cmd to rootfs
+
+endmenu

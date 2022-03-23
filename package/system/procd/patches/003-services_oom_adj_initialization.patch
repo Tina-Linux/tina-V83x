@@ -1,0 +1,107 @@
+--- a/service/instance.c
++++ b/service/instance.c
+@@ -53,6 +53,7 @@ enum {
+ 	INSTANCE_ATTR_JAIL,
+ 	INSTANCE_ATTR_TRACE,
+ 	INSTANCE_ATTR_SECCOMP,
++	INSTANCE_ATTR_OOM_ADJ,
+ 	__INSTANCE_ATTR_MAX
+ };
+ 
+@@ -75,6 +76,7 @@ static const struct blobmsg_policy insta
+ 	[INSTANCE_ATTR_JAIL] = { "jail", BLOBMSG_TYPE_TABLE },
+ 	[INSTANCE_ATTR_TRACE] = { "trace", BLOBMSG_TYPE_BOOL },
+ 	[INSTANCE_ATTR_SECCOMP] = { "seccomp", BLOBMSG_TYPE_STRING },
++	[INSTANCE_ATTR_OOM_ADJ] = { "oom_adj", BLOBMSG_TYPE_INT32 },
+ };
+ 
+ enum {
+@@ -330,6 +332,34 @@ instance_free_stdio(struct service_insta
+ 	}
+ }
+ 
++static int
++set_oom_adj(unsigned int pid, int oom_adj)
++{
++        int fd;
++        char path[32];
++        char oom_adj_string[4];
++
++        memset(path, 0, sizeof(path));
++        memset(oom_adj_string, 0, sizeof(oom_adj_string));
++        snprintf(path, sizeof(path), "/proc/%d/oom_adj", pid);
++
++        fd = open(path, O_RDWR);
++        if(fd < 0) {
++                ULOG_ERR("open %s failed\n", path);
++                return -1;
++        }
++
++        snprintf(oom_adj_string, sizeof(oom_adj_string), "%d", oom_adj);
++        if(write(fd, oom_adj_string, strlen(oom_adj_string)) <= 0) {
++                ULOG_ERR("write %s failed\n", path);
++                close(fd);
++                return -1;
++        }
++
++        close(fd);
++        return 0;
++}
++
+ void
+ instance_start(struct service_instance *in)
+ {
+@@ -380,6 +410,7 @@ instance_start(struct service_instance *
+ 
+ 	DEBUG(2, "Started instance %s::%s\n", in->srv->name, in->name);
+ 	in->proc.pid = pid;
++	set_oom_adj(in->proc.pid, in->oom_adj);
+ 	clock_gettime(CLOCK_MONOTONIC, &in->start);
+ 	uloop_process_add(&in->proc);
+ 
+@@ -780,6 +811,12 @@ instance_config_parse(struct service_ins
+ 		else
+ 			in->seccomp = seccomp;
+ 	}
++	if ((cur = tb[INSTANCE_ATTR_OOM_ADJ])) {
++		in->oom_adj= (int32_t) blobmsg_get_u32(cur);
++		if (in->oom_adj < -17 || in->oom_adj > 15)
++			return false;
++	}
++
+ 	if (!in->trace && tb[INSTANCE_ATTR_JAIL])
+ 		in->has_jail = instance_jail_parse(in, tb[INSTANCE_ATTR_JAIL]);
+ 
+@@ -913,8 +950,10 @@ void instance_dump(struct blob_buf *b, s
+ 
+ 	i = blobmsg_open_table(b, in->name);
+ 	blobmsg_add_u8(b, "running", in->proc.pending);
+-	if (in->proc.pending)
++	if (in->proc.pending) {
+ 		blobmsg_add_u32(b, "pid", in->proc.pid);
++		blobmsg_add_u32(b, "oom_adj", in->oom_adj);
++	}
+ 	blobmsg_add_blob(b, in->command);
+ 
+ 	if (!avl_is_empty(&in->errors.avl)) {
+--- a/service/instance.h
++++ b/service/instance.h
+@@ -61,6 +61,8 @@ struct service_instance {
+ 	uint32_t respawn_threshold;
+ 	uint32_t respawn_retry;
+ 
++	int oom_adj;
++
+ 	struct blob_attr *config;
+ 	struct uloop_process proc;
+ 	struct uloop_timeout timeout;
+--- a/service/service.c
++++ b/service/service.c
+@@ -517,6 +517,7 @@ service_start_early(char *name, char *cm
+ 	blobmsg_add_string(&b, "name", name);
+ 	instances = blobmsg_open_table(&b, "instances");
+ 	instance = blobmsg_open_table(&b, "instance1");
++	blobmsg_add_u32(&b, "oom_adj", -17);
+ 	command = blobmsg_open_array(&b, "command");
+ 	t = strtok(cmdline, " ");
+ 	while (t) {

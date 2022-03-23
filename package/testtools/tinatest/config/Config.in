@@ -1,0 +1,10 @@
+if PACKAGE_tinatest
+    comment "Settings For TINATEST"
+    source sys/Config.in
+
+    comment "Settings For TESTCASES"
+    source demo/Config.in
+    source base/Config.in
+    source spec/Config.in
+    source stress/Config.in
+endif

@@ -1,0 +1,6 @@
+#
+# Common neverallow permissions
+define(`no_w_file_perms', `{ append create link unlink relabelfrom rename setattr write }')
+define(`no_rw_file_perms', `{ no_w_file_perms open read ioctl lock }')
+define(`no_x_file_perms', `{ execute execute_no_trans }')
+define(`no_w_dir_perms',  `{ add_name create link relabelfrom remove_name rename reparent rmdir setattr write }')

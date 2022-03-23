@@ -1,0 +1,145 @@
+--- a/src/error.cpp
++++ b/src/error.cpp
+@@ -245,11 +245,11 @@ static int InitDialogBoxProc (HWND hDlg,
+     case MSG_INITDIALOG:
+ 
+ 
+-		if (LoadBitmap(HDC_SCREEN, &errBk, "res/err_bk.png")) 
++		if (LoadBitmap(HDC_SCREEN, &errBk, "/usr/res/err_bk.png"))
+ 			return -1;
+-		if (LoadBitmap(HDC_SCREEN, &errMark, "res/err_mark.png")) 
++		if (LoadBitmap(HDC_SCREEN, &errMark, "/usr/res/err_mark.png"))
+ 			return -1;
+-		if (LoadBitmap(HDC_SCREEN, &errButton, "res/err_button.png")) 
++		if (LoadBitmap(HDC_SCREEN, &errButton, "/usr/res/err_button.png"))
+ 			return -1;
+ 
+ 		GetWindowRect(((ERR_INFO *)lParam)->hParent, &rc);
+--- a/src/magnifier3.cpp
++++ b/src/magnifier3.cpp
+@@ -197,12 +197,12 @@ int create_glass_window(HWND parent)
+ {
+     if (!g_is_big_screen)
+     {
+-        if (LoadBitmap(HDC_SCREEN, &glass_Bmp, "res/zoom_glass.png")) 
++        if (LoadBitmap(HDC_SCREEN, &glass_Bmp, "/usr/res/zoom_glass.png"))
+             return -1;
+     }
+     else
+     {
+-        if (LoadBitmap(HDC_SCREEN, &glass_Bmp, "res-800/zoom_glass.png")) 
++        if (LoadBitmap(HDC_SCREEN, &glass_Bmp, "/usr/res-800/zoom_glass.png"))
+             return -1;
+     }
+     g_Glass_Width = glass_Bmp.bmWidth ;
+--- a/src/magnifier.cpp
++++ b/src/magnifier.cpp
+@@ -54,10 +54,10 @@ int show_magnifier(HWND toolbar, HWND br
+         if (!(bmpMagnifier = (BITMAP*)malloc(sizeof(BITMAP))))
+             return -1;
+         if (!g_is_big_screen) {
+-            if (LoadBitmap(HDC_SCREEN, bmpMagnifier, "res/magnifier.png")) 
++            if (LoadBitmap(HDC_SCREEN, bmpMagnifier, "/usr/res/magnifier.png"))
+                 return -1;
+         } else {
+-            if (LoadBitmap(HDC_SCREEN, bmpMagnifier, "res-800/magnifier.png")) 
++            if (LoadBitmap(HDC_SCREEN, bmpMagnifier, "/usr/res-800/magnifier.png"))
+                 return -1;
+         }
+         set_magnifier_rect(WINDOW_WIDTH);
+--- a/src/mdhome.cpp
++++ b/src/mdhome.cpp
+@@ -151,8 +151,8 @@ static void create_scrollbar(HWND parent
+ {
+ 
+     HDC hdc = GetClientDC(parent);
+-    LoadBitmap(hdc, &htbmp, "res/htrack.png");
+-    LoadBitmap(hdc, &htbmp2, "res/htrack2.png");
++    LoadBitmap(hdc, &htbmp, "/usr/res/htrack.png");
++    LoadBitmap(hdc, &htbmp2, "/usr/res/htrack2.png");
+     Htrack[0] = CreateCompatibleDCEx (hdc, 12, VSCROLLBAR_LENGTH);
+     SetBrushColor(Htrack[0], RGB2Pixel(hdc, 0xFF,0xFF,0xFF));
+ 
+@@ -200,10 +200,10 @@ static void paint_scroll_bar(HDC hdc)
+     }
+ 
+     if (hbbmp.bmBits == NULL) {
+-        LoadBitmap (hdc, &hbbmp, "res/hbar.png");
++        LoadBitmap (hdc, &hbbmp, "/usr/res/hbar.png");
+     }
+     if (hbbmp2.bmBits == NULL) {
+-        LoadBitmap(hdc, &hbbmp2, "res/hbar2.png");
++        LoadBitmap(hdc, &hbbmp2, "/usr/res/hbar2.png");
+     }
+ 
+ 
+--- a/src/scrollpanel.cpp
++++ b/src/scrollpanel.cpp
+@@ -22,12 +22,12 @@ enum{
+     NAV_PIC_MAX,
+ };
+ 
+-static char *s_nav_pic[NAV_PIC_MAX] = {const_cast<char*>("res/nav/navi.png"),
+-                                  const_cast<char*>("res/nav/navi_left.png"),
+-                                  const_cast<char*>("res/nav/navi_up.png"),
+-                                  const_cast<char*>("res/nav/navi_right.png"),
+-                                  const_cast<char*>("res/nav/navi_down.png"),
+-                                  const_cast<char*>("res/nav/navi_return.png")};
++static char *s_nav_pic[NAV_PIC_MAX] = {const_cast<char*>("/usr/res/nav/navi.png"),
++                                  const_cast<char*>("/usr/res/nav/navi_left.png"),
++                                  const_cast<char*>("/usr/res/nav/navi_up.png"),
++                                  const_cast<char*>("/usr/res/nav/navi_right.png"),
++                                  const_cast<char*>("/usr/res/nav/navi_down.png"),
++                                  const_cast<char*>("/usr/res/nav/navi_return.png")};
+ 
+ static BITMAP* s_nav_bmp[NAV_PIC_MAX] = {NULL};
+ 
+--- a/src/startup.cpp
++++ b/src/startup.cpp
+@@ -32,7 +32,7 @@ static int InitDialogBoxProc (HWND hDlg,
+ 	RECT rc;
+     switch (message) {
+     case MSG_INITDIALOG:
+-		if (LoadBitmap(HDC_SCREEN, &sBmp, "res/startup.png")) 
++		if (LoadBitmap(HDC_SCREEN, &sBmp, "/usr/res/startup.png"))
+ 			return -1;
+
+ 		GetWindowRect((HWND)(lParam), &rc);
+--- a/src/toolbar.cpp
++++ b/src/toolbar.cpp
+@@ -1130,13 +1130,13 @@ static int TBWinProc (HWND hwnd, int mes
+ 		case MSG_CREATE:
+             if (!g_is_big_screen)
+             {
+-                if (LoadBitmap(HDC_SCREEN, &bkBmp, "res/toolbar_bk.png")) 
++                if (LoadBitmap(HDC_SCREEN, &bkBmp, "/usr/res/toolbar_bk.png"))
+                     return -1;
+-                if (LoadBitmap(HDC_SCREEN, &toolBarBmp, "res/toolbar.png")) 
++                if (LoadBitmap(HDC_SCREEN, &toolBarBmp, "/usr/res/toolbar.png"))
+                     return -1;
+-                if (LoadBitmap(HDC_SCREEN, &progressBmp, "res/progress_bar.png")) 
++                if (LoadBitmap(HDC_SCREEN, &progressBmp, "/usr/res/progress_bar.png"))
+                     return -1;
+-                if (LoadBitmap(HDC_SCREEN, &tabBmp, "res/tab.png")) 
++                if (LoadBitmap(HDC_SCREEN, &tabBmp, "/usr/res/tab.png"))
+                     return -1;
+ #if 0
+                 if (LoadBitmap(HDC_SCREEN, &normalBmp, "res/normal.png")) 
+@@ -1145,13 +1145,13 @@ static int TBWinProc (HWND hwnd, int mes
+             }
+             else
+             {
+-                if (LoadBitmap(HDC_SCREEN, &bkBmp, "res-800/toolbar_bk.png")) 
++                if (LoadBitmap(HDC_SCREEN, &bkBmp, "/usr/res-800/toolbar_bk.png"))
+                     return -1;
+-                if (LoadBitmap(HDC_SCREEN, &toolBarBmp, "res-800/toolbar.png")) 
++                if (LoadBitmap(HDC_SCREEN, &toolBarBmp, "/usr/res-800/toolbar.png"))
+                     return -1;
+-                if (LoadBitmap(HDC_SCREEN, &progressBmp, "res-800/progress_bar.png")) 
++                if (LoadBitmap(HDC_SCREEN, &progressBmp, "/usr/res-800/progress_bar.png"))
+                     return -1;
+-                if (LoadBitmap(HDC_SCREEN, &tabBmp, "res-800/tab.png")) 
++                if (LoadBitmap(HDC_SCREEN, &tabBmp, "/usr/res-800/tab.png"))
+                     return -1;
+ #if 0
+                 if (LoadBitmap(HDC_SCREEN, &normalBmp, "res-800/normal.png")) 

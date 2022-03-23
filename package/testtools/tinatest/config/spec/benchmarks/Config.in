@@ -1,0 +1,7 @@
+menuconfig TINATEST_SPEC_BENCHMARKS
+    bool "benchmarks"
+
+if TINATEST_SPEC_BENCHMARKS
+    source coremark/Config.in
+    source linpack/Config.in
+endif

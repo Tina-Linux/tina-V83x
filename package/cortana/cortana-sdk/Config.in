@@ -1,0 +1,135 @@
+menu "Cortana Devices SDK Configurations"
+    depends on PACKAGE_cortana-sdk
+
+comment "----------"
+
+config CORTANA_SDK_ENABLE_CDP
+    bool "Enable CDP"
+    default n
+
+config CORTANA_SDK_ENABLE_COMPANION
+    bool "Enable Companion"
+    default y
+
+config CORTANA_SDK_ENABLE_SKYPE
+    bool "Enable Skype"
+    default n
+
+config CORTANA_SDK_ENABLE_HARNESS
+    bool "Enable Harness"
+    default n
+
+config CORTANA_SDK_ENABLE_KEYWORD_SPOTTER
+    bool "Enable keyword spotter"
+    default y
+
+config CORTANA_SDK_ENABLE_LOGGING
+    bool "Enable logging"
+    help
+      Disabling logging everywhere is useful in reducing image size.
+    default y
+
+config CORTANA_SDK_USE_USBEXT
+    bool "Use USB extensions"
+    help
+      Uses USB extensions in the reference application for some supported USB devices.
+    default n
+
+config CORTANA_SDK_EXTERNAL_MUSIC_MANAGER
+    bool "External music manager"
+    help
+      Disables internal music manager. You must provide your own music manager
+      implementation that will handle stop, pause, etc. commands
+    default n
+
+comment "----------"
+
+config CORTANA_SDK_BUILD_BASIC_FIRST_SAMPLE
+    bool "Build cortana-basic-first-sample"
+    default y
+
+config CORTANA_SDK_BUILD_IOT_CORTANA_SDK_SAMPLE
+    select CORTANA_SDK_ENABLE_HARNESS
+    bool "Build iot-cortana-sdk-sample"
+    default n
+
+config CORTANA_SDK_BUILD_TESTS
+    select CORTANA_SDK_ENABLE_LOGGING
+    bool "Build tests"
+    help
+      Build tests in the cortana-core directory
+    default n
+
+comment "----------"
+
+config CORTANA_SDK_SOUND_VOICE_PATH
+    string "Sound voice path"
+    help
+      Specifies the target directory where voice audio files are located.
+    default "/root/cortana_res/sound_voice"
+
+config CORTANA_SDK_SOUND_PATH
+    string "Sound path"
+    help
+      Specifies the target directory where system audio files are located.
+    default "/root/cortana_res/sound"
+
+config CORTANA_SDK_DATA_PATH
+    string "Data path"
+    help
+      Specifies the target directory where data files are located
+      (i.e. heycortana model).
+    default "/root/cortana_res/data"
+
+config CORTANA_SDK_DUMP_PATH
+    string "Write Dump path"
+    help
+      Directory where crash dumps will be written.
+    default "/tmp"
+
+comment "----------"
+
+config CORTANA_SDK_POST_DUMP_SNAP_LOGS_COMMAND
+    string "Post dump snap logs command"
+    help
+      Command to execute after a crash dump is gathered.
+      This is intended to gather logs.
+    default ""
+
+config CORTANA_SDK_ARIA_TENANT_TOKEN
+    string "Aria tenant token"
+    help
+      Enable Aria and upload using the provided tenant token.
+    default ""
+
+comment "----------"
+
+config CORTANA_SDK_CMAKE_VERBOSE_MAKEFILE
+    bool "CMAKE_VERBOSE_MAKEFILE"
+    help
+      Enable verbose output from Makefile builds.
+    default y
+
+choice
+    prompt "CMAKE_BUILD_TYPE"
+    default CORTANA_SDK_CMAKE_BUILD_TYPE_NONE
+    help
+      Specifies the build type on single-configuration generators.
+
+    config CORTANA_SDK_CMAKE_BUILD_TYPE_NONE
+        bool "None"
+
+    config CORTANA_SDK_CMAKE_BUILD_TYPE_DEBUG
+        bool "Debug"
+
+    config CORTANA_SDK_CMAKE_BUILD_TYPE_RELEASE
+        bool "Release"
+
+    config CORTANA_SDK_CMAKE_BUILD_TYPE_RELWITHDEBINFO
+        bool "RelWithDebInfo"
+
+    config CORTANA_SDK_CMAKE_BUILD_TYPE_MINSIZEREL
+        bool "MinSizeRel"
+endchoice
+
+endmenu

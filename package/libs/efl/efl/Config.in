@@ -1,0 +1,55 @@
+if PACKAGE_efl
+
+config EFL_BUILD_HOST
+    bool "Whether to build hosting tools"
+    default y
+    help
+	Because compiling EFL requires compiling the host tools first.
+	If compilation error, suggesting can not execute binary file:Exec format error,
+	you need to select this option.
+
+config EFL_FB
+    bool "Enable raw Framebuffer access"
+    default n
+
+config EFL_WAYLAND
+    bool "Enabel wayland display server"
+    default y
+
+#config EFL_DRM
+#    bool "Enable drm engine"
+#    default n
+
+config EFL_OPENGLES
+    bool "Enabel opengl es support"
+    default n
+
+config EFL_PIXMAN
+    bool "Enable pixman for software rendering"
+    default n
+
+config EFL_FONT_CONFIG
+    bool "Enable fontconfig for finding fonts"
+    default y
+
+config EFL_FRIBIDI
+    bool "Enable bidirectional text support"
+    default n
+
+#config EFL_GSTREAMER1
+#    bool "Enable gstreamer 1.0 support"
+#    default n
+
+config EFL_TSLIB
+    bool "Enable tslib for touchscreen events"
+    default n
+
+config EFL_GLIB
+    bool "Enabel glib2 support"
+    default n
+
+config EFL_AUDIO
+    bool "Enable audio support"
+    default n
+
+endif

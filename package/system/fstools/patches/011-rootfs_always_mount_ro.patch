@@ -1,0 +1,13 @@
+Index: fstools-2016-01-10/mount_root.c
+===================================================================
+--- fstools-2016-01-10.orig/mount_root.c
++++ fstools-2016-01-10/mount_root.c
+@@ -37,7 +37,7 @@ start(int argc, char *argv[1])
+ 		root = volume_find("rootfs");
+ 		volume_init(root);
+ 		ULOG_NOTE("mounting /dev/root\n");
+-		mount("/dev/root", "/", NULL, MS_NOATIME | MS_REMOUNT, 0);
++		mount("/dev/root", "/", NULL, MS_RDONLY | MS_NOATIME | MS_REMOUNT, 0);
+ 	}
+ 
+ 	/*

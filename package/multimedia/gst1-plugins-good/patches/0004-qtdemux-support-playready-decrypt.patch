@@ -1,0 +1,1248 @@
+diff --git a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -322,6 +322,15 @@
+                LDFLAGS="${SAVED_LDFLAGS}" LIBS="${SAVED_LIBS}"])
+ 
+ dnl *** set variables based on configure arguments ***
++AC_ARG_ENABLE(isoplayready,
++               [AC_HELP_STRING([--enable-isoplayready],[enable isoplayready build])],
++               [ case "${enableval}" in
++                 yes) isoplayready=true ;;
++                 no)  isoplayready=false ;;
++          *)   AC_MSG_ERROR(bad value ${enableval} for --enable-isoplayready) ;;
++       esac],
++       [isoplayready=false])
++ AM_CONDITIONAL([CONFIG_PLAYREADY],  [test x$isoplayready = xtrue])
+ 
+ dnl set license and copyright notice
+ GST_LICENSE="LGPL"
+diff --git a/gst/isomp4/Makefile.am b/gst/isomp4/Makefile.am
+index d76cb42..cfc5754 100644
+--- a/gst/isomp4/Makefile.am
++++ b/gst/isomp4/Makefile.am
+@@ -11,11 +11,29 @@
+     -lgsttag-@GST_API_VERSION@ \
+     -lgstpbutils-@GST_API_VERSION@ \
+     $(GST_BASE_LIBS) $(GST_LIBS) $(ZLIB_LIBS)
++
++if CONFIG_PLAYREADY
++libgstisomp4_la_CFLAGS += \
++	-I$(STAGING_DIR)/usr/include/ \
++	-I$(STAGING_DIR)/usr/include/inc \
++	-I$(STAGING_DIR)/usr/include/oem/common/inc \
++	-I$(STAGING_DIR)/usr/include/oem/linux/inc \
++	-I$(STAGING_DIR)/usr/include/results \
++	-I$(STAGING_DIR)/usr/include/tools/shared/common \
++	-I$(STAGING_DIR)/usr/include/tools/shared/netio \
++	-DADJUST_ADDRESS_FOR_SECURE_OS_OPTEE \
++	-DDRM_BUILD_PROFILE=900 \
++	-DARM=1 \
++	-DCONFIG_PLAYREADY
++
++libgstisomp4_la_LIBADD += -lplayreadypk
++endif
++
+ libgstisomp4_la_LDFLAGS = ${GST_PLUGIN_LDFLAGS}
+ libgstisomp4_la_SOURCES = isomp4-plugin.c gstrtpxqtdepay.c \
+ 	qtdemux.c qtdemux_types.c qtdemux_dump.c qtdemux_lang.c \
+ 	gstqtmux.c gstqtmoovrecover.c atoms.c atomsrecovery.c descriptors.c \
+-	properties.c gstqtmuxmap.c gstisoff.c
++	properties.c gstqtmuxmap.c gstisoff.c awPlayReadyLicense.c
+ 
+ presetdir = $(datadir)/gstreamer-$(GST_API_VERSION)/presets
+ preset_DATA = GstQTMux.prs
+@@ -37,7 +55,8 @@
+ 	properties.h     \
+ 	fourcc.h         \
+ 	gstisoff.h       \
+-	gstqtmuxmap.h
++	gstqtmuxmap.h    \
++	awPlayReadyLicense.h
+ 
+ EXTRA_DIST = \
+ 	gstqtmux-doc.c \
+diff --git a/gst/isomp4/awPlayReadyLicense.c b/gst/isomp4/awPlayReadyLicense.c
+new file mode 100755
+index 0000000..fd8fe6d
+--- /dev/null
++++ b/gst/isomp4/awPlayReadyLicense.c
+@@ -0,0 +1,891 @@
++/*
++ * Copyright (c) 2008-2018 Allwinner Technology Co. Ltd.
++ * All rights reserved.
++ *
++ * File : awPlayReadyLicense.c
++ * Description : aw PlayReady License
++ * History :
++ *
++ */
++#ifdef HAVE_CONFIG_H
++#include "config.h"
++#endif
++
++#include "gst/gst-i18n-plugin.h"
++
++#include <glib/gprintf.h>
++#include <gst/tag/tag.h>
++#include <gst/audio/audio.h>
++#include <gst/video/video.h>
++#include <gst/pbutils/pbutils.h>
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <pthread.h>
++
++#include <math.h>
++#include <gst/math-compat.h>
++
++#ifdef HAVE_ZLIB
++# include <zlib.h>
++#endif
++
++#include "awPlayReadyLicense.h"
++
++#ifdef CONFIG_PLAYREADY
++#include <drmwindowsenv.h>
++#include <drmfeatures.h>
++#include <drmtypes.h>
++#include <drmutilitieslite.h>
++#include <drmcrt.h>
++#include <drmmanager.h>
++#include <drmdomainimp.h>
++#include <drmrevocation.h>
++#include <drmcmdlnpars.h>
++#include <drmtoolsutils.h>
++#include <drmtoolsmediafile.h>
++#include <drmheaderparser.h>
++#include <drmutf.h>
++#include <drmsoapxmlutility.h>
++#include <drmmeterapi.h>
++#include <drmmathsafe.h>
++#include <drmtoolsnetio.h>
++#include <drmtrace.h>
++#include <drmtoolsinit.h>
++#include <drmconstants.h>
++#include <stdarg.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <drmpath.h>
++
++#define DUMP_NETWORK_DATA 1
++
++#define ManifestFile PLAYREADY_TMPFILE_DIR "manifest"
++#define WRMHeaderPath PLAYREADY_TMPFILE_DIR "sstr.xml"
++
++#define DECRYPT_ERROR_NUM 3
++
++static guint8 currPlayreadyRef = 0;
++
++pthread_mutex_t playready_mutex = PTHREAD_MUTEX_INITIALIZER;
++static gboolean playready_doLicensed = FALSE;
++
++static const char *codes =
++"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++
++static const unsigned char map[256] = {
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 253, 255,
++255, 253, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 253, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255,  62, 255, 255, 255,  63,
++ 52,  53,  54,  55,  56,  57,  58,  59,  60,  61, 255, 255,
++255, 254, 255, 255, 255,   0,   1,   2,   3,   4,   5,   6,
++  7,   8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,
++ 19,  20,  21,  22,  23,  24,  25, 255, 255, 255, 255, 255,
++255,  26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,
++ 37,  38,  39,  40,  41,  42,  43,  44,  45,  46,  47,  48,
++ 49,  50,  51, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
++255, 255, 255, 255 };
++
++struct DrmInfoS {
++    DRM_BOOL IsInit;
++    DRM_APP_CONTEXT *AppContext;
++    DRM_BYTE *OpaqueBuffer;
++    DRM_BYTE *RevocationBuffer;
++    DRM_DECRYPT_CONTEXT DecryptContext;
++    DRM_BOOL IsDecryptInit;
++} drminfo = { 0 };
++
++static int base64_encode(const unsigned char *in,  unsigned long len,
++                        unsigned char *out)
++{
++   unsigned long i, leven;
++   unsigned char *p;
++
++   p = out;
++   leven = 3*(len / 3);
++   for (i = 0; i < leven; i += 3) {
++       *p++ = codes[in[0] >> 2];
++       *p++ = codes[((in[0] & 3) << 4) + (in[1] >> 4)];
++       *p++ = codes[((in[1] & 0xf) << 2) + (in[2] >> 6)];
++       *p++ = codes[in[2] & 0x3f];
++       in += 3;
++   }
++   if (i < len) {
++       unsigned a = in[0];
++       unsigned b = (i+1 < len) ? in[1] : 0;
++       unsigned c = 0;
++
++       *p++ = codes[a >> 2];
++       *p++ = codes[((a & 3) << 4) + (b >> 4)];
++       *p++ = (i+1 < len) ? codes[((b & 0xf) << 2) + (c >> 6)] : '=';
++       *p++ = '=';
++   }
++
++   *p = '\0';
++
++   return p - out;
++}
++
++static int base64_decode(const unsigned char *in, unsigned char *out)
++{
++    unsigned long t, x, y, z;
++    unsigned char c;
++    int g = 3;
++
++    for (x = y = z = t = 0; in[x]!=0;) {
++        c = map[in[x++]];
++        if (c == 255) return -1;
++        if (c == 253) continue;
++        if (c == 254) { c = 0; g--; }
++        t = (t<<6)|c;
++        if (++y == 4) {
++            out[z++] = (unsigned char)((t>>16)&255);
++            if (g > 1) out[z++] = (unsigned char)((t>>8)&255);
++            if (g > 2) out[z++] = (unsigned char)(t&255);
++            y = t = 0;
++        }
++    }
++
++    return z;
++}
++
++static DRM_RESULT DRM_CALL PolicyCallback(
++    __in     const DRM_VOID *f_pvPolicyCallbackData,
++    __in     DRM_POLICY_CALLBACK_TYPE f_dwCallbackType,
++    __in_opt const DRM_KID *f_pKID,
++    __in_opt const DRM_LID *f_pLID,
++    __in     const DRM_VOID *f_pv )
++{
++    (void)f_pKID;
++    (void)f_pLID;
++    (void)f_pv;
++    return DRMTOOLS_PrintPolicyCallback( f_pvPolicyCallbackData, f_dwCallbackType );
++}
++
++static DRM_RESULT DRM_CALL BindCallback(
++    __in     const DRM_VOID                 *f_pvPolicyCallbackData,
++    __in           DRM_POLICY_CALLBACK_TYPE  f_dwCallbackType,
++    __in_opt const DRM_KID                  *f_pKID,
++    __in_opt const DRM_LID                  *f_pLID,
++    __in     const DRM_VOID                 *f_pv )
++{
++    (void)(f_pKID);
++    (void)(f_pLID);
++    (void)(f_pv);
++    return DRMTOOLS_PrintPolicyCallback( f_pvPolicyCallbackData, f_dwCallbackType );
++}
++
++static void DebugAnalyze(unsigned long dr, const char* file, unsigned long line, const char* expr)
++{
++    if (dr != 0)
++        GST_DEBUG("%s:%ld 0x%x(%s)", file, line, (int)dr, expr);
++}
++
++static DRM_RESULT DRM_CALL DumpData(
++    __in                    const DRM_CONST_STRING *f_path,
++    __in_ecount(f_cbPacket) DRM_BYTE  *f_pbPacket,
++    __in                    DRM_DWORD  f_cbPacket )
++{
++    DRM_RESULT dr = DRM_SUCCESS;
++
++#if DUMP_NETWORK_DATA
++
++    OEM_FILEHDL fp                                                = OEM_INVALID_HANDLE_VALUE;
++    DRM_DWORD   cbWritten                                         = 0;
++
++    ChkArg( f_pbPacket != NULL && f_cbPacket > 0 );
++
++    fp = Oem_File_Open( NULL,
++                        f_path->pwszString,
++                        OEM_GENERIC_WRITE,
++                        OEM_FILE_SHARE_NONE,
++                        OEM_CREATE_ALWAYS,
++                        OEM_ATTRIBUTE_NORMAL );
++
++    if ( fp == OEM_INVALID_HANDLE_VALUE )
++    {
++        ChkDR( DRM_E_FAIL );
++    }
++
++    if ( !Oem_File_Write( fp, f_pbPacket, f_cbPacket, &cbWritten ) ||
++         cbWritten != f_cbPacket )
++    {
++        ChkDR( DRM_E_FAIL );
++    }
++
++ErrorExit:
++
++    if ( fp != OEM_INVALID_HANDLE_VALUE )
++    {
++        Oem_File_Close( fp );
++    }
++
++#endif
++
++    return dr;
++}
++
++static DRM_BOOL DRM_CALL LoadFile(const DRM_CONST_STRING * pPath, DRM_BYTE **ppBuffer, DRM_DWORD *pSize)
++{
++    DRM_RESULT dr = DRM_SUCCESS;
++    OEM_FILEHDL fp = OEM_INVALID_HANDLE_VALUE;
++    DRM_DWORD cbRead = 0;
++
++    ChkBOOL( ( fp = Oem_File_Open( NULL,
++                                     pPath->pwszString,
++                                     OEM_GENERIC_READ,
++                                     OEM_FILE_SHARE_READ,
++                                     OEM_OPEN_EXISTING,
++                                     OEM_ATTRIBUTE_NORMAL ) ) != OEM_INVALID_HANDLE_VALUE,
++             DRM_E_FILEOPEN );
++
++    ChkBOOL( Oem_File_SetFilePointer( fp,
++                                      0,
++                                      OEM_FILE_END,
++                                      pSize ), DRM_E_FILE_SEEK_ERROR );
++
++    ChkMem( *ppBuffer = ( DRM_BYTE * )Oem_MemAlloc( *pSize ) );
++
++    ChkBOOL( Oem_File_SetFilePointer( fp,
++                                      0,
++                                      OEM_FILE_BEGIN,
++                                      NULL ), DRM_E_FILE_SEEK_ERROR );
++
++    ChkBOOL( Oem_File_Read( fp,
++                            *ppBuffer,
++                            *pSize,
++                            &cbRead ), DRM_E_FILE_READ_ERROR );
++
++    ChkBOOL( cbRead == *pSize, DRM_E_FILE_READ_ERROR );
++
++ErrorExit:
++
++    if ( fp != OEM_INVALID_HANDLE_VALUE )
++    {
++        Oem_File_Close( fp );
++    }
++
++    return dr;
++
++}
++
++static DRM_RESULT GenerateLicenseChallege(DRM_APP_CONTEXT *AppContext, DRM_BYTE *pbHeader, DRM_DWORD cbHeader, DRM_BYTE **ppbChallenge, DRM_DWORD *pcbChallenge)
++{
++    DRM_RESULT dr = DRM_SUCCESS;
++    const DRM_CONST_STRING  *rgpdstrRights[ 1 ] = { 0 };
++    DRM_BYTE *pbHeader2 = NULL;
++    DRM_STRING dstrHeader = DRM_EMPTY_DRM_STRING;
++    DRM_SUBSTRING dasstrHeader1 = DRM_EMPTY_DRM_SUBSTRING;
++    DRM_BYTE *pbChallenge = NULL;
++    DRM_DWORD cbChallenge = 0;
++    DRM_CHAR rgchURL[ 1024 ];
++    DRM_DWORD cchURL = 1024;
++
++    rgpdstrRights[ 0 ] = &g_dstrWMDRM_RIGHT_PLAYBACK;
++
++    ChkMem( pbHeader2 = (DRM_BYTE *)Oem_MemAlloc( cbHeader * sizeof( DRM_WCHAR ) ) );
++
++    DRM_DSTR_FROM_PB( &dstrHeader, pbHeader2, cbHeader * sizeof( DRM_WCHAR ) );
++
++    dasstrHeader1.m_cch = cbHeader;
++
++    DRM_UTL_PromoteASCIItoUNICODE( (const DRM_CHAR *)pbHeader,
++                                  &dasstrHeader1,
++                                  ( DRM_STRING * )&dstrHeader );
++
++    ChkDR( Drm_Content_SetProperty( AppContext,
++                                    DRM_CSP_AUTODETECT_HEADER,
++                                    DRM_PB_DSTR( &dstrHeader ),
++                                    DRM_CB_DSTR( &dstrHeader ) ) );
++
++    dr = Drm_LicenseAcq_GenerateChallenge( AppContext,
++                                           (const DRM_CONST_STRING **)rgpdstrRights,
++                                           DRM_NO_OF (rgpdstrRights),
++                                           NULL,
++                                           NULL,
++                                           0,
++                                           rgchURL,
++                                           &cchURL,
++                                           NULL,
++                                           NULL,
++                                           NULL,
++                                           &cbChallenge );
++
++    if ( dr != DRM_E_BUFFERTOOSMALL )
++    {
++        if (dr!= DRM_SUCCESS)
++       {
++            ChkDR( dr );
++        }
++        else
++        {
++            ChkDR( DRM_E_TEST_UNEXPECTED_OUTPUT);
++        }
++    }
++
++    ChkBOOL( cchURL <= 1024, DRM_E_FAIL );
++
++    ChkMem( pbChallenge = ( DRM_BYTE * )Oem_MemAlloc( cbChallenge ) );
++
++    ChkDR( Drm_LicenseAcq_GenerateChallenge( AppContext,
++                                             (const DRM_CONST_STRING **)rgpdstrRights,
++                                             DRM_NO_OF (rgpdstrRights),
++                                             NULL,
++                                             NULL,
++                                             0,
++                                             rgchURL,
++                                             &cchURL,
++                                             NULL,
++                                             NULL,
++                                             pbChallenge,
++                                             &cbChallenge ) );
++
++    *ppbChallenge = pbChallenge;
++    *pcbChallenge = cbChallenge;
++
++ErrorExit:
++
++    SAFE_OEM_FREE( pbHeader2 );
++    return dr;
++}
++
++DRM_RESULT DRM_CALL GenerateLicenseAck(
++    DRM_APP_CONTEXT *f_poAppContext,
++    DRM_LICENSE_RESPONSE *f_poLicResponse,
++    DRM_BYTE **f_ppbAcknowledgement,
++    DRM_DWORD *f_pcbAcknowledgement )
++{
++    DRM_RESULT dr = DRM_SUCCESS;
++
++    ChkArg( f_poAppContext != NULL );
++    ChkArg( f_poLicResponse != NULL );
++    ChkArg( f_ppbAcknowledgement != NULL );
++    ChkArg( f_pcbAcknowledgement != NULL );
++
++    dr = Drm_LicenseAcq_GenerateAck( f_poAppContext,
++                                     f_poLicResponse,
++                                     NULL,
++                                     f_pcbAcknowledgement);
++
++    if ( dr == DRM_E_BUFFERTOOSMALL )
++    {
++        ChkMem( *f_ppbAcknowledgement =
++                    (DRM_BYTE *)Oem_MemAlloc( *f_pcbAcknowledgement ) );
++
++        ChkDR( Drm_LicenseAcq_GenerateAck( f_poAppContext,
++                                           f_poLicResponse,
++                                           *f_ppbAcknowledgement,
++                                           f_pcbAcknowledgement ) );
++    }
++    else
++    {
++        goto ErrorExit;
++    }
++
++ErrorExit:
++
++    return dr;
++}
++
++static inline void stringToWString(DRM_WCHAR *dst, char *src)
++{
++    while ((*dst++ = *src++));
++}
++
++static int doLicensing(const char *la_url)
++{
++    DRM_RESULT dr = DRM_SUCCESS;
++    DRM_APP_CONTEXT *AppContext = NULL;
++    DRM_BYTE *pbOpaqueBuffer = NULL;
++    DRM_BYTE *pbRevocationBuffer = NULL;
++    DRM_LICENSE_RESPONSE oLicResponse;
++
++    DRM_BYTE *pbHeader = NULL;
++    DRM_DWORD cbHeader = 0;
++    DRM_BYTE *pbChallenge1 = NULL;
++    DRM_DWORD cbChallenge1 = 0;
++    DRM_BYTE *pbChallenge2 = NULL;
++    DRM_DWORD cbChallenge2 = 0;
++    DRM_BYTE *pbResponse1 = NULL;
++    DRM_DWORD cbResponse1 = 0;
++    DRM_BYTE *pbResponse2 = NULL;
++    DRM_DWORD cbResponse2 = 0;
++
++    GST_DEBUG("%s %d", __func__, __LINE__);
++
++    // chl1.dat, mode = w+b
++    char chl1[] = PLAYREADY_TMPFILE_DIR "chl1.dat";
++    DRM_WCHAR wchl1[sizeof(chl1)] = {0};
++    stringToWString(wchl1, chl1);
++    const DRM_CONST_STRING strchl1 = DRM_CREATE_DRM_STRING(wchl1);
++
++    // chl2.dat, mode = w+b
++    char chl2[] = PLAYREADY_TMPFILE_DIR "chl2.dat";
++    DRM_WCHAR wchl2[sizeof(chl2)] = {0};
++    stringToWString(wchl2, chl2);
++    const DRM_CONST_STRING strchl2 = DRM_CREATE_DRM_STRING(wchl2);
++
++    // rsp1.dat, mode = w+b
++    char rsp1[] = PLAYREADY_TMPFILE_DIR "rsp1.dat";
++    DRM_WCHAR wrsp1[sizeof(rsp1)] = {0};
++    stringToWString(wrsp1, rsp1);
++    const DRM_CONST_STRING strrsp1 = DRM_CREATE_DRM_STRING(wrsp1);
++
++    // rsp2.dat, mode = w+b
++    char rsp2[] = PLAYREADY_TMPFILE_DIR "rsp2.dat";
++    DRM_WCHAR wrsp2[sizeof(rsp2)] = {0};
++    stringToWString(wrsp2, rsp2);
++    const DRM_CONST_STRING strrsp2 = DRM_CREATE_DRM_STRING(wrsp2);
++
++    // sstr.xml
++    char pin[] = PLAYREADY_TMPFILE_DIR "sstr.xml";
++    DRM_WCHAR wpin[sizeof(pin)] = {0};
++    stringToWString(wpin, pin);
++    DRM_CONST_STRING strin = DRM_CREATE_DRM_STRING(wpin);
++
++    // pr.hds
++    char prhds[] = PLAYREADY_TMPFILE_DIR "pr.hds";
++    DRM_WCHAR wprhds[sizeof(prhds)] = {0};
++    stringToWString(wprhds, prhds);
++    const DRM_CONST_STRING strhds = DRM_CREATE_DRM_STRING(wprhds);
++
++
++    // response.xml
++    char res[] = PLAYREADY_TMPFILE_DIR "response.xml";
++    DRM_WCHAR wres[sizeof(res)] = {0};
++    stringToWString(wres, res);
++    DRM_CONST_STRING strresponse = DRM_CREATE_DRM_STRING(wres);
++
++    memset(&oLicResponse, 0, sizeof(oLicResponse));
++    oLicResponse.m_eType = eUnknownProtocol;
++
++    ChkDR( KeyPath_Initialize(PLAYREADY_CERT_DIR) );
++    SetDbgAnalyzeFunction(DebugAnalyze);
++
++    GST_DEBUG("%s %d", __func__, __LINE__);
++    ChkDR( DRMTOOLS_DrmInitializeWithOpaqueBuffer(NULL, &strhds, TOOLS_DRM_BUFFER_SIZE, &pbOpaqueBuffer, &AppContext) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++    if( DRM_REVOCATION_IsRevocationSupported() )
++    {
++        ChkMem( pbRevocationBuffer = ( DRM_BYTE * )Oem_MemAlloc( REVOCATION_BUFFER_SIZE ) );
++
++        ChkDR( Drm_Revocation_SetBuffer( AppContext,
++                                         pbRevocationBuffer,
++                                         REVOCATION_BUFFER_SIZE ) );
++    }
++
++    GST_DEBUG("%s %d", __func__, __LINE__);
++    ChkDR( LoadFile(&strin, &pbHeader, &cbHeader) );
++
++    GST_DEBUG("%s %d", __func__, __LINE__);
++    ChkDR( GenerateLicenseChallege(AppContext, pbHeader, cbHeader, &pbChallenge1, &cbChallenge1) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++    ChkDR( DumpData(&strchl1, pbChallenge1, cbChallenge1) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++
++    ChkDR( DRM_TOOLS_NETIO_SendData( la_url,
++                                     eDRM_TOOLS_NET_LICGET,
++                                     pbChallenge1,
++                                     cbChallenge1,
++                                     &pbResponse1,
++                                     &cbResponse1,
++                                     NULL,
++                                     NULL ) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++    ChkDR( DumpData(&strrsp1, pbResponse1, cbResponse1) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++
++    oLicResponse.m_dwResult = DRM_SUCCESS;
++    ChkDR( Drm_LicenseAcq_ProcessResponse( AppContext,
++                                           DRM_PROCESS_LIC_RESPONSE_SIGNATURE_NOT_REQUIRED,
++                                           NULL,
++                                           NULL,
++                                           pbResponse1,
++                                           cbResponse1,
++                                           &oLicResponse ) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++    ChkDR( DumpData(&strresponse, pbResponse1, cbResponse1) );
++    GST_DEBUG("%s %d result: %lx", __func__, __LINE__, oLicResponse.m_dwResult);
++    if (!DRM_SUCCEEDED(oLicResponse.m_dwResult)) {
++        ChkDR(DRM_E_FAIL);
++    } else {
++        GST_DEBUG("transid:%d", oLicResponse.m_cbTransactionID);
++        if (oLicResponse.m_cbTransactionID > 0) {
++            ChkDR( GenerateLicenseAck( AppContext,
++                                       &oLicResponse,
++                                       &pbChallenge2,
++                                       &cbChallenge2) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++            ChkDR( DumpData(&strchl2, pbChallenge2, cbChallenge2) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++            ChkDR( DRM_TOOLS_NETIO_SendData( la_url,
++                                             eDRM_TOOLS_NET_LICACK,
++                                             pbChallenge2,
++                                             cbChallenge2,
++                                             &pbResponse2,
++                                             &cbResponse2,
++                                             NULL,
++                                             NULL ) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++            ChkDR( DumpData(&strrsp2, pbResponse2, cbResponse2) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++            DRM_RESULT dr1 = DRM_SUCCESS;
++            ChkDR( Drm_LicenseAcq_ProcessAckResponse( AppContext,
++                                                      pbResponse2,
++                                                      cbResponse2,
++                                                      &dr1 ) );
++    GST_DEBUG("%s %d", __func__, __LINE__);
++            ChkDR(dr1);
++    GST_DEBUG("%s %d", __func__, __LINE__);
++
++        }
++    }
++
++    GST_DEBUG("%s %d", __func__, __LINE__);
++
++ErrorExit:
++
++    SAFE_OEM_FREE(pbRevocationBuffer);
++    DRMTOOLS_DrmUninitializeWithOpaqueBuffer( &pbOpaqueBuffer, &AppContext );
++    SAFE_OEM_FREE(pbHeader);
++    SAFE_OEM_FREE(pbChallenge1);
++    SAFE_OEM_FREE(pbChallenge2);
++    SAFE_OEM_FREE(pbResponse1);
++    SAFE_OEM_FREE(pbResponse2);
++    KeyPath_UnInitialize();
++    GST_DEBUG("end, dr=0x%x", (int)dr);
++    return (int)dr;
++}
++
++static DRM_RESULT PlayReadyOpenDrm(void)
++{
++	int index = 0;
++    DRM_RESULT dr = DRM_SUCCESS;
++
++    char prhds[] = PLAYREADY_TMPFILE_DIR "pr.hds";
++    DRM_WCHAR wprhds[sizeof(prhds)] = {0};
++    stringToWString(wprhds, prhds);
++    const DRM_CONST_STRING pdstrDataStoreFile = DRM_CREATE_DRM_STRING(wprhds);
++    const DRM_CONST_STRING *rights[1] = { &g_dstrWMDRM_RIGHT_PLAYBACK };
++
++    DRM_BYTE *pbHeader = NULL;
++    DRM_DWORD cbHeader = 0;
++    DRM_BYTE *pbHeader2 = NULL;
++    DRM_CONST_STRING dstrHeader = DRM_EMPTY_DRM_STRING;
++    DRM_SUBSTRING dasstrHeader1 = DRM_EMPTY_DRM_SUBSTRING;
++
++    char pin[] = PLAYREADY_TMPFILE_DIR "sstr.xml";
++    DRM_WCHAR wpin[sizeof(pin)] = {0};
++    stringToWString(wpin, pin);
++    const DRM_CONST_STRING strin = DRM_CREATE_DRM_STRING(wpin);
++
++	pthread_mutex_lock(&playready_mutex);
++
++    //SetDbgAnalyzeFunction(DebugAnalyze);
++
++    if (drminfo.IsInit == 0) {
++
++        memset(&drminfo, 0, sizeof(drminfo));
++
++		drminfo.IsInit = 1;
++        drminfo.IsDecryptInit = FALSE;
++
++        ChkDR( DRMTOOLS_DrmInitializeWithOpaqueBuffer(NULL,
++                                                      &pdstrDataStoreFile,
++                                                      TOOLS_DRM_BUFFER_SIZE,
++                                                      &drminfo.OpaqueBuffer,
++                                                      &drminfo.AppContext) );
++        if (DRM_REVOCATION_IsRevocationSupported())
++        {
++            ChkMem( drminfo.RevocationBuffer = (DRM_BYTE *)Oem_MemAlloc(REVOCATION_BUFFER_SIZE) );
++            ChkDR( Drm_Revocation_SetBuffer(drminfo.AppContext, drminfo.RevocationBuffer,
++                REVOCATION_BUFFER_SIZE) );
++        }
++
++        ChkDR( LoadFile(&strin, &pbHeader, &cbHeader) );
++        ChkMem( pbHeader2 = (DRM_BYTE *)Oem_MemAlloc( cbHeader * sizeof( DRM_WCHAR ) ) );
++        DRM_DSTR_FROM_PB( &dstrHeader, pbHeader2, cbHeader * sizeof( DRM_WCHAR ) );
++        dasstrHeader1.m_cch = cbHeader;
++
++        DRM_UTL_PromoteASCIItoUNICODE( (const DRM_CHAR *)pbHeader,
++                                      &dasstrHeader1,
++                                      ( DRM_STRING * )&dstrHeader );
++
++        ChkDR( Drm_Content_SetProperty( drminfo.AppContext,
++                                        DRM_CSP_AUTODETECT_HEADER,
++                                        DRM_PB_DSTR( &dstrHeader ),
++                                        DRM_CB_DSTR( &dstrHeader ) ) );
++
++        ChkDR( Drm_Reader_Bind(drminfo.AppContext,
++                              rights,
++                              DRM_NO_OF(rights),
++                              (DRMPFNPOLICYCALLBACK)BindCallback,
++                              NULL,
++                              &drminfo.DecryptContext) );
++        drminfo.IsDecryptInit = TRUE;
++
++        ChkDR( Drm_Reader_Commit(drminfo.AppContext, NULL, NULL) );
++
++        SAFE_OEM_FREE(pbHeader);
++        SAFE_OEM_FREE(pbHeader2);
++    }
++
++	/* ref++ */
++	currPlayreadyRef++;
++	pthread_mutex_unlock(&playready_mutex);
++    return dr;
++ErrorExit:
++    GST_ERROR("OpenDrm failed:dr=0x%x", (int)dr);
++    if (drminfo.IsDecryptInit)
++    {
++        Drm_Reader_Close(&drminfo.DecryptContext);
++    }
++
++    DRMTOOLS_DrmUninitializeWithOpaqueBuffer(&drminfo.OpaqueBuffer, &drminfo.AppContext);
++    SAFE_OEM_FREE(drminfo.RevocationBuffer);
++    SAFE_OEM_FREE(pbHeader);
++    SAFE_OEM_FREE(pbHeader2);
++	drminfo.IsInit = 0;
++	pthread_mutex_unlock(&playready_mutex);
++    return dr;
++}
++
++static DRM_RESULT PlayReadyCloseDrm(void)
++{
++    DRM_RESULT dr = DRM_SUCCESS;
++
++	pthread_mutex_lock(&playready_mutex);
++	if(--currPlayreadyRef > 0){
++		pthread_mutex_unlock(&playready_mutex);
++		GST_WARNING("Playready is being used, not closed, currPlayreadyRef %u", currPlayreadyRef);
++		return dr;
++	}
++	pthread_mutex_unlock(&playready_mutex);
++
++    if (drminfo.IsInit == 1) {
++        if (drminfo.IsDecryptInit)
++        {
++            Drm_Reader_Close(&drminfo.DecryptContext);
++        }
++
++        DRMTOOLS_DrmUninitializeWithOpaqueBuffer(&drminfo.OpaqueBuffer, &drminfo.AppContext);
++        SAFE_OEM_FREE(drminfo.RevocationBuffer);
++        drminfo.IsInit = 0;
++
++		playready_doLicensed = FALSE;
++
++		GST_INFO("Release the playready DRM.");
++    }
++
++    return dr;
++}
++int doLicense(char *manifest)
++{
++	int success = -1;
++    unsigned int i,j;
++    FILE *fp = NULL;
++    char *currManifest = NULL;
++	int currManifestLength = 0;
++
++	if(!manifest)
++		return -1;
++
++	/* Get the certificate only once */
++	pthread_mutex_lock(&playready_mutex);
++	if(playready_doLicensed){
++		pthread_mutex_unlock(&playready_mutex);
++		return 0;
++	}
++
++    int len = strlen((char*)manifest);
++    int str_len;
++
++    /* base64decode wrmheader */
++    if(strstr((char*)manifest,"=="))
++        str_len = len/4*3-2;
++    else if(strstr((char*)manifest,"="))
++        str_len = len/4*3-1;
++    else
++        str_len = len/4;
++
++    unsigned char* Header = malloc(str_len+1);
++    success = base64_decode(manifest, Header);
++
++    if(success <= 0){
++        GST_ERROR("base64 decode fail. %s %d", __func__, __LINE__);
++        free(Header);
++        goto ErrorExit;
++    }
++    /* drop all '\0',so we can get the real Header */
++    for(i=j=0;i< str_len;i++){
++        if(Header[i] != '\0'){
++            Header[j++] = Header[i];
++        }
++    }
++    Header[j] = '\0';
++
++    char * WRMHeader = strstr((char*)Header, "<WRMHEADER");
++    GST_DEBUG("WRMHeader=%s",WRMHeader);
++
++    /* save WRMHeader data in sstr.xml */
++    fp = fopen(WRMHeaderPath, "r" );
++    if(fp){
++        fclose(fp);
++        fp = NULL;
++        remove(WRMHeaderPath);
++    }
++    fp = fopen(WRMHeaderPath, "wb");
++    if (fp){
++        fwrite(WRMHeader, 1, strlen(WRMHeader), fp);
++    }
++    fclose(fp);
++
++    /* ack and process license using wrmheader. */
++    if (WRMHeader != NULL) {
++		int dolicense = 0;
++        /* get license acquire URL */
++        char* LA_URL = strstr(WRMHeader, "<LA_URL>");
++        LA_URL += 8;
++        char* LA_URL_END = strstr(WRMHeader, "</LA_URL>");
++        LA_URL_END[0] = '\0';
++        GST_DEBUG("LA_URL=%s",LA_URL);
++DOLICENSE:
++        success = -1;
++        success = doLicensing(LA_URL);
++		if ((success == DRM_E_FAIL) && (dolicense == 0)){
++			GST_ERROR("doLicensing return error,do it again.");
++			dolicense++;
++			goto DOLICENSE;
++		}
++    }
++    free(Header);
++
++    if (!success){
++		playready_doLicensed = TRUE;
++		pthread_mutex_unlock(&playready_mutex);
++		GST_INFO("license succeed.");
++        return 0;
++    }
++
++ErrorExit:
++	pthread_mutex_unlock(&playready_mutex);
++    GST_ERROR("license failed return=0x%x.", (int)success);
++    return -1;
++}
++
++int OpenPlayReadyDrm(void)
++{
++	if(PlayReadyOpenDrm() == DRM_SUCCESS){
++    	GST_INFO("OpenDrm succeed.");
++		return 0;
++	}else
++		return -1;
++}
++
++int ClosePlayReadyDrm(void)
++{
++	if(PlayReadyCloseDrm() == DRM_SUCCESS){
++		GST_INFO("CloseDrm succeed.");
++		return 0;
++	}else
++		return -1;
++}
++
++gint PlayReadyDecrypt(GstBuffer *buf, guint64 iv, guint32 region_count, guint32 *regions)
++{
++  DRM_RESULT dr = DRM_SUCCESS;
++  GstMapInfo map;
++  guint8 *data;
++  guint size;
++  unsigned char *opaque_buf;
++  unsigned int opaque_size;
++  unsigned int decryptCount = 0;
++
++  gst_buffer_map (buf, &map, GST_MAP_READ);
++  data = map.data;
++  size = map.size;
++
++  if(region_count == 0){
++    region_count = 2;
++    regions[0] = 0;
++    regions[1] = size;
++  }
++
++  pthread_mutex_lock(&playready_mutex);
++DECRTPT:
++  decryptCount++;
++  /* decrypt */
++  dr = Drm_Reader_DecryptOpaque(&drminfo.DecryptContext,
++                region_count,
++                regions,
++                iv,
++                size,
++                data,
++                &opaque_size,
++                &opaque_buf);
++  if(dr != DRM_SUCCESS) {
++    GST_ERROR("decryptCount %u, decrypt fail:dr=0x%x", decryptCount, (int)dr);
++	if(opaque_buf && opaque_size > 0)
++    	DRM_Reader_FreeOpaqueDecryptedContent(&drminfo.DecryptContext, opaque_size, opaque_buf);
++
++	if(decryptCount < DECRYPT_ERROR_NUM)
++		goto DECRTPT;
++
++    pthread_mutex_unlock(&playready_mutex);
++    gst_buffer_unmap (buf, &map);
++    return -1;
++  }
++
++  gst_buffer_unmap (buf, &map);
++
++  /* copy */
++  memset(&map, 0, sizeof(GstMapInfo));
++  gst_buffer_map (buf, &map, GST_MAP_WRITE);
++  data = map.data;
++  size = map.size;
++
++  memcpy(data, opaque_buf, size);
++
++  DRM_Reader_FreeOpaqueDecryptedContent(&drminfo.DecryptContext, opaque_size, opaque_buf);
++  gst_buffer_unmap (buf, &map);
++  pthread_mutex_unlock(&playready_mutex);
++
++  GST_DEBUG("decrypt succeed.");
++
++  return opaque_size;
++}
++
++#else
++int doLicense(char* manifest)
++{
++  return 0;
++}
++
++int OpenPlayReadyDrm(void)
++{
++  return 0;
++}
++
++int ClosePlayReadyDrm(void)
++{
++  return 0;
++}
++
++gint PlayReadyDecrypt(GstBuffer *buf, guint64 iv, guint32 region_count, guint32 *regions)
++{
++  return 0;
++}
++#endif
+diff --git a/gst/isomp4/awPlayReadyLicense.h b/gst/isomp4/awPlayReadyLicense.h
+new file mode 100755
+index 0000000..c40ddb2
+--- /dev/null
++++ b/gst/isomp4/awPlayReadyLicense.h
+@@ -0,0 +1,11 @@
++#ifndef AW_PLAYREADY_LICENSE_H
++#define AW_PLAYREADY_LICENSE_H
++
++#include <glib.h>
++
++int doLicense(char* manifest);
++int OpenPlayReadyDrm(void);
++int ClosePlayReadyDrm(void);
++gint PlayReadyDecrypt(GstBuffer *buf, guint64 iv, guint32 region_count, guint32 *regions);
++
++#endif /* AW_PLAYREADY_LICENSE_H */
+diff --git a/gst/isomp4/qtdemux.c b/gst/isomp4/qtdemux.c
+index a6f870f..82da2f0 100644
+--- a/gst/isomp4/qtdemux.c
++++ b/gst/isomp4/qtdemux.c
+@@ -82,6 +82,8 @@
+ # include <zlib.h>
+ #endif
+ 
++#include "awPlayReadyLicense.h"
++
+ /* max. size considered 'sane' for non-mdat atoms */
+ #define QTDEMUX_MAX_ATOM_SIZE (25*1024*1024)
+ 
+@@ -469,13 +471,15 @@ static GNode *qtdemux_tree_get_sibling_by_type_full (GNode * node,
+     guint32 fourcc, GstByteReader * parser);
+ 
+ static GstFlowReturn qtdemux_add_fragmented_samples (GstQTDemux * qtdemux);
+-
++#define PLAYREADY_SYSTEM_ID "9A04F079-9840-4286-AB92-E65BE0885F95"
+ static GstStaticPadTemplate gst_qtdemux_sink_template =
+     GST_STATIC_PAD_TEMPLATE ("sink",
+     GST_PAD_SINK,
+     GST_PAD_ALWAYS,
+     GST_STATIC_CAPS ("video/quicktime; video/mj2; audio/x-m4a; "
+-        "application/x-3gp")
++        "application/x-3gp; "
++        "application/x-cenc, "
++          GST_PROTECTION_SYSTEM_ID_CAPS_FIELD "=(string)" PLAYREADY_SYSTEM_ID)
+     );
+ 
+ static GstStaticPadTemplate gst_qtdemux_videosrc_template =
+@@ -615,7 +619,7 @@ gst_qtdemux_class_init (GstQTDemuxClass * klass)
+   gst_element_class_add_static_pad_template (gstelement_class,
+       &gst_qtdemux_subsrc_template);
+   gst_element_class_set_static_metadata (gstelement_class, "QuickTime demuxer",
+-      "Codec/Demuxer",
++      "Codec/Demuxer/Decryptor",
+       "Demultiplex a QuickTime file into audio and video streams",
+       "David Schleef <ds@schleef.org>, Wim Taymans <wim@fluendo.com>");
+ 
+@@ -661,6 +665,8 @@ gst_qtdemux_init (GstQTDemux * qtdemux)
+   qtdemux->cenc_aux_info_sizes = NULL;
+   qtdemux->cenc_aux_sample_count = 0;
+   qtdemux->protection_system_ids = NULL;
++  qtdemux->protected_playready = FALSE;
++  qtdemux->playready_openDRM = FALSE;
+   g_queue_init (&qtdemux->protection_event_queue);
+   gst_segment_init (&qtdemux->segment, GST_FORMAT_TIME);
+   qtdemux->tag_list = gst_tag_list_new_empty ();
+@@ -2381,10 +2387,38 @@ gst_qtdemux_handle_sink_event (GstPad * sinkpad, GstObject * parent,
+     case GST_EVENT_PROTECTION:
+     {
+       const gchar *system_id = NULL;
++      GstBuffer *data;
++      const gchar *origin;
+ 
+-      gst_event_parse_protection (event, &system_id, NULL, NULL);
++      gst_event_parse_protection (event, &system_id, &data, &origin);
+       GST_DEBUG_OBJECT (demux, "Received protection event for system ID %s",
+           system_id);
++
++      if ((g_ascii_strcasecmp (system_id, PLAYREADY_SYSTEM_ID) == 0) &&
++          (g_strcmp0 (origin, "smooth-streaming") == 0)) {
++		  GstMapInfo info;
++		  gchar *value;
++
++          demux->protected_playready = TRUE;
++		  GST_DEBUG_OBJECT (demux, "Playready certificate acquisition operation");
++          /* extract WRMHeader */
++          gst_buffer_map (data, &info, GST_MAP_READ);
++
++          value = g_malloc (info.size + 1);
++          strncpy (value, (gchar *) info.data, info.size);
++          value[info.size] = 0;
++          gst_buffer_unmap (data, &info);
++
++		  if (doLicense(value) == 0)
++			GST_DEBUG_OBJECT (demux, "Successful certification of playready");
++		  else
++			GST_ERROR_OBJECT (demux, "playready certification failed");
++
++          g_free (value);
++
++      	  res = TRUE;
++      	  goto drop;
++      }
+       gst_qtdemux_append_protection_system_id (demux, system_id);
+       /* save the event for later, for source pads that have not been created */
+       g_queue_push_tail (&demux->protection_event_queue, gst_event_ref (event));
+@@ -2520,6 +2554,12 @@ gst_qtdemux_stream_clear (GstQTDemux * qtdemux, QtDemuxStream * stream)
+   stream->redirect_uri = NULL;
+   stream->sent_eos = FALSE;
+   stream->protected = FALSE;
++  /* clear the playready decryption component */
++  if (qtdemux->protected_playready && qtdemux->playready_openDRM)
++    ClosePlayReadyDrm();
++  qtdemux->protected_playready = FALSE;
++  qtdemux->playready_openDRM = FALSE;
++
+   if (stream->protection_scheme_info) {
+     if (stream->protection_scheme_type == FOURCC_cenc) {
+       QtDemuxCencSampleSetInfo *info =
+@@ -2671,15 +2711,22 @@ qtdemux_parse_piff (GstQTDemux * qtdemux, const guint8 * buffer, gint length,
+   stream = qtdemux->streams[0];
+ 
+   structure = gst_caps_get_structure (CUR_STREAM (stream)->caps, 0);
+-  if (!gst_structure_has_name (structure, "application/x-cenc")) {
++
++  /* playready encryption does not check this value */
++  if (!qtdemux->protected_playready &&
++      !gst_structure_has_name (structure, "application/x-cenc")) {
+     GST_WARNING_OBJECT (qtdemux,
+         "Attempting PIFF box parsing on an unencrypted stream.");
+     return;
+   }
+ 
+-  gst_structure_get (structure, GST_PROTECTION_SYSTEM_ID_CAPS_FIELD,
+-      G_TYPE_STRING, &system_id, NULL);
+-  gst_qtdemux_append_protection_system_id (qtdemux, system_id);
++  /* playready encryption does not check this value */
++  if (!qtdemux->protected_playready) {
++    gst_structure_get (structure, GST_PROTECTION_SYSTEM_ID_CAPS_FIELD,
++        G_TYPE_STRING, &system_id, NULL);
++    gst_qtdemux_append_protection_system_id (qtdemux, system_id);
++  }else
++    gst_qtdemux_append_protection_system_id (qtdemux, PLAYREADY_SYSTEM_ID);
+ 
+   stream->protected = TRUE;
+   stream->protection_scheme_type = FOURCC_cenc;
+@@ -2784,6 +2831,7 @@ qtdemux_parse_piff (GstQTDemux * qtdemux, const guint8 * buffer, gint length,
+       gst_structure_free (properties);
+       return;
+     }
++
+     buf = gst_buffer_new_wrapped (data, iv_size);
+     gst_structure_set (properties, "iv", GST_TYPE_BUFFER, buf, NULL);
+     gst_buffer_unref (buf);
+@@ -2799,6 +2847,7 @@ qtdemux_parse_piff (GstQTDemux * qtdemux, const guint8 * buffer, gint length,
+         return;
+       }
+       GST_LOG_OBJECT (qtdemux, "subsample count: %u", n_subsamples);
++
+       if (!gst_byte_reader_dup_data (&br, n_subsamples * 6, &data)) {
+         GST_ERROR_OBJECT (qtdemux, "failed to get subsample data for sample %u",
+             i);
+@@ -2816,6 +2865,15 @@ qtdemux_parse_piff (GstQTDemux * qtdemux, const guint8 * buffer, gint length,
+ 
+     g_ptr_array_add (ss_info->crypto_info, properties);
+   }
++
++  /* open playready drm */
++  if (!qtdemux->playready_openDRM) {
++    if (OpenPlayReadyDrm() == 0)
++      qtdemux->playready_openDRM = TRUE;
++    else
++      GST_ERROR_OBJECT (qtdemux, "open playready drm failed");
++  }
++
+ }
+ 
+ static void
+@@ -5544,7 +5602,6 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
+     stream->on_keyframe = TRUE;
+   }
+ 
+-
+   GST_LOG_OBJECT (qtdemux,
+       "Pushing buffer with dts %" GST_TIME_FORMAT ", pts %" GST_TIME_FORMAT
+       ", duration %" GST_TIME_FORMAT " on pad %s", GST_TIME_ARGS (dts),
+@@ -5574,11 +5631,72 @@ gst_qtdemux_decorate_and_push_buffer (GstQTDemux * qtdemux,
+     if (G_LIKELY (index >= 0 && index < info->crypto_info->len)) {
+       /* steal structure from array */
+       crypto_info = g_ptr_array_index (info->crypto_info, index);
+-      g_ptr_array_index (info->crypto_info, index) = NULL;
+-      GST_LOG_OBJECT (qtdemux, "attaching cenc metadata [%u/%u]", index,
+-          info->crypto_info->len);
+-      if (!crypto_info || !gst_buffer_add_protection_meta (buf, crypto_info))
+-        GST_ERROR_OBJECT (qtdemux, "failed to attach cenc metadata to buffer");
++
++      /* playready Decrypt */
++      if (qtdemux->protected_playready) {
++        const GValue *value;
++        guint subsample_count = 0;
++        GstBuffer *buffer = NULL;
++        GstMapInfo map;
++        guint8 *data;
++        guint size;
++        guint i;
++        guint ret = 0;
++        guint64 iv = 0;
++        guint32 region_count = 0;
++        guint32 regions[32]; /* 16 pairs max */
++
++        /* Get decryption information */
++        if (gst_structure_has_field_typed (crypto_info, "iv", GST_TYPE_BUFFER)) {
++          gst_structure_get (crypto_info, "iv", GST_TYPE_BUFFER, &buffer, NULL);
++          gst_buffer_map (buffer, &map, GST_MAP_READ);
++          data = map.data;
++          size = map.size;
++          iv = QT_UINT64(data);
++          GST_DEBUG_OBJECT (qtdemux, "info->crypto_info index %u iv = %"G_GUINT64_FORMAT, index, iv);
++          gst_buffer_unmap (buffer, &map);
++        }
++        if (gst_structure_has_field_typed (crypto_info, "subsample_count", G_TYPE_UINT)) {
++          value = gst_structure_get_value (crypto_info, "subsample_count");
++          subsample_count = g_value_get_uint (value);
++          region_count = subsample_count * 2;
++          GST_DEBUG_OBJECT (qtdemux, "info->crypto_info index %d region_count %u", index, region_count);
++        }
++        if (gst_structure_has_field_typed (crypto_info, "subsamples", GST_TYPE_BUFFER)) {
++          gst_structure_get (crypto_info, "subsamples", GST_TYPE_BUFFER, &buffer, NULL);
++          gst_buffer_map (buffer, &map, GST_MAP_READ);
++          data = map.data;
++          size = map.size;
++          if (size < subsample_count*6){
++            GST_ERROR_OBJECT (qtdemux, "subsamples size error");
++            gst_buffer_unmap (buffer, &map);
++            goto exit;
++          }
++          for(i = 0; i < subsample_count; ++i){
++            if (i < 16) {
++              regions[i*2] = QT_UINT16(data);
++              regions[i*2+1] = QT_UINT32(data+2);
++            }
++            GST_DEBUG_OBJECT (qtdemux, "info->crypto_info index %u subsamples regions[%d] = %u", index, i*2, regions[i*2]);
++            GST_DEBUG_OBJECT (qtdemux, "info->crypto_info index %u subsamples regions[%d] = %u", index, i*2+1, regions[i*2+1]);
++            data += 6;
++          }
++          gst_buffer_unmap (buffer, &map);
++        }
++
++        /* Decrypt */
++        GST_LOG_OBJECT (qtdemux, "Will be decrypted");
++        ret = PlayReadyDecrypt(buf, iv, region_count, regions);
++        if (ret < 0)
++          GST_ERROR_OBJECT (qtdemux, "decrypt failed");
++      } else {
++        g_ptr_array_index (info->crypto_info, index) = NULL;
++
++        GST_LOG_OBJECT (qtdemux, "attaching cenc metadata [%u/%u]", index,
++            info->crypto_info->len);
++        if (!crypto_info || !gst_buffer_add_protection_meta (buf, crypto_info))
++          GST_ERROR_OBJECT (qtdemux, "failed to attach cenc metadata to buffer");
++      }
+     } else {
+       GST_INFO_OBJECT (qtdemux, "No crypto info with index %d and sample %d",
+           index, stream->sample_index);
+@@ -7980,7 +8098,7 @@ gst_qtdemux_configure_stream (GstQTDemux * qtdemux, QtDemuxStream * stream)
+ 
+     gst_pad_use_fixed_caps (stream->pad);
+ 
+-    if (stream->protected) {
++    if (stream->protected && !qtdemux->protected_playready) {
+       if (!gst_qtdemux_configure_protected_caps (qtdemux, stream)) {
+         GST_ERROR_OBJECT (qtdemux,
+             "Failed to configure protected stream caps.");
+diff --git a/gst/isomp4/qtdemux.h b/gst/isomp4/qtdemux.h
+index ad4da3e..8474027 100644
+--- a/gst/isomp4/qtdemux.h
++++ b/gst/isomp4/qtdemux.h
+@@ -151,7 +151,8 @@ struct _GstQTDemux {
+   guint64 cenc_aux_info_offset;
+   guint8 *cenc_aux_info_sizes;
+   guint32 cenc_aux_sample_count;
+-
++  gboolean playready_openDRM; /* Record whether the DRM has been opened */
++  gboolean protected_playready; /* playready encryption flag */
+ 
+   /*
+    * ALL VARIABLES BELOW ARE ONLY USED IN PUSH-BASED MODE

@@ -1,0 +1,42 @@
+--- a/cv_bridge/CMakeLists.txt	2018-04-17 06:00:21.000000000 +0800
++++ b/cv_bridge/CMakeLists.txt	2019-11-30 14:55:19.024075478 +0800
+@@ -13,7 +13,7 @@
+ else()
+ find_package(Boost REQUIRED)
+ endif()
+-find_package(OpenCV 3 REQUIRED
++find_package(OpenCV REQUIRED
+   COMPONENTS
+     opencv_core
+     opencv_imgproc
+--- a/cv_bridge/src/CMakeLists.txt	2018-04-17 06:00:21.000000000 +0800
++++ b/cv_bridge/src/CMakeLists.txt	2019-11-30 15:06:41.560104564 +0800
+@@ -34,6 +34,8 @@
+ 
+ if (OpenCV_VERSION_MAJOR VERSION_EQUAL 3)
+ add_library(${PROJECT_NAME}_boost module.cpp module_opencv3.cpp)
++elseif(OpenCV_VERSION_MAJOR VERSION_EQUAL 4)
++add_library(${PROJECT_NAME}_boost module.cpp module_opencv3.cpp)
+ else()
+ add_library(${PROJECT_NAME}_boost module.cpp module_opencv2.cpp)
+ endif()
+--- a/cv_bridge/src/module_opencv3.cpp	2018-04-17 06:00:21.000000000 +0800
++++ b/cv_bridge/src/module_opencv3.cpp	2019-11-30 15:16:21.112129262 +0800
+@@ -107,7 +107,7 @@
+         return u;
+     }
+ 
+-    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, int flags, UMatUsageFlags usageFlags) const
++    UMatData* allocate(int dims0, const int* sizes, int type, void* data, size_t* step, AccessFlag flags, UMatUsageFlags usageFlags) const
+     {
+         if( data != 0 )
+         {
+@@ -136,7 +136,7 @@
+         return allocate(o, dims0, sizes, type, step);
+     }
+ 
+-    bool allocate(UMatData* u, int accessFlags, UMatUsageFlags usageFlags) const
++    bool allocate(UMatData* u, AccessFlag accessFlags, UMatUsageFlags usageFlags) const
+     {
+         return stdAllocator->allocate(u, accessFlags, usageFlags);
+     }

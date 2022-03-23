@@ -1,0 +1,766 @@
+#!/bin/bash
+
+ROOT_PATH=$(cd "$(dirname "$0")"; pwd)
+
+################################################################################
+## files for configuration.
+################################################################################
+configFiles_mk=("${ROOT_PATH}/config.mk")
+configFiles_h=("${ROOT_PATH}/config.h" "${ROOT_PATH}/CODEC/VIDEO/DECODER/include/vdecoder_config.h")
+
+################################################################################
+## variables for configuration.
+################################################################################
+CONFIGURATIONS=(
+    CONFIG_CC                                   nu              0
+    CONFIG_OS                                   nu              0
+    CONFIG_OS_VERSION                           nu              0
+    CONFIG_PRODUCT                              nu              0
+    CONFIG_CHIP                                 nu              0
+    CONFIG_LOG_LEVEL                            nu              0
+    CONFIG_ENABLE_DEMUX_ASF                     nu              0
+    CONFIG_ENABLE_DEMUX_AVI                     nu              0
+    CONFIG_ENABLE_DEMUX_BLUERAYDISK             nu              0
+    CONFIG_ENABLE_DEMUX_MPEGDASH                nu              0
+    CONFIG_ENABLE_DEMUX_FLV                     nu              0
+    CONFIG_ENABLE_DEMUX_HLS                     nu              0
+    CONFIG_ENABLE_DEMUX_MKV                     nu              0
+    CONFIG_ENABLE_DEMUX_MMS                     nu              0
+    CONFIG_ENABLE_DEMUX_MOV                     nu              0
+    CONFIG_ENABLE_DEMUX_MPG                     nu              0
+    CONFIG_ENABLE_DEMUX_PMP                     nu              0
+    CONFIG_ENABLE_DEMUX_OGG                     nu              0
+    CONFIG_ENABLE_DEMUX_RX                      nu              0
+    CONFIG_ENABLE_DEMUX_TS                      nu              0
+	CONFIG_HAVE_ZLIB                            nu              0
+	CONFIG_HAVE_SSL                             nu              0
+	CONFIG_HAVE_LIVE555                         nu              0
+	CONFIG_CEDARX_PATH                          nu              0
+	CONFIG_MMS                                  nu              0
+)
+
+################################################################################
+## help message.
+################################################################################
+show_help()
+{
+    cat <<EOF
+********************************************************************************
+********************************************************************************
+Usage:   configure [options]
+Options: [read from configuration files if not specified]
+
+Help options:
+
+  --help                        print this message
+
+  --show-config                 print the configurations
+
+Standard options:
+
+  --tool-chain=compile_tool_set the compile tool chain, option can be [gnueabihf/gnueabi/ucgnueabi/linuxgnueabi/muslgnueabi/muslgnueabi64/uclibc_arm926], not used for android os.
+
+  --cedarx-path=path            the absolute path of liballwinner.
+
+  --os=target_os                the target os, option can be [android/linux].
+
+  --os-version=version          target os version, for android os, option can be [4.2/4.4/5.0], not used for other os.
+
+  --product=product_type        the target product type, option can be [pad/tvbox/ott_cmcc/iptv/dvb/loudspeaker].
+
+  --chip=chip_code              the target chip, option can be [r8/r16/r58/r18/c500/t2/t3/r40/v40].
+
+  --debug-level=level           log output level for debug, option can be [close/error/warning/default/detail].
+
+  --libz-enable=libz            the libz library enable or not, option can be [yes/no].
+
+  --ssl-enable=ssl              the openssl library enable or not, option can be [yes/no].
+
+  --live555-enable=live555      the live555 library enable or not, option can be [yes/no].
+
+  --mms=enable                  the mms stream enable or not, option can be [yes/no].
+
+  --disable-demux=demuxer       disable demux for specific file format, option can be [asf/avi/bd/dash/flv/hls/mkv/mms/mov/mpg/pmp/ogg/rx/ts].
+
+  --enable-demux=demuxer        enable demux for specific file format, option can be [asf/avi/bd/dash/flv/hls/mkv/mms/mov/mpg/pmp/ogg/rx/ts].
+
+  --disable-vdecoder=decoder    diable video decoder for specific codec format,
+                                option can be [mjpeg/mpeg1/mpeg2/mpeg4/msmpeg4v1/msmpeg4v2/divx3/divx4/divx5/xvid/h263/s263/rxg2/wmv1/wmv2/wmv3/vp6/vp8/vp9/rx/h264/h265].
+
+  --enable-vdecoder=decoder     enable video decoder for specific codec format,
+                                option can be [mjpeg/mpeg1/mpeg2/mpeg4/msmpeg4v1/msmpeg4v2/divx3/divx4/divx5/xvid/h263/s263/rxg2/wmv1/wmv2/wmv3/vp6/vp8/vp9/rx/h264/h265].
+
+Note: This script read configurations from files, change configuration according to user command and write back to files.
+
+********************************************************************************
+********************************************************************************
+
+EOF
+  exit 0
+}
+
+################################################################################
+## read configuration from files.
+################################################################################
+for myFile in ${configFiles_h[*]}
+do
+    if [ ! -f "$myFile" ]; then
+        continue
+    fi
+
+    while read line
+    do
+        i=0
+        key=""
+        value=""
+
+        ## abstract a configuration from one line.
+        for element in $line
+        do
+            ## if the line is not start with "#define", it is not code for configuration, skip it.
+            if [ $i -eq 0 ]; then
+                if [ $element != "#define" ]; then
+                    break;
+                fi
+            fi
+
+            ## set key.
+            if [ $i -eq 1 ]; then
+                key=$element
+            fi
+
+            ## set value.
+            if [ $i -eq 2 ]; then
+                value=$element
+            fi
+
+            i=$((i+1))
+            if [ $i -ge 3 ]; then
+                break;
+            fi
+        done
+
+        prefix="CONFIG_"
+        prefix_length=${#prefix}
+        if [ ${#value} -gt 0 ]; then
+            if [ "${key:0:$prefix_length}" != "$prefix" ]; then
+                continue
+            fi
+        else
+            continue
+        fi
+
+        len=${#CONFIGURATIONS[*]}
+        for ((j=0; j<len; j=j+3))
+        do
+            if [ $key = ${CONFIGURATIONS[$j]} ]; then
+                CONFIGURATIONS[$((j+1))]=$value
+                break;
+            fi
+        done
+    done < $myFile
+done
+
+################################################################################
+## read configuration from files.[config.mk]
+################################################################################
+for myFile in ${configFiles_mk[*]}
+do
+    if [ ! -f "$myFile" ]; then
+        continue
+    fi
+
+    while read line
+    do
+        i=0
+        key=""
+        value=""
+
+        ## abstract a configuration from one line.
+        for element in $line
+        do
+            ## if the line is not start with "CONFIG_", it is not code for configuration, skip it.
+            if [ $i -eq 0 ]; then
+                if [ $(echo $element | cut -c 1-7) != "CONFIG_" ]; then
+                    break;
+                fi
+                ## set key.
+                key=$element
+            fi
+
+            ## if the line has no '=', it is not code for configuration, skip it.
+            if [ $i -eq 1 ]; then
+                if [ $element != '=' ]; then
+                    break;
+                fi
+            fi
+
+            ## set value.
+            if [ $i -eq 2 ]; then
+                value=$(echo $element | cut -d '(' -f 2 | cut -d ')' -f 1)
+            fi
+
+            i=$((i+1))
+            if [ $i -ge 3 ]; then
+                break;
+            fi
+        done
+
+        prefix="CONFIG_"
+        prefix_length=${#prefix}
+        if [ ${#value} -gt 0 ]; then
+            if [ "${key:0:$prefix_length}" != "$prefix" ]; then
+                echo ${key:0:$prefix_length}
+                continue
+            fi
+        else
+            continue
+        fi
+
+        len=${#CONFIGURATIONS[*]}
+        for ((j=0; j<len; j=j+3))
+        do
+            if [ $key = ${CONFIGURATIONS[$j]} ]; then
+                if [ ${CONFIGURATIONS[$((j+2))]} = 0 ]; then
+                    CONFIGURATIONS[$((j+1))]=$value
+                    CONFIGURATIONS[$((j+2))]=1
+                    break;
+                fi
+            fi
+        done
+    done < $myFile
+done
+
+################################################################################
+## process user commands.
+################################################################################
+for opt do
+    optval="${opt#*=}"
+    optval=$(echo $optval)
+
+    key=""
+    value=""
+
+    case "$opt" in
+        ## show the help message.
+        --help|-h) show_help
+        ;;
+
+        ## show the configurations read from file.
+        --show-config)
+            len=${#CONFIGURATIONS[*]}
+            for((k=0; k<len; k+=3))
+            do
+                echo ${CONFIGURATIONS[$k]} = ${CONFIGURATIONS[$((k+1))]}
+            done
+        ;;
+
+        ## config the compile tool chain, option can be [gnueabihf/gnueabi/linuxgnueabi], not used for android os.
+        --tool-chain=*)
+            key=CONFIG_CC
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid tool chain option."
+                continue
+            fi
+
+            if [ $optval = "gnueabihf" ]; then
+                value=OPTION_CC_GNUEABIHF
+            elif [ $optval = "gnueabi" ]; then
+                value=OPTION_CC_GNUEABI
+            elif [ $optval = "ucgnueabi" ]; then
+                value=OPTION_CC_UCGNUEABI
+            elif [ $optval = "linuxgnueabi" ]; then
+                value=OPTION_CC_LINUX_UCGNUEABI
+			elif [ $optval = "muslgnueabi" ]; then
+                value=OPTION_CC_LINUX_MUSLGNUEABI
+            elif [ $optval = "muslgnueabi64" ]; then
+                value=OPTION_CC_LINUX_MUSLGNUEABI64
+            elif [ $optval = "uclibc_arm926" ]; then
+                value=OPTION_CC_UCLIBC_ARM926
+            else
+                echo "invalid tool chain $optval."
+                continue
+            fi
+        ;;
+
+        ## config the target os, option can be [android/linux].
+        --os=*)
+            key=CONFIG_OS
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid os option."
+                continue
+            fi
+
+            if [ $optval = "android" ]; then
+                value=OPTION_OS_ANDROID
+            elif [ $optval = "linux" ]; then
+                value=OPTION_OS_LINUX
+            else
+                echo "invalid os option $optval."
+                continue
+            fi
+        ;;
+
+        ## config the target os version, for android os, option can be [4.2/4.4/5.0], not used for other os.
+        --os-version=*)
+            key=CONFIG_OS_VERSION
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid os version option."
+                continue
+            fi
+
+            if [ $optval = "4.2" ]; then
+                value=OPTION_OS_VERSION_ANDROID_4_2
+            elif [ $optval = "4.4" ]; then
+                value=OPTION_OS_VERSION_ANDROID_4_4
+            elif [ $optval = "5.0" ]; then
+                value=OPTION_OS_VERSION_ANDROID_5_0
+            else
+                echo "invalid os version option $optval."
+                continue
+            fi
+        ;;
+
+        ## config which driver to use for allocating physical continue memory block, option can be [sunximem/ion/ion_linux_3_10].
+        --memory-driver=*)
+            key=CONFIG_MEMORY_DRIVER
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid memory diriver option."
+                continue
+            fi
+
+            if [ $optval = "sunximem" ]; then
+                value=OPTION_MEMORY_DRIVER_SUNXIMEM
+            elif [ $optval = "ion" ]; then
+                value=OPTION_MEMORY_DRIVER_ION
+            else
+                echo "invalid memory diriver option $optval."
+                continue
+            fi
+        ;;
+
+        ## config the target product type, option can be [pad/tvbox/ott_cmcc/iptv/dvb/loudspeaker].
+        --product=*)
+            key=CONFIG_PRODUCT
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid product option."
+                continue
+            fi
+
+            if [ $optval = "pad" ]; then
+                value=OPTION_PRODUCT_PAD
+            elif [ $optval = "tvbox" ]; then
+                value=OPTION_PRODUCT_TVBOX
+            elif [ $optval = "ott_cmcc" ]; then
+                value=OPTION_PRODUCT_OTT_CMCC
+            elif [ $optval = "iptv" ]; then
+                value=OPTION_PRODUCT_IPTV
+            elif [ $optval = "dvb" ]; then
+                value=OPTION_PRODUCT_DVB
+            elif [ $optval = "loudspeaker" ]; then
+                value=OPTION_PRODUCT_LOUDSPEAKER
+            else
+                echo "invalid product option $optval."
+                continue
+            fi
+        ;;
+
+        ## config the target chip, option can be [r8/r16/r58/r18/c500/t2/t3].
+        --chip=*)
+            key=CONFIG_CHIP
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid chip option."
+                continue
+            fi
+
+            if [ $optval = "r8" ]; then
+			echo "r8"
+                value=OPTION_CHIP_R8
+            elif [ $optval = "r16" ]; then
+                value=OPTION_CHIP_R16
+            elif [ $optval = "c500" ]; then
+                value=OPTION_CHIP_C500
+            elif [ $optval = "r58" ]; then
+                value=OPTION_CHIP_R58
+            elif [ $optval = "r18" ]; then
+                value=OPTION_CHIP_R18
+            elif [ $optval = "t2" ]; then
+                value=OPTION_CHIP_T2
+            elif [ $optval = "t3" ]; then
+                value=OPTION_CHIP_T3
+            elif [ $optval = "v40" ]; then
+                value=OPTION_CHIP_T3
+            elif [ $optval = "r40" ]; then
+                value=OPTION_CHIP_T3
+            else
+                echo "invalid chip option $optval."
+                continue
+            fi
+        ;;
+
+        ## cofig DRAM interface, option can be [ddr1_16bits/ddr1_32bits/ddr2_16bits/ddr2_32bits/ddr3_16bits/ddr3_32bits/ddr3_64bits].
+        --dram-interface=*)
+            key=CONFIG_DRAM_INTERFACE
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid dram interface option."
+                continue
+            fi
+
+            if [ $optval = "ddr1_16bits" ]; then
+                value=OPTION_DRAM_INTERFACE_DDR1_16BITS
+            elif [ $optval = "ddr1_32bits" ]; then
+                value=OPTION_DRAM_INTERFACE_DDR1_32BITS
+            elif [ $optval = "ddr2_16bits" ]; then
+                value=OPTION_DRAM_INTERFACE_DDR2_16BITS
+            elif [ $optval = "ddr2_32bits" ]; then
+                value=OPTION_DRAM_INTERFACE_DDR2_32BITS
+            elif [ $optval = "ddr3_16bits" ]; then
+                value=OPTION_DRAM_INTERFACE_DDR3_16BITS
+            elif [ $optval = "ddr3_32bits" ]; then
+                value=OPTION_DRAM_INTERFACE_DDR3_32BITS
+            elif [ $optval = "ddr3_64bits" ]; then
+                value=OPTION_DRAM_INTERFACE_DDR3_64BITS
+            else
+                echo "invalid dram interface option $optval."
+                continue
+            fi
+        ;;
+
+        ## config log output level for debug, option can be [close/error/warning/default/detail].
+        --debug-level=*)
+            key=CONFIG_LOG_LEVEL
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid debug level option."
+                continue
+            fi
+
+            if [ $optval = "close" ]; then
+                value=OPTION_LOG_LEVEL_CLOSE
+            elif [ $optval = "error" ]; then
+                value=OPTION_LOG_LEVEL_ERROR
+            elif [ $optval = "warning" ]; then
+                value=OPTION_LOG_LEVEL_WARNING
+            elif [ $optval = "default" ]; then
+                value=OPTION_LOG_LEVEL_DEFAULT
+            elif [ $optval = "detail" ]; then
+                value=OPTION_LOG_LEVEL_DETAIL
+            else
+                echo "invalid debug level option $optval."
+                continue
+            fi
+        ;;
+
+        ## config ve_ipc, option can be [disable/enable].
+        --ve-ipc=*)
+            key=CONFIG_VE_IPC
+            value=""
+
+            if [ $optval = "disable" ]; then
+                value=OPTION_VE_IPC_DISABLE
+            elif [ $optval = "enable" ]; then
+                value=OPTION_VE_IPC_ENABLE
+            else
+                echo "invalid ve_ipc option $optval."
+                continue
+            fi
+        ;;
+
+        --mms=*)
+            key=CONFIG_MMS
+            value=""
+
+        if [ $optval = "yes" ]; then
+                value=OPTION_MMS_ENABLE
+            elif [ $optval = "no" ]; then
+                value=OPTION_MMS_DISABLE
+            else
+                echo "invalid ve_ipc option $optval."
+                continue
+            fi
+        ;;
+
+		## config cedarx path.
+        --cedarx-path=*)
+            key=CONFIG_CEDARX_PATH
+            value=""
+
+			echo "==== $optval"
+			value=$optval
+
+			echo "==== value: $value"
+			if [ $optval ]; then
+				value=$optval
+			fi
+        ;;
+
+        ## disable or enable demux for specific file format,
+        ## option can be [asf/avi/bd/mpegdash/flv/hls/mkv/mms/mov/mpg/pmp/ogg/ts].
+        --disable-demux=*|--enable-demux=*)
+            key=""
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid demux format."
+                continue
+            fi
+
+            if [ $optval = "asf" ]; then
+                key=CONFIG_ENABLE_DEMUX_ASF
+            elif [ $optval = "avi" ]; then
+                key=CONFIG_ENABLE_DEMUX_AVI
+            elif [ $optval = "bd" ]; then
+                key=CONFIG_ENABLE_DEMUX_BLUERAYDISK
+            elif [ $optval = "mpegdash" ]; then
+                key=CONFIG_ENABLE_DEMUX_MPEGDASH
+            elif [ $optval = "flv" ]; then
+                key=CONFIG_ENABLE_DEMUX_FLV
+            elif [ $optval = "hls" ]; then
+                key=CONFIG_ENABLE_DEMUX_HLS
+            elif [ $optval = "mkv" ]; then
+                key=CONFIG_ENABLE_DEMUX_MKV
+            elif [ $optval = "mms" ]; then
+                key=CONFIG_ENABLE_DEMUX_MMS
+            elif [ $optval = "mov" ]; then
+                key=CONFIG_ENABLE_DEMUX_MOV
+            elif [ $optval = "mpg" ]; then
+                key=CONFIG_ENABLE_DEMUX_MPG
+            elif [ $optval = "pmp" ]; then
+                key=CONFIG_ENABLE_DEMUX_PMP
+            elif [ $optval = "ogg" ]; then
+                key=CONFIG_ENABLE_DEMUX_OGG
+            elif [ $optval = "rx" ]; then
+                key=CONFIG_ENABLE_DEMUX_RX
+            elif [ $optval = "ts" ]; then
+                key=CONFIG_ENABLE_DEMUX_TS
+            else
+                echo "invalid demux format $optval."
+                continue
+            fi
+
+            if [ "${opt:2:6}" = "enable" ]; then
+                value=1
+            else
+                value=0
+            fi
+        ;;
+
+        ## diable or enable video decoder for specific codec format,
+        ## option can be [mjpeg/mpeg1/mpeg2/mpeg4/msmpeg4v1/msmpeg4v2/divx3/divx4/divx5/xvid/h263/s263/rxg2/wmv1/wmv2/wmv3/vp6/vp8/vp9/rv8/rv9/h264/h265].
+        --disable-vdecoder=*|--enable-vdecoder=*)
+            key=""
+            value=""
+
+            if [ ${#optval} -eq 0 ]; then
+                echo "invalid video codec format."
+                continue
+            fi
+
+            if [ $optval = "mjpeg" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_MJPEG
+            elif [ $optval = "mpeg1" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_MPEG1
+            elif [ $optval = "mpeg2" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_MPEG2
+            elif [ $optval = "mpeg4" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_MPEG4
+            elif [ $optval = "msmpeg4v1" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_MSMPEG4V1
+            elif [ $optval = "msmpeg4v2" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_MSMPEG4V2
+            elif [ $optval = "divx3" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_DIVX3
+            elif [ $optval = "divx4" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_DIVX4
+            elif [ $optval = "divx5" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_DIVX5
+            elif [ $optval = "xvid" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_XVID
+            elif [ $optval = "h263" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_H263
+            elif [ $optval = "s263" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_SORENSSON_H263
+            elif [ $optval = "rxg2" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_RXG2
+            elif [ $optval = "wmv1" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_WMV1
+            elif [ $optval = "wmv2" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_WMV2
+            elif [ $optval = "wmv3" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_WMV3
+            elif [ $optval = "vp6" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_VP6
+            elif [ $optval = "vp8" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_VP8
+            elif [ $optval = "vp9" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_VP9
+            elif [ $optval = "rx" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_RX
+            elif [ $optval = "h264" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_H264
+            elif [ $optval = "h265" ]; then
+                key=CONFIG_ENABLE_VIDEO_DECODER_H265
+            else
+                echo "invalid video codec format $optval."
+                continue
+            fi
+
+            if [ "${opt:2:6}" = "enable" ]; then
+                value=1
+            else
+                value=0
+            fi
+        ;;
+        ## config cmcc[yes/no].
+        --cmcc=*)
+            key=CONFIG_CMCC
+            value=""
+
+            if [ ${optval} = "yes" ]; then
+                echo "cmcc yes"
+                value=OPTION_CMCC_YES
+            elif [ ${optval} = "no" ]; then
+                echo "cmcc no"
+                value=OPTION_CMCC_NO
+            else
+                echo "invalid cmcc option $optval."
+                continue
+            fi
+        ;;
+		## config libz[yes/no].
+        --libz-enable=*)
+            key=CONFIG_HAVE_ZLIB
+            value=""
+
+            if [ ${optval} = "yes" ]; then
+                echo "zlib yes"
+                value=OPTION_HAVE_ZLIB
+            elif [ ${optval} = "no" ]; then
+                echo "zlib no"
+                value=OPTION_NO_ZLIB
+            else
+                echo "invalid cmcc option $optval."
+                continue
+            fi
+        ;;
+		## config openssl[yes/no].
+        --ssl-enable=*)
+            key=CONFIG_HAVE_SSL
+            value=""
+
+            if [ ${optval} = "yes" ]; then
+                echo "ssl yes"
+                value=OPTION_HAVE_SSL
+            elif [ ${optval} = "no" ]; then
+                echo "ssl no"
+                value=OPTION_NO_SSL
+            else
+                echo "invalid cmcc option $optval."
+                continue
+            fi
+        ;;
+        ## config live555[yes/no].
+        --live555-enable=*)
+            key=CONFIG_HAVE_LIVE555
+            value=""
+
+            if [ ${optval} = "yes" ]; then
+                value=OPTION_HAVE_LIVE555
+            elif [ ${optval} = "no" ]; then
+                value=OPTION_NO_LIVE555
+            else
+                echo "invalid cmcc option $optval."
+                continue
+            fi
+        ;;
+
+        ## config is_camera_decoder[yes/no].
+        --is_camera_decoder=*)
+            key=CONFIG_IS_CAMERA_DECODER
+            value=""
+
+            if [ ${optval} = "yes" ]; then
+                echo "is camera decoder, yes, only compile h264 and mjpegplus decoder"
+                value=OPTION_IS_CAMERA_DECODER_YES
+            elif [ ${optval} = "no" ]; then
+                echo "is camera decoder, no, compile all decoders"
+                value=OPTION_IS_CAMERA_DECODER_NO
+            else
+                echo "invalid is_camera_decoder option $optval."
+                continue
+            fi
+        ;;
+
+        *)
+            optname="${opt%%=*}"
+            optname="${optname#--}"
+            echo "error: unknown option $optname, quit"
+            exit 0
+        ;;
+    esac
+
+    ## set configuration.
+    if [ ${#value} -gt 0 ]; then
+        len=${#CONFIGURATIONS[*]}
+        for ((j=0; j<len; j=j+3))
+        do
+            if [ $key = ${CONFIGURATIONS[$j]} ]; then
+                CONFIGURATIONS[$((j+1))]=$value
+                break;
+            fi
+        done
+    fi
+done
+
+################################################################################
+## write configuration to files [.h].
+################################################################################
+for myFile in ${configFiles[*]}
+do
+    if [ ! -f "$myFile" ]; then
+        continue
+    fi
+
+    for ((j=0; j<len; j=j+3))
+    do
+        key=${CONFIGURATIONS[$j]}
+        value=${CONFIGURATIONS[$((j+1))]}
+        sed -i "/^#define ${key} /c#define ${key}    ${value}" $myFile
+    done
+done
+
+################################################################################
+## write configuration to config.mk
+################################################################################
+myFile="${ROOT_PATH}/config.mk"
+if [ ! -f "$myFile" ]; then
+    echo "file config.mk not exist, can not write configuration for makefile."
+    exit 1
+fi
+
+for ((j=0; j<len; j=j+3))
+do
+    key=${CONFIGURATIONS[$j]}
+    value=${CONFIGURATIONS[$((j+1))]}
+
+	if [ $key = "CONFIG_CEDARX_PATH" ]; then
+		sed -i "/^${key} /c${key} = ${value}" $myFile
+	else
+		sed -i "/^${key} /c${key} = \$\(${value}\)" $myFile
+	fi
+done

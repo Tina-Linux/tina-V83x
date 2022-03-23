@@ -1,0 +1,7 @@
+menuconfig TINATEST_DEMO
+    bool "demo"
+
+if TINATEST_DEMO
+    source demo-sh/Config.in
+    source demo-c/Config.in
+endif

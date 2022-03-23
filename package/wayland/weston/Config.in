@@ -1,0 +1,44 @@
+if PACKAGE_weston
+
+config WESTON_DBUS
+    bool "Enabel dbus support"
+    default n
+
+config WESTON_LAUNCH
+    bool "Enabel weston-launch linux pam support"
+    default n
+
+config WESTON_OPENGL_ES
+    bool "Enabel opengl es support"
+    default y
+
+config WESTON_FBDEV
+    bool "Enabel fbdev compositor support"
+    default n
+
+config WESTON_DRM
+    bool "Enabel drm compositor support"
+    default y
+
+#config WESTON_LIBVA
+#    bool "Enabel vaapi recorder support"
+#    default n
+
+config WESTON_LCMS2
+    bool "Enabel lcms support"
+    default n
+
+#config WESTON_SYSTEMD
+#    bool "Enabel systemd login and notify support"
+#    default n
+
+config WESTON_LIBXML2
+    bool "Enabel junit xml support"
+    default n
+
+config WESTON_DEMO_CLIENTS
+    bool "Enabel demo clients install"
+    default n
+
+endif
+

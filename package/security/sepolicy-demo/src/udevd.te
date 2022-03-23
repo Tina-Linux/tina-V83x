@@ -1,0 +1,41 @@
+# udevd -
+type udevd, domain;
+type udevd_exec, exec_type, file_type;
+# permissive udevd;
+init_daemon_domain(udevd)
+# domain_auto_trans(udevd,busybox_exec,busybox)
+
+# # domain_auto_trans(adbd,adbd_exec,adbd)
+# allow udevd udevd_exec:file rwx_file_perms;
+
+# allow udevd console_device:chr_file rw_file_perms;
+# allow udevd sysfs:file rw_file_perms;
+
+# allow udevd system_file:file { execute execute_no_trans open execmod };
+# allow udevd shell_exec:file rx_file_perms;
+# allow udevd shell_exec:lnk_file r_file_perms;
+# allow udevd { etc_initd kmodloader }:dir search;
+# allow udevd { etc_initd kmodloader }:file r_file_perms;
+# allow udevd kmodloader:system module_load;
+
+# allow udevd temp_exec:file {read getattr execute execute_no_trans open execmod};
+# allow udevd temp_exec:lnk_file { getattr open read execute };
+# allow udevd etc_selinux:dir { search open read getattr };
+# allow udevd etc_selinux:{ file lnk_file } { open read getattr };
+# allow udevd tmpfs:dir create_dir_perms;
+# allow udevd tmpfs:file create_file_perms;
+# allow udevd dev_type:dir create_dir_perms;
+# allow udevd dev_type:{ lnk_file file } create_file_perms;
+# allow udevd proc:file write;
+# allow udevd self:netlink_kobject_uevent_socket *;
+# allow udevd dev_type:chr_file { rw_file_perms setattr };
+# allow udevd tmpfs:sock_file { create getattr open read write setattr };
+# allow udevd self:capability { net_admin dac_override sys_resource chown sys_module };
+# allow udevd udevd_tmpfs:file { ioctl rename unlink getattr lock };
+# allow udevd { nand_device mmc_device dm_device }:blk_file { rw_file_perms setattr };
+# allow udevd etc_passwd:file r_file_perms;
+
+# # for pidof access /proc/<PID>/
+# allow udevd { init kernel adbd } :dir r_dir_perms;
+# allow udevd { init kernel adbd }:{ file lnk_file } r_file_perms;
+# allow udevd usermodehelper:file rw_file_perms;

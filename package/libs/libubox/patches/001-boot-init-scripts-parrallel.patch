@@ -1,0 +1,88 @@
+--- a/runqueue.c
++++ b/runqueue.c
+@@ -34,6 +34,58 @@ void runqueue_init(struct runqueue *q)
+	INIT_SAFE_LIST(&q->tasks_inactive);
+ }
+
++static struct runqueue_task *get_next_task_from_inactive_list(struct runqueue *q)
++{
++	struct runqueue_task *t, *tmp_node = NULL;
++	struct list_head *inactive_node,*active_node;
++	unsigned int i;
++
++	list_for_each(inactive_node, &q->tasks_inactive.list) {
++		t = container_of(inactive_node, struct runqueue_task, list.list);
++		if(tmp_node == t) {
++			//fprintf(stderr, "only depend task!\n");
++			return NULL;
++		}
++		if(!t->depend_task_num)
++			return t;
++		list_for_each(active_node, &q->tasks_active.list) {
++			for(i=0; i<t->depend_task_num; i++) {
++				if(container_of(active_node, struct runqueue_task,
++					list.list) == t->depend_task[i]) {
++						if(inactive_node == &q->tasks_inactive.list)
++							return NULL;
++						else
++							inactive_node = inactive_node->next;
++						safe_list_del(&t->list);
++						safe_list_add(&t->list, &q->tasks_inactive);
++						inactive_node = inactive_node->prev;
++						if(!tmp_node)
++							tmp_node = t;
++						goto ExitActiveErgo;
++				}
++			}
++		}
++ExitActiveErgo:
++		if(!tmp_node) {
++			struct list_head *node;
++			struct runqueue_task *depend_inactive_node = NULL;
++			list_for_each(node, &q->tasks_inactive.list) {
++				for(i=0; i<t->depend_task_num; i++) {
++					if(container_of(node, struct runqueue_task,
++						list.list) == t->depend_task[i]) {
++						if(!depend_inactive_node)
++							depend_inactive_node = t;
++					}
++				}
++			}
++			if(!depend_inactive_node)
++				return t;
++		}
++	}
++
++	return NULL;
++}
++
+ static void __runqueue_start_next(struct uloop_timeout *timeout)
+ {
+	struct runqueue *q = container_of(timeout, struct runqueue, timeout);
+@@ -48,10 +100,12 @@ static void __runqueue_start_next(struct
+
+		if (q->max_running_tasks && q->running_tasks >= q->max_running_tasks)
+			break;
+-
+-		t = list_first_entry(&q->tasks_inactive.list, struct runqueue_task, list.list);
++		t = get_next_task_from_inactive_list(q);
++		if(t == NULL)
++			break;
+		safe_list_del(&t->list);
+		safe_list_add(&t->list, &q->tasks_active);
++
+		t->running = true;
+		q->running_tasks++;
+		if (t->run_timeout)
+--- a/runqueue.h
++++ b/runqueue.h
+@@ -80,6 +80,9 @@ struct runqueue_task {
+	int cancel_timeout;
+	int cancel_type;
+
++	unsigned int depend_task_num;
++	struct runqueue_task **depend_task;
++
+	bool queued;
+	bool running;
+	bool cancelled;

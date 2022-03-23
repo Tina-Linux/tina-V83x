@@ -1,0 +1,9 @@
+The files in this avs directory are deprecated.
+
+Please refer to the following packages instead:
+- thirdparty/avs-device-sdk
+- thirdparty/avs-sampleapp
+- thirdparty/libpryon-lite
+- thirdparty/avs-fetch-device-sn
+- thirdparty/tutuclear-lib
+- allwinner/tconfigs

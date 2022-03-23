@@ -1,0 +1,48 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006-2011 OpenWrt.org
+
+ START=99
+ STOP=99
+#USE_PROCD=1
+
+start() {
+if  ps | grep  [b]rcm_patchram_plus ; then
+    killall brcm_patchram_plus
+fi
+
+echo 0 > /sys/class/rfkill/rfkill0/state
+echo 1 > /sys/class/rfkill/rfkill0/state
+#brcm_patchram_plus -d --tosleep=50000 --no2bytes --enable_hci --scopcm=0,2,0,0,0,0,0,0,0,0 --baudrate 1500000 --patchram /lib/firmware/ap6212/bcm43438a0.hcd  /dev/ttyS1 &
+brcm_patchram_plus --tosleep=50000 --no2bytes --enable_hci --scopcm=0,2,0,0,0,0,0,0,0,0 --baudrate 1500000 --patchram /lib/firmware/ap6212/bcm43438a0.hcd  /dev/ttyS1 &
+sleep  10
+
+#change all bluetooth type rfkillx/state to 1
+rootrfkillpath="/sys/class/rfkill"
+let i=1
+while [ $i -le 100 ]
+do
+  subrfkillpath=${rootrfkillpath}"/rfkill$i"
+  if [ -e ${subrfkillpath} ]; then
+    # echo "i=$i ${subrfkillpath} exist"
+    if [ -d ${subrfkillpath} ] ; then
+      if cat ${subrfkillpath}"/type" | grep bluetooth ; then
+	    substatepath=${subrfkillpath}"/state"
+		echo 0 > ${substatepath}
+		echo 1 > ${substatepath}
+	 fi
+   fi
+fi
+let i++
+done
+sleep 1
+#echo "before hci0 up"
+hciconfig hci0 up
+sleep 5
+#scan other devices?
+#read -p "scan to find other devices? y/n" usrsel
+#echo $usrsel
+#if [ $usrsel=="y" ]; then
+
+#echo "before scan "
+   #hcitool scan hci0
+}

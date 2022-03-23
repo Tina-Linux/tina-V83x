@@ -1,0 +1,203 @@
+--- a/src/newgal/fbcon/fbvideo.c	2018-12-28 15:28:11.330606012 +0800
++++ b/src/newgal/fbcon/fbvideo.c	2018-12-28 15:28:49.206604919 +0800
+@@ -797,7 +797,7 @@
+ 			rects.h = current->h;
+ 
+ 			FB_FlipHWSurface(this, current, &rects, TRUE);
+-			this->screen = NULL;
++			//this->screen = NULL;
+ 		}
+ 	}
+ 
+--- a/src/newgal/shadow/shadow.c	2018-12-28 15:27:57.994606396 +0800
++++ b/src/newgal/shadow/shadow.c	2018-12-29 15:56:36.352064257 +0800
+@@ -219,6 +219,77 @@
+     return ;
+ }
+ 
++static int SHADOW_FlipHWSurface(_THIS, GAL_Surface *surface, GAL_Rect *rects, BOOL enable)
++{
++	GAL_VideoDevice * real_device;
++	real_device = this->hidden->realfb_info->real_device;
++	RECT qvfb_rect;
++	GAL_Rect dirty_rect;
++	if(enable){
++	SetRect(&qvfb_rect, 0, 0, _shadowfbheader->width, _shadowfbheader->height);
++#ifdef _MGRM_PROCESSES
++		_sysvipc_sem_op (this->hidden->semid, 0, -1);
++#else
++		pthread_mutex_lock (&this->hidden->update_lock);
++#endif
++		if (real_device) {
++			if (_shadowfbheader->palette_changed) {
++				real_device->SetColors (real_device, _shadowfbheader->firstcolor,
++					_shadowfbheader->ncolors,
++					(GAL_Color*)((char*)_shadowfbheader + _shadowfbheader->palette_offset));
++				SetRect (&_shadowfbheader->dirty_rect, 0, 0,
++				_shadowfbheader->width, _shadowfbheader->height);
++			}
++			__mg_shadow_fb_ops->refresh (_shadowfbheader,
++			this->hidden->realfb_info, &(_shadowfbheader->dirty_rect));
++
++			if (this->hidden->realfb_info->flags & _ROT_DIR_CW) {
++				_get_dst_rect_cw (&qvfb_rect, &(_shadowfbheader->dirty_rect),this->hidden->realfb_info);
++			}else if (this->hidden->realfb_info->flags & _ROT_DIR_CCW){
++				_get_dst_rect_ccw (&qvfb_rect, &(_shadowfbheader->dirty_rect), this->hidden->realfb_info);
++			}
++			else if (this->hidden->realfb_info->flags & _ROT_DIR_HFLIP)
++			{
++				qvfb_rect = _shadowfbheader->dirty_rect;
++				_get_dst_rect_hflip (&qvfb_rect, this->hidden->realfb_info);
++			}
++			else if (this->hidden->realfb_info->flags & _ROT_DIR_VFLIP)
++			{
++				qvfb_rect = _shadowfbheader->dirty_rect;
++				_get_dst_rect_vflip (&qvfb_rect, this->hidden->realfb_info);
++			}else{
++				qvfb_rect = _shadowfbheader->dirty_rect;
++			}
++
++			dirty_rect.x = qvfb_rect.left;
++			dirty_rect.y = qvfb_rect.top;
++			dirty_rect.w = qvfb_rect.right - qvfb_rect.left;
++			dirty_rect.h = qvfb_rect.bottom - qvfb_rect.top;
++			real_device->FlipHWSurface(real_device,real_device->screen, &dirty_rect, enable);
++			this->hidden->realfb_info->height = real_device->screen->h;
++			this->hidden->realfb_info->width = real_device->screen->w;
++			this->hidden->realfb_info->depth = real_device->screen->format->BitsPerPixel;
++			this->hidden->realfb_info->fb = real_device->screen->pixels;
++			this->hidden->realfb_info->pitch = real_device->screen->pitch;
++		}
++	}
++	SetRect (&_shadowfbheader->dirty_rect, 0, 0, 0, 0);
++	_shadowfbheader->dirty = FALSE;
++	_shadowfbheader->palette_changed = FALSE;
++#ifdef _MGRM_PROCESSES
++	 _sysvipc_sem_op (this->hidden->semid, 0, 1);
++#else
++	 pthread_mutex_unlock (&this->hidden->update_lock);
++#endif
++}
++
++static int SHADOW_DoubleBufferEnable(_THIS, GAL_Surface *current, BOOL enable)
++{
++	GAL_VideoDevice * real_device;
++	real_device = this->hidden->realfb_info->real_device;
++	real_device->DoubleBufferEnable(real_device, real_device->screen, enable);
++}
++
+ static GAL_VideoDevice *SHADOW_CreateDevice(int devindex)
+ {
+     GAL_VideoDevice *device;
+@@ -253,7 +324,11 @@
+     device->FreeHWSurface = SHADOW_FreeHWSurface;
+     device->UpdateRects = SHADOW_UpdateRects;
+ 
++    device->FlipHWSurface = SHADOW_FlipHWSurface;
++    device->DoubleBufferEnable = SHADOW_DoubleBufferEnable;
+     device->free = SHADOW_DeleteDevice;
++
++    device->doubleBufferStatus = FALSE;
+     return device;
+ }
+ 
+@@ -286,6 +361,12 @@
+             return -1;
+     }
+ 
++    char *GAL_doublebuffer = getenv("MG_DOUBLEBUFFER");
++    Uint32 flags = GAL_HWPALETTE;
++    if (GAL_doublebuffer != NULL && strcmp(GAL_doublebuffer, "1") == 0) {
++	    flags = GAL_HWPALETTE | GAL_DOUBLEBUF;
++    }
++
+     w = atoi (mode);
+     h = atoi (strchr (mode, 'x') + 1);
+     depth = atoi (strrchr (mode, '-') + 1);
+@@ -307,7 +388,7 @@
+         fprintf (stderr, "NEWGAL>SHADOW: can't create screen of real engine.\n");    
+ 
+     real_device->SetVideoMode(realfb_info->real_device, 
+-            real_device->screen, w, h, depth, GAL_HWPALETTE);
++            real_device->screen, w, h, depth, flags | GAL_HWPALETTE);
+ 
+     realfb_info->height = real_device->screen->h;
+     realfb_info->width = real_device->screen->w;
+@@ -494,7 +575,6 @@
+         if (_shadowfbheader == NULL) {
+             break;
+         }
+-
+         if (_shadowfbheader->dirty || _shadowfbheader->palette_changed) 
+         {
+ #ifdef _MGRM_PROCESSES
+@@ -542,7 +622,7 @@
+ 
+                 if (real_device->UpdateRects)
+                     real_device->UpdateRects(real_device, 1, &dirty_rect);
+-            }
++	    }
+ 
+             SetRect (&_shadowfbheader->dirty_rect, 0, 0, 0, 0);
+             _shadowfbheader->dirty = FALSE;
+@@ -696,7 +776,11 @@
+     }
+ 
+     /* Set up the new mode framebuffer */
+-    current->flags = GAL_HWSURFACE | GAL_FULLSCREEN;
++    //current->flags = GAL_HWSURFACE | GAL_FULLSCREEN;
++	if(flags & GAL_DOUBLEBUF){
++		current->flags = GAL_DOUBLEBUF;
++	       this->doubleBufferStatus = TRUE;
++	}
+     current->w = _shadowfbheader->width;
+     current->h = _shadowfbheader->height;
+     current->pitch = _shadowfbheader->pitch;
+@@ -708,14 +792,16 @@
+         run_flag = 1;
+         end_flag = 0;
+ 
+-        pthread_attr_init (&new_attr);
++	if(current->flags != GAL_DOUBLEBUF){
++		pthread_attr_init (&new_attr);
+ #ifndef __LINUX__
+-        pthread_attr_setstacksize (&new_attr, 512);
++	        pthread_attr_setstacksize (&new_attr, 512);
+ #endif
+-        pthread_attr_setdetachstate (&new_attr, PTHREAD_CREATE_DETACHED);
+-        ret = pthread_create (&this->hidden->update_th, &new_attr, 
+-                        task_do_update, this);
+-        pthread_attr_destroy (&new_attr);
++	        pthread_attr_setdetachstate (&new_attr, PTHREAD_CREATE_DETACHED);
++		ret = pthread_create (&this->hidden->update_th, &new_attr,
++	                        task_do_update, this);
++	        pthread_attr_destroy (&new_attr);
++	}
+     }
+ 
+     /* We're done */
+@@ -753,7 +839,7 @@
+ /*******************************************/
+ 
+ static GAL_Surface *SHADOW_SetVideoMode(_THIS, GAL_Surface *current,
+-        int width, int height, int bpp, Uint32 flags)
++	int width, int height, int bpp, Uint32 flags)
+ {
+     int ret, size;
+ 
+@@ -764,7 +850,6 @@
+     size = 0;
+     ret = 0;
+ 
+-    printf ("SHADOW_SetVideoMode\n");
+     if (mgIsServer) {
+         ShadowFBHeader shadowfbheader;
+ 
+@@ -899,7 +984,6 @@
+         }
+     }
+ 
+-    printf ("SHADOW_SetVideoMode\n");
+     /* We're done */
+     return (current);
+ }

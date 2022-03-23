@@ -1,0 +1,77 @@
+--- a/src/misc/nposix.c
++++ b/src/misc/nposix.c
+@@ -22,6 +22,7 @@
+ 
+ #ifdef HAVE_TIME
+ #include <time.h>
++#include <sys/time.h>
+ #endif
+ 
+ #ifndef HAVE_STRDUP
+--- a/src/newgal/fbcon/pci_smi.c
++++ b/src/newgal/fbcon/pci_smi.c
+@@ -10,7 +10,7 @@
+ */
+ 
+ #include <stdio.h>
+-#include <error.h>
++/*#include <error.h>*/
+ #include <string.h>
+ 
+ /*#define _DEBUG*/
+--- a/src/kernel/sharedres.c
++++ b/src/kernel/sharedres.c
+@@ -25,6 +25,9 @@
+ #include <sys/time.h>
+ #include <sys/file.h>
+ #include <sys/mman.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
+ 
+ #include "minigui.h"
+ #include "gdi.h"
+--- a/src/newgal/shadow/shadow.c
++++ b/src/newgal/shadow/shadow.c
+@@ -45,7 +45,7 @@
+ 
+ #ifdef _MGGAL_SHADOW
+ 
+-#include <error.h>
++/*#include <error.h>*/
+ #include <sys/types.h>
+ #ifndef __NOUNIX__
+ #include <pthread.h>
+--- a/src/newgal/shadow/shadow_refresh_msb_left.c
++++ b/src/newgal/shadow/shadow_refresh_msb_left.c
+@@ -42,7 +42,7 @@
+ #include "minigui.h"
+ #include "newgal.h"
+ #include "sysvideo.h"
+-#include "error.h"
++/*#include "error.h"*/
+ #include "shadow.h"
+ 
+ extern gal_uint8* __gal_a_line;
+--- a/src/newgal/shadow/shadow_refresh_msb_right.c
++++ b/src/newgal/shadow/shadow_refresh_msb_right.c
+@@ -42,7 +42,7 @@
+ #include "minigui.h"
+ #include "newgal.h"
+ #include "sysvideo.h"
+-#include "error.h"
++/*#include "error.h"*/
+ #include "shadow.h"
+ 
+ gal_uint8* __gal_a_line;
+--- a/etc/Makefile.am
++++ b/etc/Makefile.am
+@@ -1,7 +1,7 @@
+ # The directory where the data files will be installed
+ 
+ install-data-local:
+-	if [ ! -d $(prefix)/etc ]; then $(INSTALL) -d $(prefix)/etc; fi
++	if [ ! -d $(DESTDIR)/$(prefix)/etc ]; then $(INSTALL) -d $(DESTDIR)/$(prefix)/etc; fi
+ 
+ ##if MGLIB_MVFB
+ ##	$(INSTALL_DATA) $(abs_top_srcdir)/etc/mvfb.cfg $(prefix)/etc/mvfb.cfg

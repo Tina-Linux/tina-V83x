@@ -1,0 +1,105 @@
+diff --git a/memtester.c b/memtester.c
+index 91633e7..8ba314e 100644
+--- a/memtester.c
++++ b/memtester.c
+@@ -34,7 +34,6 @@
+ #define EXIT_FAIL_OTHERTEST     0x04
+ 
+ struct test tests[] = {
+-    { "Random Value", test_random_value },
+     { "Compare XOR", test_xor_comparison },
+     { "Compare SUB", test_sub_comparison },
+     { "Compare MUL", test_mul_comparison },
+@@ -102,7 +101,29 @@ off_t physaddrbase = 0;
+ /* Function definitions */
+ void usage(char *me) {
+     fprintf(stderr, "\n"
+-            "Usage: %s [-p physaddrbase [-d device]] <mem>[B|K|M|G] [loops]\n",
++            "Usage: %s [-p physaddrbase [-d device]] [-m testmask] <mem>[B|K|M|G] [loops]\n"
++            "\n"
++            "[testmask]: specify tests which we want run.\n"
++            "bit0  Compare XOR\n"
++            "bit1  Compare SUB\n"
++            "bit2  Compare MUL\n"
++            "bit3  Compare DIV\n"
++            "bit4  Compare OR\n"
++            "bit5  Compare AND\n"
++            "bit6  Sequential Increment\n"
++            "bit7  Solid Bits\n"
++            "bit8  Block Sequential\n"
++            "bit9  Checkerboard\n"
++            "bit10 Bit Spread\n"
++            "bit11 Bit Flip\n"
++            "bit12 Walking Ones\n"
++            "bit13 Walking Zeroes\n"
++            "bit14 8-bit Writes(ifdef TEST_NARROW_WRITE)\n"
++            "bit15 16-bit Writes(ifdef TEST_NARROW_WRITE)\n"
++            "\n"
++            "eg:\n"
++            "    memtester -m 0xc 10M 1\n"
++            "    means run Compare DIV&MUL tests only to test 10M memory loop 1 time.\n",
+             me);
+     exit(EXIT_FAIL_NONSTARTER);
+ }
+@@ -135,7 +156,6 @@ int main(int argc, char **argv) {
+     pagesize = memtester_pagesize();
+     pagesizemask = (ptrdiff_t) ~(pagesize - 1);
+     printf("pagesizemask is 0x%tx\n", pagesizemask);
+-    
+     /* If MEMTESTER_TEST_MASK is set, we use its value as a mask of which
+        tests we run.
+      */
+@@ -150,7 +170,7 @@ int main(int argc, char **argv) {
+         printf("using testmask 0x%lx\n", testmask);
+     }
+ 
+-    while ((opt = getopt(argc, argv, "qp:d:")) != -1) {
++    while ((opt = getopt(argc, argv, "qp:d:m:")) != -1) {
+         switch (opt) {
+             case 'p':
+                 errno = 0;
+@@ -196,11 +216,21 @@ int main(int argc, char **argv) {
+             case 'q':
+                 quiet = 1;
+                 break;
++            case 'm':
++                errno = 0;
++		testmask = strtoul(optarg, 0, 0);
++                if (errno) {
++                    fprintf(stderr, "error parsing testmask %s: %s\n", 
++                        optarg, strerror(errno));
++                    usage(argv[0]); /* doesn't return */
++                }
++                break;
+             default: /* '?' */
+                 usage(argv[0]); /* doesn't return */
+         }
+     }
+ 
++
+     if (device_specified && !use_phys) {
+         fprintf(stderr, 
+                 "for mem device, physaddrbase (-p) must be specified\n");
+@@ -373,6 +403,7 @@ int main(int argc, char **argv) {
+             printf("/%lu", loops);
+         }
+         printf(":\n");
++	printf("<============Prepare============>\n");
+         printf("  %-20s: ", "Stuck Address");
+         fflush(stdout);
+         if (!test_stuck_address(aligned, bufsize / sizeof(ul))) {
+@@ -380,6 +411,14 @@ int main(int argc, char **argv) {
+         } else {
+             exit_code |= EXIT_FAIL_ADDRESSLINES;
+         }
++        printf("  %-20s: ", "Random Value");
++        fflush(stdout);
++	if (!test_random_value(bufa, bufb, count)) {
++	    printf("ok\n");
++	    printf("<============Start test============>\n");
++	} else {
++	    exit_code |= EXIT_FAIL_OTHERTEST;
++	}
+         for (i=0;;i++) {
+             if (!tests[i].name) break;
+             /* If using a custom testmask, only run this test if the

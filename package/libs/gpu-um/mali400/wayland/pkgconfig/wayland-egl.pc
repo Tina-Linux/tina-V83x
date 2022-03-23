@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=/usr
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: wayland-egl
+Description: Userspace interface to kernel DRM services
+Version:17.1.7
+Libs: -L${libdir} -lwayland-egl
+Cflags: -I${includedir}

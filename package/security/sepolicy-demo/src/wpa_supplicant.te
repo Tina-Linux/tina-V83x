@@ -1,0 +1,20 @@
+# wpa - wpa supplicant or equivalent
+type wpa, domain;
+# permissive wpa;
+type wpa_exec, exec_type, file_type;
+type wpa_cfg, file_type;
+
+domain_auto_trans(init,wpa_exec,wpa)
+domain_auto_trans(wpa,busybox_exec,busybox)
+type_transition wpa wifi_data_file:sock_file wpa_socket;
+
+# debug
+domain_auto_trans(shell,wpa_exec,wpa)
+
+allow wpa wpa_exec:file rwx_file_perms;
+allow wpa wpa_cfg:file rw_file_perms;
+
+allow wpa console_device:chr_file r_file_perms;
+allow wpa tmpfs:file rw_file_perms;
+allow wpa init:fifo_file write;
+

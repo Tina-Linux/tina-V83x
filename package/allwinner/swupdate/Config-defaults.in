@@ -1,0 +1,162 @@
+config SWUPDATE_DEFAULT_HAVE_DOT_CONFIG
+	bool
+	default y
+config SWUPDATE_DEFAULT_CURL
+	bool
+	default n
+config SWUPDATE_DEFAULT_CURL_SSL
+	bool
+	default n
+config SWUPDATE_DEFAULT_SYSTEMD
+	bool
+	default n
+config SWUPDATE_DEFAULT_SCRIPTS
+	bool
+	default y
+config SWUPDATE_DEFAULT_HW_COMPATIBILITY
+	bool
+	default n
+config SWUPDATE_DEFAULT_SW_VERSIONS_FILE
+	string
+	default "/etc/sw-versions"
+config SWUPDATE_DEFAULT_SOCKET_CTRL_PATH
+	string
+	default "/tmp/sockinstctrl"
+config SWUPDATE_DEFAULT_SOCKET_PROGRESS_PATH
+	string
+	default "/tmp/swupdateprog"
+config SWUPDATE_DEFAULT_SOCKET_REMOTE_HANDLER_DIRECTORY
+	string
+	default "/tmp/"
+config SWUPDATE_DEFAULT_MTD
+	bool
+	default n
+config SWUPDATE_DEFAULT_LUA
+	bool
+	default n
+config SWUPDATE_DEFAULT_FEATURE_SYSLOG
+	bool
+	default n
+config SWUPDATE_DEFAULT_CROSS_COMPILE
+	string
+	default ""
+config SWUPDATE_DEFAULT_SYSROOT
+	string
+	default ""
+config SWUPDATE_DEFAULT_EXTRA_CFLAGS
+	string
+	default ""
+config SWUPDATE_DEFAULT_EXTRA_LDFLAGS
+	string
+	default ""
+config SWUPDATE_DEFAULT_EXTRA_LDLIBS
+	string
+	default ""
+config SWUPDATE_DEFAULT_DEBUG
+	bool
+	default n
+config SWUPDATE_DEFAULT_WERROR
+	bool
+	default n
+config SWUPDATE_DEFAULT_NOCLEANUP
+	bool
+	default n
+config SWUPDATE_DEFAULT_BOOTLOADER_EBG
+	bool
+	default n
+config SWUPDATE_DEFAULT_UBOOT
+	bool
+	default y
+config SWUPDATE_DEFAULT_BOOTLOADER_NONE
+	bool
+	default n
+config SWUPDATE_DEFAULT_BOOTLOADER_GRUB
+	bool
+	default n
+config SWUPDATE_DEFAULT_UBOOT_FWENV
+	string
+	default "/etc/fw_env.config"
+config SWUPDATE_DEFAULT_UBOOT_NEWAPI
+	bool
+	default n
+config SWUPDATE_DEFAULT_DOWNLOAD
+	bool
+	default n
+config SWUPDATE_DEFAULT_DOWNLOAD_SSL
+	bool
+	default n
+config SWUPDATE_DEFAULT_CHANNEL_CURL
+	bool
+	default n
+config SWUPDATE_DEFAULT_HASH_VERIFY
+	bool
+	default n
+config SWUPDATE_DEFAULT_SIGNED_IMAGES
+	bool
+	default n
+config SWUPDATE_DEFAULT_ENCRYPTED_IMAGES
+	bool
+	default n
+config SWUPDATE_DEFAULT_SURICATTA
+	bool
+	default n
+config SWUPDATE_DEFAULT_WEBSERVER
+	bool
+	default n
+config SWUPDATE_DEFAULT_GUNZIP
+	bool
+	default y
+config SWUPDATE_DEFAULT_LIBCONFIG
+	bool
+	default y
+config SWUPDATE_DEFAULT_PARSERROOT
+	string
+	default ""
+config SWUPDATE_DEFAULT_JSON
+	bool
+	default n
+config SWUPDATE_DEFAULT_SETSWDESCRIPTION
+	bool
+	default n
+config SWUPDATE_DEFAULT_UBIVOL
+	bool
+	default n
+config SWUPDATE_DEFAULT_UBIVIDOFFSET
+	int
+	default 2048
+config SWUPDATE_DEFAULT_CFI
+	bool
+	default n
+config SWUPDATE_DEFAULT_CFIHAMMING1
+	bool
+	default n
+config SWUPDATE_DEFAULT_RAW
+	bool
+	default y
+config SWUPDATE_DEFAULT_RDIFFHANDLER
+	bool
+	default n
+config SWUPDATE_DEFAULT_SHELLSCRIPTHANDLER
+	bool
+	default y
+config SWUPDATE_DEFAULT_ARCHIVE
+	bool
+	default n
+config SWUPDATE_DEFAULT_REMOTE_HANDLER
+	bool
+	default n
+config SWUPDATE_DEFAULT_SWUFORWARDER_HANDLER
+	bool
+	default n
+config SWUPDATE_DEFAULT_BOOTLOADERHANDLER
+	bool
+	default y
+config SWUPDATE_DEFAULT_AWBOOT_HANDLER
+	bool
+	default y
+config SWUPDATE_DEFAULT_UCFWHANDLER
+	bool
+	default n
+config SWUPDATE_DEFAULT_UBIVIDOFFSET
+	int
+	default 2048

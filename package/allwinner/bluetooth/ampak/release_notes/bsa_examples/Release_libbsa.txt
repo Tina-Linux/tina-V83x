@@ -1,0 +1,23 @@
+
+This package contains the Bluetooth Application LIBBSA Client library on Linux.
+
+To compile the Bluetooth LIBBSA Client library you have to type:
+> cd 3rdparty/embedded/bsa_examples/linux/libbsa/build
+> make			<= For PC/Linux target (default)
+> make CPU=mips		<= For MIPS/Linux target
+
+The libbsa.txt file (which controls the BSA modules present in the library) may
+have to be adapted to your system (to add missing modules or to reduce code size).
+
+Both Shared and Static libraries are created (for both x86 and mips platforms).
+
+Furthermore, all the include file needed by the application are copied (during
+build) in the libbsa/include folder.
+
+Thanks to the bsalib library, the applications does not have to compile anymore
+the BSA client (just to link with its library).
+Furthermore, for application, only libbsa/include include folder has to be used.
+
+An example of makefile based on libbsa is available in libbsa/example.
+Note that during execution of a program linked with a shared library, the system
+will look for the library in some system lib folder (e.g. /lib).

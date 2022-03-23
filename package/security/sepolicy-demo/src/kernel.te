@@ -1,0 +1,84 @@
+# Life begins with the kernel.
+type kernel, domain, mlstrustedsubject;
+
+allow kernel self:capability sys_nice;
+
+# Allow init relabel itself.
+allow kernel rootfs:file relabelfrom;
+allow kernel init_exec:file relabelto;
+allow kernel init_exec:lnk_file r_file_perms;
+# TODO: investigate why we need this.
+allow kernel init:process share;
+
+# cgroup filesystem initialization prior to setting the cgroup root directory label.
+allow kernel unlabeled:dir { search getattr };
+allow kernel unlabeled:lnk_file read;
+allow kernel unlabeled:file r_file_perms;;
+
+allow kernel self:process setcurrent;
+allow kernel init:process dyntransition;
+
+# Initial setenforce by init prior to switching to init domain.
+# We use dontaudit instead of allow to prevent a kernel spawned userspace
+# process from turning off SELinux once enabled.
+dontaudit kernel self:security setenforce;
+
+# Write to /proc/1/oom_adj prior to switching to init domain.
+allow kernel self:capability sys_resource;
+
+# Init reboot before switching selinux domains under certain error
+# conditions. Allow it.
+# As part of rebooting, init writes "u" to /proc/sysrq-trigger to
+# remount filesystems read-only. /data is not mounted at this point,
+# so we could ignore this. For now, we allow it.
+allow kernel self:capability { sys_boot mknod };
+# allow kernel proc_sysrq:file w_file_perms;
+
+# Allow writing to /dev/__kmsg__ which was created prior to
+# loading policy
+allow kernel tmpfs:chr_file write;
+
+# Allow rw to dev
+allow kernel dev_type:chr_file { read write ioctl open create setattr getattr };
+allow kernel dev_type:dir { read write add_name };
+
+# Set checkreqprot by init.rc prior to switching to init domain.
+allow kernel selinuxfs:file write;
+allow kernel self:security setcheckreqprot;
+
+# MTP sync (b/15835289)
+# kernel thread "loop0", used by the loop block device, for ASECs (b/17158723)
+# allow kernel untrusted_app:fd use;
+allow kernel sdcard_type:file { read write };
+domain_auto_trans(kernel, init_exec, init)
+
+allow kernel device:dir create_dir_perms;
+allow kernel device:blk_file r_file_perms;
+allow kernel {rootfs unlabeled}:file { execute execute_no_trans open execmod };
+allow kernel {rootfs labeledfs unlabeled}:filesystem { mount remount unmount };
+allow kernel self:capability sys_admin;
+allow kernel rootfs:dir {write mounton};
+
+allow kernel self:capability net_bind_service;
+
+
+###
+### neverallow rules
+###
+
+# The initial task starts in the kernel domain (assigned via
+# initial_sid_contexts), but nothing ever transitions to it.
+neverallow domain kernel:process { transition dyntransition };
+
+# The kernel domain is never entered via an exec, nor should it
+# ever execute a program outside the rootfs without changing to another domain.
+# If you encounter an execute_no_trans denial on the kernel domain, then
+# possible causes include:
+# - The program is a kernel usermodehelper.  In this case, define a domain
+#   for the program and domain_auto_trans() to it.
+# - You failed to setcon u:r:init:s0 in your init.rc and thus your init
+#   program was left in the kernel domain and is now trying to execute
+#   some other program.  Fix your init.rc file.
+# - You are running an exploit which switched to the init task credentials
+#   and is then trying to exec a shell or other program.  You lose!
+neverallow kernel { file_type fs_type -rootfs -unlabeled}:file { entrypoint execute_no_trans };

@@ -1,0 +1,38 @@
+type base_script, domain, mlstrustedsubject;
+type base_script_exec, exec_type, file_type;
+# permissive base_script;
+domain_auto_trans(init,base_script_exec,base_script)
+# domain_auto_trans(base_script,kmodloader_exec,kmodloader)
+domain_auto_trans(base_script,busybox_exec,busybox)
+# domain_auto_trans(base_script,shell_exec,shell)
+# domain_auto_trans(base_script,ubusd_exec,ubusd)
+
+allow base_script init:fifo_file { read write };
+
+# # allow base_script self:system module_load;
+# allow base_script self:capability { sys_module sys_admin dac_override dac_read_search };
+
+allow base_script self:process setfscreate;
+
+# allow base_script device:dir rw_dir_perms;
+# allow base_script device:lnk_file create_file_perms;
+allow base_script console_device:chr_file r_file_perms;
+# allow base_script serial_device:chr_file r_file_perms;
+
+allow base_script system_file:file { execute execute_no_trans open execmod };
+# # allow base_script shell:file { execute execute_no_trans open execmod };
+
+allow base_script temp_exec:file {read getattr execute execute_no_trans open execmod};
+allow base_script temp_exec:lnk_file { getattr open read execute };
+
+allow base_script tmpfs:dir create_dir_perms;
+allow base_script tmpfs:file create_file_perms;
+# allow base_script tmpfs:lnk_file create;
+allow base_script shell_tmpfs:file r_file_perms;
+
+# allow base_script sysfs:dir mounton;
+# allow base_script debugfs:filesystem mount;
+
+# allow base_script { etc_selinux etc_initd }:dir { search open read getattr };
+# allow base_script etc_passwd:file r_file_perms;
+# allow base_script etc_shadow:file r_file_perms;

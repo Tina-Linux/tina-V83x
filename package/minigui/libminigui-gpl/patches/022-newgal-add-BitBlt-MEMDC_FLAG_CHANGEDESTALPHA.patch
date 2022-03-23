@@ -1,0 +1,185 @@
+From 1ade5bbb4d6f2b733d38d979e8651375184ea646 Mon Sep 17 00:00:00 2001
+From: anruliu@allwinnertech.com
+Date: Tue, 26 Nov 2019 14:36:37 +0800
+Subject: [PATCH] newgal: add BitBlt MEMDC_FLAG_CHANGEDESTALPHA
+
+Signed-off-by: anruliu@allwinnertech.com
+---
+ include/gdi.h        |  1 +
+ src/include/newgal.h |  1 +
+ src/newgal/blit.c    |  3 ++-
+ src/newgal/blit_A.c  | 61 ++++++++++++++++++++++++++++++++++++++++++++++++++--
+ src/newgal/surface.c | 11 +++++++++-
+ src/newgdi/gdi.c     |  3 ++-
+ 6 files changed, 75 insertions(+), 5 deletions(-)
+
+diff --git a/include/gdi.h b/include/gdi.h
+index 604c1c6..14389b8 100644
+--- a/include/gdi.h
++++ b/include/gdi.h
+@@ -1332,6 +1332,7 @@ MG_EXPORT BOOL GUIAPI RestoreDC (HDC hdc, int saved_dc);
+ #define MEMDC_FLAG_SRCCOLORKEY      0x00001000  /* Blit uses a source color key */
+ #define MEMDC_FLAG_SRCALPHA         0x00010000  /* Blit uses source alpha blending*/
+ #define MEMDC_FLAG_SRCPIXELALPHA    0x00020000  /* Blit uses source per-pixel alpha blending*/
++#define MEMDC_FLAG_CHANGEDESTALPHA  0x00040000  /* Blit uses source per-pixel alpha blending, change dest_alpha*/
+ #define MEMDC_FLAG_RLEACCEL         0x00004000  /* Surface is RLE encoded */
+ 
+ /**
+diff --git a/src/include/newgal.h b/src/include/newgal.h
+index e0cab87..3643e9f 100644
+--- a/src/include/newgal.h
++++ b/src/include/newgal.h
+@@ -141,6 +141,7 @@ typedef struct GAL_Surface {
+ #define GAL_RLEACCEL         MEMDC_FLAG_RLEACCEL        /* Surface is RLE encoded */
+ #define GAL_SRCALPHA         MEMDC_FLAG_SRCALPHA        /* Blit uses source alpha blending */
+ #define GAL_SRCPIXELALPHA    MEMDC_FLAG_SRCPIXELALPHA   /* Blit uses source per-pixel alpha blending */
++#define GAL_CHANGEDESTALPHA  MEMDC_FLAG_CHANGEDESTALPHA /* Blit uses source per-pixel alpha blending, , change dest_alpha*/
+ #define GAL_PREALLOC         0x01000000                 /* Surface uses preallocated memory */
+ 
+ /* Evaluates to true if the surface needs to be locked before access */
+diff --git a/src/newgal/blit.c b/src/newgal/blit.c
+index 8596307..a57aa4c 100644
+--- a/src/newgal/blit.c
++++ b/src/newgal/blit.c
+@@ -239,7 +239,8 @@ int GAL_CalculateBlit(GAL_Surface *surface)
+     blit_index = 0;
+     blit_index |= (!!(surface->flags & GAL_SRCCOLORKEY)) << 0;
+     if (((surface->flags & GAL_SRCALPHA) && surface->format->alpha != GAL_ALPHA_OPAQUE)
+-         ||((surface->flags & GAL_SRCPIXELALPHA) && surface->format->Amask)) {
++         ||((surface->flags & GAL_SRCPIXELALPHA) && surface->format->Amask)
++         ||((surface->flags & GAL_CHANGEDESTALPHA) && surface->format->Amask)) {
+         if(surface != surface->map->dst){ 
+             blit_index |= 2;
+         }
+diff --git a/src/newgal/blit_A.c b/src/newgal/blit_A.c
+index 9d47c22..72fbec2 100644
+--- a/src/newgal/blit_A.c
++++ b/src/newgal/blit_A.c
+@@ -264,6 +264,58 @@ static void BlitRGBtoRGBSurfaceAlpha(GAL_BlitInfo *info)
+ }
+ 
+ /* fast ARGB888->(A)RGB888 blending with pixel alpha */
++static void BlitRGBtoRGBPixelDestAlpha(GAL_BlitInfo *info)
++{
++        int width = info->d_width;
++        int height = info->d_height;
++        Uint32 *srcp = (Uint32 *)info->s_pixels;
++        int srcskip = info->s_skip >> 2;
++        Uint32 *dstp = (Uint32 *)info->d_pixels;
++        int dstskip = info->d_skip >> 2;
++
++        while(height--) {
++            DUFFS_LOOP4({
++                Uint32 dalpha;
++                Uint32 d;
++                Uint32 s1;
++                Uint32 d1;
++                Uint32 s = *srcp;
++                Uint32 alpha = s >> 24;
++                /* FIXME: Here we special-case opaque alpha since the
++                   compositioning used (>>8 instead of /255) doesn't handle
++                   it correctly. Also special-case alpha=0 for speed?
++                   Benchmark this! */
++                if (alpha == GAL_ALPHA_OPAQUE) {
++                    *dstp = s;
++                } else {
++                    /*
++                     * take out the middle component (green), and process
++                     * the other two in parallel. One multiply less.
++                     */
++                    d = *dstp;
++                    dalpha = d >> 24;
++
++                    s1 = s & 0xff00ff;
++                    d1 = d & 0xff00ff;
++                    d1 = (d1 + (((s1 - d1) * alpha) >> 8)) & 0xff00ff;
++                    s &= 0xff00;
++                    d &= 0xff00;
++                    d = (d + (((s - d) * alpha) >> 8)) & 0xff00;
++
++                    /* should not change dest_alpha */
++                    dalpha = (dalpha + alpha - (((dalpha * alpha)) >> 8));
++
++                    *dstp = d1 | (d & 0xff00) | (dalpha << 24);
++                }
++                ++srcp;
++                ++dstp;
++            }, width);
++            srcp += srcskip;
++            dstp += dstskip;
++        }
++}
++
++/* fast ARGB888->(A)RGB888 blending with pixel alpha */
+ static void BlitRGBtoRGBPixelAlpha(GAL_BlitInfo *info)
+ {
+         int width = info->d_width;
+@@ -818,8 +870,13 @@ GAL_loblit GAL_CalculateAlphaBlit(GAL_Surface *surface, int blit_index)
+                && sf->Rmask == df->Rmask
+                && sf->Gmask == df->Gmask
+                && sf->Bmask == df->Bmask
+-               && sf->BytesPerPixel == 4)
+-                return BlitRGBtoRGBPixelAlpha;
++               && sf->BytesPerPixel == 4) {
++                if ((surface->flags & GAL_CHANGEDESTALPHA) == GAL_CHANGEDESTALPHA)
++                    return BlitRGBtoRGBPixelDestAlpha;
++                else
++                    return BlitRGBtoRGBPixelAlpha;
++            }
++
+             return BlitNtoNPixelAlpha;
+ 
+         case 3:
+diff --git a/src/newgal/surface.c b/src/newgal/surface.c
+index a7a372b..f5981b1 100644
+--- a/src/newgal/surface.c
++++ b/src/newgal/surface.c
+@@ -255,6 +255,12 @@ int GAL_SetAlpha (GAL_Surface *surface, Uint32 flag, Uint8 value)
+         } else {
+             flag = GAL_SRCPIXELALPHA;
+         }
++    } else if ( flag & GAL_CHANGEDESTALPHA ) {
++        if ( flag & (GAL_RLEACCEL|GAL_RLEACCELOK) ) {
++            flag = GAL_CHANGEDESTALPHA|GAL_RLEACCELOK;
++        } else {
++            flag = GAL_CHANGEDESTALPHA;
++        }
+     } else {
+         flag = 0;
+     }
+@@ -271,7 +277,9 @@ int GAL_SetAlpha (GAL_Surface *surface, Uint32 flag, Uint8 value)
+             surface->format->alpha = value;
+         } else if ( flag & GAL_SRCPIXELALPHA ){
+             surface->flags |= GAL_SRCPIXELALPHA;
+-        } 
++        }  else if ( flag & GAL_CHANGEDESTALPHA ) {
++            surface->flags |= GAL_CHANGEDESTALPHA;
++        }
+ 
+         
+         if ( (surface->flags & GAL_HWACCEL) == GAL_HWACCEL ) {
+@@ -288,6 +296,7 @@ int GAL_SetAlpha (GAL_Surface *surface, Uint32 flag, Uint8 value)
+     } else {
+         surface->flags &= ~GAL_SRCALPHA;
+         surface->flags &= ~GAL_SRCPIXELALPHA;
++        surface->flags &= ~GAL_CHANGEDESTALPHA;
+         surface->format->alpha = GAL_ALPHA_OPAQUE;
+     }
+     /*
+diff --git a/src/newgdi/gdi.c b/src/newgdi/gdi.c
+index ac05b7f..3c79676 100644
+--- a/src/newgdi/gdi.c
++++ b/src/newgdi/gdi.c
+@@ -3333,7 +3333,8 @@ BOOL GUIAPI SetMemDCAlpha (HDC mem_dc, DWORD flags, Uint8 alpha)
+     ret = !GAL_SetAlpha (pmem_dc->surface, flags, alpha);
+ 
+     if ((tmp_flag & MEMDC_FLAG_SRCALPHA) 
+-            && (tmp_flag & MEMDC_FLAG_SRCPIXELALPHA))
++            && (tmp_flag & MEMDC_FLAG_SRCPIXELALPHA)
++            && (tmp_flag & MEMDC_FLAG_CHANGEDESTALPHA))
+         ret = !GAL_SetAlpha (pmem_dc->surface, 
+                 tmp_flag & (~MEMDC_FLAG_SRCALPHA), alpha);
+ 
+-- 
+1.9.1
+

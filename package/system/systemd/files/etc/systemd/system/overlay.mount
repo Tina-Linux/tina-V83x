@@ -1,0 +1,11 @@
+[Unit]
+Before=sysroot.mount
+ConditionPathExists=/etc/initrd-release
+ConditionPathIsDirectory=/overlay
+DefaultDependencies=false
+
+[Mount]
+What=tmpfs
+Where=/overlay
+Type=tmpfs
+Options=noatime,mode=0755

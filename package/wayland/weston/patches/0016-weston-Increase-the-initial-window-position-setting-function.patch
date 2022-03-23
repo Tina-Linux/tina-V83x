@@ -1,0 +1,151 @@
+diff --git a/desktop-shell/shell.c b/desktop-shell/shell.c
+index f80088f..9af9ba5 100644
+--- a/desktop-shell/shell.c
++++ b/desktop-shell/shell.c
+@@ -4087,6 +4087,9 @@ weston_view_set_initial_position(struct weston_view *view,
+ 	struct weston_output *output, *target_output = NULL;
+ 	struct weston_seat *seat;
+ 	pixman_rectangle32_t area;
++	struct weston_desktop_surface *desktop_surface;
++	struct weston_position window_position;
++	bool has_window_position = false;
+ 
+ 	/* As a heuristic place the new window on the same output as the
+ 	 * pointer. Falling back to the output containing 0, 0.
+@@ -4133,6 +4136,20 @@ weston_view_set_initial_position(struct weston_view *view,
+ 	if (range_y > 0)
+ 		y += random() % range_y;
+ 
++	desktop_surface = weston_surface_get_desktop_surface(view->surface);
++	if (desktop_surface) {
++		has_window_position = weston_desktop_surface_get_has_window_position(
++				desktop_surface);
++		if (has_window_position) {
++			window_position = weston_desktop_surface_get_window_position(
++					desktop_surface);
++			weston_view_set_position(view, window_position.x, window_position.y);
++		} else {
++			weston_view_set_position(view, x, y);
++		}
++		return;
++	}
++
+ 	weston_view_set_position(view, x, y);
+ }
+ 
+diff --git a/libweston-desktop/internal.h b/libweston-desktop/internal.h
+index 763355b..3d4345b 100644
+--- a/libweston-desktop/internal.h
++++ b/libweston-desktop/internal.h
+@@ -196,6 +196,9 @@ void
+ weston_desktop_surface_set_geometry(struct weston_desktop_surface *surface,
+ 				    struct weston_geometry geometry);
+ void
++weston_desktop_surface_set_window_position(struct weston_desktop_surface *surface,
++				    struct weston_position window_position);
++void
+ weston_desktop_surface_set_relative_to(struct weston_desktop_surface *surface,
+ 				       struct weston_desktop_surface *parent,
+ 				       int32_t x, int32_t y, bool use_geometry);
+diff --git a/libweston-desktop/libweston-desktop.h b/libweston-desktop/libweston-desktop.h
+index 03b04c7..90a6fc3 100644
+--- a/libweston-desktop/libweston-desktop.h
++++ b/libweston-desktop/libweston-desktop.h
+@@ -187,6 +187,10 @@ bool
+ weston_desktop_surface_get_resizing(struct weston_desktop_surface *surface);
+ struct weston_geometry
+ weston_desktop_surface_get_geometry(struct weston_desktop_surface *surface);
++struct weston_position
++weston_desktop_surface_get_window_position(struct weston_desktop_surface *surface);
++bool
++weston_desktop_surface_get_has_window_position(struct weston_desktop_surface *surface);
+ struct weston_size
+ weston_desktop_surface_get_max_size(struct weston_desktop_surface *surface);
+ struct weston_size
+diff --git a/libweston-desktop/surface.c b/libweston-desktop/surface.c
+index d3be936..f8bccd8 100644
+--- a/libweston-desktop/surface.c
++++ b/libweston-desktop/surface.c
+@@ -60,6 +60,8 @@ struct weston_desktop_surface {
+ 	struct wl_list resource_list;
+ 	bool has_geometry;
+ 	struct weston_geometry geometry;
++	bool has_window_position;
++	struct weston_position window_position;
+ 	struct {
+ 		char *title;
+ 		char *app_id;
+@@ -653,6 +655,24 @@ weston_desktop_surface_get_geometry(struct weston_desktop_surface *surface)
+ 	return weston_surface_get_bounding_box(surface->surface);
+ }
+ 
++WL_EXPORT struct weston_position
++weston_desktop_surface_get_window_position(struct weston_desktop_surface *surface)
++{
++	if (surface->has_window_position)
++		return surface->window_position;
++
++	struct weston_position window_position;
++	window_position.x = -1;
++	window_position.y = -1;
++	return window_position;
++}
++
++WL_EXPORT bool
++weston_desktop_surface_get_has_window_position(struct weston_desktop_surface *surface)
++{
++		return surface->has_window_position;
++}
++
+ WL_EXPORT struct weston_size
+ weston_desktop_surface_get_max_size(struct weston_desktop_surface *surface)
+ {
+@@ -719,6 +739,14 @@ weston_desktop_surface_set_geometry(struct weston_desktop_surface *surface,
+ }
+ 
+ void
++weston_desktop_surface_set_window_position(struct weston_desktop_surface *surface,
++				    struct weston_position window_position)
++{
++	surface->has_window_position = true;
++	surface->window_position = window_position;
++}
++
++void
+ weston_desktop_surface_set_relative_to(struct weston_desktop_surface *surface,
+ 				       struct weston_desktop_surface *parent,
+ 				       int32_t x, int32_t y, bool use_geometry)
+diff --git a/libweston-desktop/wl-shell.c b/libweston-desktop/wl-shell.c
+index 399139c..e906853 100644
+--- a/libweston-desktop/wl-shell.c
++++ b/libweston-desktop/wl-shell.c
+@@ -380,6 +380,21 @@ weston_desktop_wl_shell_surface_protocol_set_class(struct wl_client *wl_client,
+ 	weston_desktop_surface_set_app_id(surface, class_);
+ }
+ 
++static void
++weston_desktop_wl_shell_surface_protocol_set_window_postion(struct wl_client *wl_client,
++						   struct wl_resource *resource,
++							 int32_t x, int32_t y)
++{
++	struct weston_desktop_surface *surface =
++		wl_resource_get_user_data(resource);
++
++	struct weston_position window_position;
++	window_position.x = x;
++	window_position.y = y;
++
++	weston_desktop_surface_set_window_position(surface, window_position);
++}
++
+ 
+ static const struct wl_shell_surface_interface weston_desktop_wl_shell_surface_implementation = {
+ 	.pong           = weston_desktop_wl_shell_surface_protocol_pong,
+@@ -392,6 +407,7 @@ static const struct wl_shell_surface_interface weston_desktop_wl_shell_surface_i
+ 	.set_maximized  = weston_desktop_wl_shell_surface_protocol_set_maximized,
+ 	.set_title      = weston_desktop_wl_shell_surface_protocol_set_title,
+ 	.set_class      = weston_desktop_wl_shell_surface_protocol_set_class,
++	.set_window_position = weston_desktop_wl_shell_surface_protocol_set_window_postion,
+ };
+ 
+ static const struct weston_desktop_surface_implementation weston_desktop_wl_shell_surface_internal_implementation = {

@@ -1,0 +1,145 @@
+--- a/rcS.c
++++ b/rcS.c
+@@ -21,6 +21,7 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <unistd.h>
++#include <ctype.h>
+
+ #include <sys/types.h>
+ #include <sys/stat.h>
+@@ -32,6 +33,13 @@
+ #include "rcS.h"
+
+ static struct runqueue q, r;
++static unsigned int rc_boot_init = 0;
++#define RC_TASK_NAME_SIZE	64
++struct rc_task{
++	char file_name[RC_TASK_NAME_SIZE];
++	struct runqueue_task *task;
++};
++static struct rc_task *rc_task_list = NULL;
+
+ struct initd {
+	struct ustream_fd fd;
+@@ -99,11 +107,64 @@ static void q_initd_complete(struct runq
+	struct initd *s = container_of(p, struct initd, proc.task);
+
+	DEBUG(2, "stop %s %s \n", s->file, s->param);
++	if(p->depend_task_num && p->depend_task) {
++		p->depend_task_num = 0;
++		free(p->depend_task);
++		p->depend_task = NULL;
++	}
+	ustream_free(&s->fd.stream);
+	close(s->fd.fd.fd);
+	free(s);
+ }
+
++static unsigned int find_rc_boot_depend_task(char *file, struct runqueue_task *task)
++{
++	unsigned int num=0,i;
++	FILE *fp;
++	char buf[512];
++	char DEPEND[] = "DEPEND";
++	char depend_task_name[20][RC_TASK_NAME_SIZE];
++
++	fp = fopen(file, "r");
++	if(!fp)
++		return 0;
++	for(i=0;i<20;i++) {
++		memset(buf, 0, sizeof(buf));
++		if(!fgets(buf, sizeof(buf), fp))
++			goto err;
++		if(!memcmp(buf, DEPEND, 6)) {
++			char *ptr, *tmp=NULL;
++			int j=0,k=0;
++			memset(depend_task_name, 0, sizeof(depend_task_name));
++			ptr = strchr(buf, '=');
++			for(ptr+=1; *ptr != '\0'; ptr++) {
++				if(isspace(*ptr))
++					continue;
++				tmp = ptr;
++				while(!isspace(*ptr) && *ptr != ',')
++					ptr++;
++				memcpy(depend_task_name[num++], tmp, ptr-tmp);
++				if(num >= 20)
++					break;
++			}
++			if(num != 0) {
++				task->depend_task = (struct runqueue_task **)malloc(num*sizeof(struct runqueue_task *));
++				for(j=0;j < rc_boot_init+1; j++) {
++					for(k=0;k<num;k++) {
++						if(!strcmp(rc_task_list[j].file_name, depend_task_name[k])) {
++							task->depend_task[task->depend_task_num++] = rc_task_list[j].task;
++						}
++					}
++				}
++			}
++			break;
++		}
++	}
++err:
++	fclose(fp);
++	return num;
++}
++
+ static void add_initd(struct runqueue *q, char *file, char *param)
+ {
+	static const struct runqueue_task_type initd_type = {
+@@ -119,6 +180,15 @@ static void add_initd(struct runqueue *q
+		ERROR("Out of memory in %s.\n", file);
+		return;
+	}
++	if(rc_task_list) {
++		char *ptr,*name = rc_task_list[rc_boot_init].file_name;
++		ptr = strrchr(file, '/')+2;
++		while(*ptr >= '0' && *ptr <= '9')
++			ptr++;
++		strncpy(name, ptr, RC_TASK_NAME_SIZE);
++		rc_task_list[rc_boot_init].task = &s->proc.task;
++		find_rc_boot_depend_task(file, &s->proc.task);
++	}
+	s->proc.task.type = &initd_type;
+	s->proc.task.complete = q_initd_complete;
+	if (!strcmp(param, "stop") || !strcmp(param, "shutdown"))
+@@ -129,7 +199,6 @@ static void add_initd(struct runqueue *q
+	strcpy(s->file, file);
+	runqueue_task_add(q, &s->proc.task, false);
+ }
+-
+ static int _rc(struct runqueue *q, char *path, const char *file, char *pattern, char *param)
+ {
+	char *dir = alloca(2 + strlen(path) + strlen(file) + strlen(pattern));
+@@ -148,8 +217,20 @@ static int _rc(struct runqueue *q, char
+		return -1;
+	}
+
+-	for (j = 0; j < gl.gl_pathc; j++)
+-		add_initd(q, gl.gl_pathv[j], param);
++	if(!rc_boot_init && !strcmp(param, "boot")) {
++		rc_task_list = (struct rc_task *)malloc(gl.gl_pathc*sizeof(struct rc_task));
++		for (j = 0; j < gl.gl_pathc; j++){
++			add_initd(q, gl.gl_pathv[j], param);
++			rc_boot_init++;
++		}
++		free(rc_task_list);
++		rc_task_list = NULL;
++	}else {
++		for (j = 0; j < gl.gl_pathc; j++){
++			rc_boot_init++;
++			add_initd(q, gl.gl_pathv[j], param);
++		}
++	}
+
+	globfree(&gl);
+
+@@ -160,7 +241,7 @@ int rcS(char *pattern, char *param, void
+ {
+	runqueue_init(&q);
+	q.empty_cb = q_empty;
+-	q.max_running_tasks = 1;
++	q.max_running_tasks = 10;
+
+	return _rc(&q, "/etc/rc.d", pattern, "*", param);
+ }

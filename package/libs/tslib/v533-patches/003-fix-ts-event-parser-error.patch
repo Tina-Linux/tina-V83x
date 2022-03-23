@@ -1,0 +1,60 @@
+--- a/plugins/input-raw.c	2019-10-30 11:08:34.692500765 +0800
++++ b/plugins/input-raw.c	2019-10-30 13:41:37.488630632 +0800
+@@ -335,6 +335,8 @@
+ 	int ret = nr;
+ 	int total = 0;
+ 	int pen_up = 0;
++    i->current_p = 255;
++    static int pressure_flag = 0;//used tp identify the pressing process
+ 
+ 	if (ts->fd != i->last_fd)
+ 		i->last_fd = check_fd(i);
+@@ -372,23 +374,28 @@
+ 				switch (ev.code) {
+ 				case BTN_TOUCH:
+ 				case BTN_LEFT:
+-					if (ev.value == 0)
++					if (ev.value == 0){
+ 						pen_up = 1;
++                        i->current_p = 0;
++					}else{
++                        pen_up = 0;
++                        i->current_p = 255;
++                        pressure_flag = 1;
++                    }
+ 					break;
+ 				}
+ 				break;
+ 			case EV_SYN:
++                if(pressure_flag == 0)//filter the date when raise hand
++                    return;
+ 				if (ev.code == SYN_REPORT) {
+-					/* Fill out a new complete event */
++                    /* Fill out a new complete event */
++                    samp->x = i->current_x;
++					samp->y = i->current_y;
++					samp->pressure = i->current_p;
+ 					if (pen_up) {
+-						samp->x = i->current_x;
+-						samp->y = i->current_y;
+-						samp->pressure = 0;
+ 						pen_up = 0;
+-					} else {
+-						samp->x = i->current_x;
+-						samp->y = i->current_y;
+-						samp->pressure = i->current_p;
++                        pressure_flag = 0;
+ 					}
+ 					samp->tv = ev.time;
+ 			#ifdef DEBUG
+@@ -472,10 +479,6 @@
+ 							samp->pressure = i->current_p;
+ 							break;
+ 						case ABS_MT_TRACKING_ID:
+-							if (ev.value == -1){
+-								i->current_p = 255;
+-								samp->pressure = i->current_p;
+-							}
+ 							break;
+ 					}
+ 				}

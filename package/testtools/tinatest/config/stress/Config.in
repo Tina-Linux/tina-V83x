@@ -1,0 +1,12 @@
+menuconfig TINATEST_STRESS
+    bool "stress"
+
+if TINATEST_STRESS
+    source reboot/Config.in
+    source gpu/Config.in
+    source ddr/Config.in
+    source cpu/Config.in
+    source storage/Config.in
+    source wifi/Config.in
+    source standby/Config.in
+endif

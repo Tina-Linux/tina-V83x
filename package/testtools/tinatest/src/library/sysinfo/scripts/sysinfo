@@ -1,0 +1,32 @@
+#!/bin/sh
+# get kernel_version,target,boot media
+#	-t: target
+#	-k: kernel version
+#	-b: boot media
+#	(NULL): ALL
+# example: var=`sysinfo`
+
+if [ $# -eq 0 ]; then
+    echo "TinaLinux kernel-$(get_kernel_version) $(get_target) $(get_boot_media)"
+else
+	while [ $# -gt 0 ]
+	do
+		case "$1" in
+			-t)
+				shift
+				get_target
+				;;
+			-k)
+				shift
+				get_kernel_version
+				;;
+			-b)
+				shift
+				get_boot_media
+				;;
+			*)
+				shift
+				;;
+		esac
+	done
+fi
