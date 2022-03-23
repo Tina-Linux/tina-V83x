@@ -25,6 +25,3 @@
 [submodule "package"]
 	path = package
 	url = https://github.com/Tina-V833/package
-[submodule "scripts"]
-	path = scripts
-	url = https://github.com/Tina-V833/scripts
