@@ -1,9 +1,6 @@
 [submodule "docs"]
 	path = docs
 	url = https://github.com/Tina-V833/docs
-[submodule "build"]
-	path = build
-	url = https://github.com/Tina-V833/build
 [submodule "lichee/brandy-2.0/u-boot-2018"]
 	path = lichee/brandy-2.0/u-boot-2018
 	url = https://github.com/Tina-V833/u-boot-2018
