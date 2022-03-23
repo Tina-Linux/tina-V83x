@@ -4,9 +4,6 @@
 [submodule "lichee/brandy-2.0/u-boot-2018"]
 	path = lichee/brandy-2.0/u-boot-2018
 	url = https://github.com/Tina-V833/u-boot-2018
-[submodule "lichee/brandy-2.0/tools"]
-	path = lichee/brandy-2.0/tools
-	url = https://github.com/Tina-V833/brandy-tools
 [submodule "lichee/linux-4.9"]
 	path = lichee/linux-4.9
 	url = https://github.com/Tina-V833/linux-4.9
