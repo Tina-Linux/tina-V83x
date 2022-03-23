@@ -1,0 +1,17 @@
+# tracer: nop
+#
+# entries-in-buffer/entries-written: 6/6   #P:6
+#
+#                                      _-----=> irqs-off
+#                                     / _----=> need-resched
+#                                    | / _---=> hardirq/softirq
+#                                    || / _--=> preempt-depth
+#                                    ||| /     delay
+#           TASK-PID    TGID   CPU#  ||||    TIMESTAMP  FUNCTION
+#              | |        |      |   ||||       |         |
+ awtrace_example-15898 (15898) [000] ...1  8264.110213: tracing_mark_write: E
+ awtrace_example-15898 (15898) [000] ...1  8265.094386: tracing_mark_write: B|15898|ATRACE_BEGIN_END_TEST
+ awtrace_example-15898 (15898) [000] ...1  8266.078522: tracing_mark_write: E
+ awtrace_example-15898 (15898) [000] ...1  8267.062727: tracing_mark_write: B|15898|atrace_call_test
+ awtrace_example-15898 (15898) [000] ...1  8268.046836: tracing_mark_write: E
+ awtrace_example-15898 (15898) [000] ...1  8269.030992: tracing_mark_write: B|15898|ATRACE_BEGIN_END_TEST

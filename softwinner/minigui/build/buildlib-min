@@ -1,0 +1,36 @@
+#!/bin/sh
+
+./configure \
+    --disable-dblclk \
+    --disable-cursor \
+    --disable-mousecalibrate \
+    --disable-clipboard \
+    --disable-adv2dapi \
+    --disable-splash \
+    --disable-screensaver \
+    --disable-flatlf \
+    --disable-skinlf \
+    --disable-rbfvgaoem \
+    --disable-rbfterminal \
+    --disable-vbfsupport \
+    --disable-qpfsupport \
+    --disable-upfsupport \
+    --disable-bmpfsupport \
+    --disable-latin9support   \
+    --disable-gbsupport       \
+    --disable-gbksupport      \
+    --disable-unicodesupport  \
+    --disable-savebitmap \
+    --disable-jpgsupport \
+    --disable-pngsupport \
+    --disable-gifsupport \
+    --disable-aboutdlg \
+    --disable-savescreen \
+    --disable-mousecalibrate \
+    --disable-ctrlanimation \
+    --disable-ctrlnewtextedit \
+    --disable-consoleps2 \
+    --disable-consoleimps2 \
+    --disable-consolems \
+    --disable-consolems3 \
+    --disable-consolegpm
