@@ -1,0 +1,27 @@
+config GCC_VERSION_4_5_1
+    bool
+    default n if (!TOOLCHAINOPTS && arc)
+
+config GCC_VERSION_5_2_LINARO
+	default n if (!TOOLCHAINOPTS && !arc)
+	bool
+
+config GCC_VERSION_5_3_1
+	default n if (!TOOLCHAINOPTS && !arc)
+	bool
+
+config GCC_VERSION_6_4_LINARO
+	default y if (!TOOLCHAINOPTS && !arc)
+	bool
+
+config GCC_VERSION_7_4_LINARO
+	default y if (!TOOLCHAINOPTS && !arc)
+	bool
+
+config GCC_VERSION
+	string
+	default "linaro-5.3-2016.05" if GCC_VERSION_5_3_1
+	default "4.5-2010.09" if GCC_VERSION_4_5_1
+	default "linaro-5.2-2015.11-2" if GCC_VERSION_5_2_LINARO
+	default "linaro-6.4-2017.11" if GCC_VERSION_6_4_LINARO
+	default "linaro-7.4-2019.02" if GCC_VERSION_7_4_LINARO
