@@ -19,6 +19,3 @@
 [submodule "lichee/linux-4.9"]
 	path = lichee/linux-4.9
 	url = https://github.com/Tina-V833/linux-4.9
-[submodule "package"]
-	path = package
-	url = https://github.com/Tina-V833/package
