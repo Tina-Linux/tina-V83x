@@ -10,9 +10,6 @@
 [submodule "config"]
 	path = config
 	url = https://github.com/Tina-V833/config
-[submodule "prebuilt"]
-	path = prebuilt
-	url = https://github.com/Tina-V833/prebuilt
 [submodule "lichee/brandy-2.0/u-boot-2018"]
 	path = lichee/brandy-2.0/u-boot-2018
 	url = https://github.com/Tina-V833/u-boot-2018
