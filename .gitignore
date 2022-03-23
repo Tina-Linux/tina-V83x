@@ -1,3 +1,4 @@
 out/
 tmp/
 .config
+.config.old
