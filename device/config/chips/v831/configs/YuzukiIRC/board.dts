@@ -298,23 +298,6 @@
 				allwinner,pull = <0>;
 			};
 
-			// pwm5_pins_a: pwm5@0 {
-			// 	allwinner,pins = "PH5";
-			// 	allwinner,pname = "pwm5_positive";
-			// 	allwinner,function = "pwm5";
-			// 	allwinner,muxsel = <2>;
-			// 	allwinner,drive = <1>;
-			// 	allwinner,pull = <0>;
-			// };
-
-			// pwm5_pins_b: pwm5@1 {
-			// 	allwinner,pins = "PH5";
-			// 	allwinner,function = "io_disabled";
-			// 	allwinner,muxsel = <7>;
-			// 	allwinner,drive = <1>;
-			// 	allwinner,pull = <0>;
-			// };
-
 			pwm6_pins_a: pwm6@0 {
 				allwinner,pins = "PH6";
 				allwinner,pname = "pwm6_positive";
@@ -436,20 +419,6 @@
 			status = "okay";
 		};
 
-		// uart3: uart@05000c00 {
-		// 	compatible = "allwinner,sun8i-uart";
-		// 	device_type = "uart3";
-		// 	reg = <0x0 0x05000c00 0x0 0x400>;
-		// 	interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
-		// 	clocks = <&clk_uart3>;
-		// 	pinctrl-names = "default", "sleep";
-		// 	pinctrl-0 = <&uart3_pins_a>;
-		// 	pinctrl-1 = <&uart3_pins_b>;
-		// 	uart3_port = <3>;
-		// 	uart3_type = <4>;
-		// 	status = "okay";
-		// };
-
 		twi0: twi@0x05002000{
 			pinctrl-0 = <&twi0_pins_a>;
 			pinctrl-1 = <&twi0_pins_b>;
@@ -522,6 +491,7 @@
 				actuator0_afvdd_vol = <2800000>;
 				status = "disabled";
 			};
+
 			flash0:flash@0 {
 				device_type = "flash0";
 				flash0_type = <2>;
@@ -532,6 +502,7 @@
 				device_id = <0>;
 				status = "disabled";
 			};
+
 			sensor0:sensor@0 {
 				device_type = "sensor0";
 				// sensor0_mname = "ov9732_mipi";
@@ -558,6 +529,7 @@
 				sensor0_pwdn = <&pio PE 17 1 0 1 0>;
 				status	= "okay";
 			};
+
 			sensor1:sensor@1 {
 				device_type = "sensor1";
 				sensor1_mname = "ov5647";
@@ -581,6 +553,7 @@
 				sensor1_pwdn = <&pio PI 4 1 0 1 0>;
 				status	= "disabled";
 			};
+
 			vinc0:vinc@0 {
 				vinc0_csi_sel = <0>;
 				vinc0_mipi_sel = <0>;
@@ -591,6 +564,7 @@
 				vinc0_sensor_list = <0>;
 				status = "okay";
 			};
+
 			vinc1:vinc@1 {
 				vinc1_csi_sel = <0>;
 				vinc1_mipi_sel = <0>;
@@ -601,6 +575,7 @@
 				vinc1_sensor_list = <0>;
 				status = "okay";
 			};
+
 			vinc2:vinc@2 {
 				vinc2_csi_sel = <0>;
 				vinc2_mipi_sel = <0>;
@@ -611,6 +586,7 @@
 				vinc2_sensor_list = <0>;
 				status = "disabled";
 			};
+
 			vinc3:vinc@3 {
 				vinc3_csi_sel = <1>;
 				vinc3_mipi_sel = <0xff>;
@@ -622,6 +598,7 @@
 				status = "disabled";
 			};
 		};
+		
 		s_owc0: s_owc@07040400 {
 			pinctrl-0 = <&owc0_pins_a>;
 			pinctrl-1 = <&owc0_pins_b>;
