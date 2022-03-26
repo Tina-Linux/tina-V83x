@@ -12,7 +12,7 @@ This repo aim to integrate the codes for V833 Tina from https://github.com/orgs/
 ## Get the Code
 ```shell
 git clone --recursive https://github.com/Tina-Linux/tina-V83x
-cd tina-V833 
+cd tina-V83x
 ```
 
 After clone you'll have a 4.7GB source code directory, after download all packages you'll have a 16GB directory. Make sure you have enough space for the source code.
