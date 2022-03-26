@@ -1,6 +1,3 @@
-[submodule "docs"]
-	path = docs
-	url = https://github.com/Tina-V833/docs
 [submodule "lichee/linux-4.9"]
 	path = lichee/linux-4.9
 	url = https://github.com/Tina-V833/tina-v83x-linux-4.9
