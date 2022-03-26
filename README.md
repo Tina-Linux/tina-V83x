@@ -11,7 +11,7 @@ This repo aim to integrate the codes for V833 Tina from https://github.com/orgs/
 
 ## Get the Code
 ```shell
-git clone --recursive https://github.com/Tina-V833/tina-V833
+git clone --recursive https://github.com/Tina-Linux/tina-V83x
 cd tina-V833 
 ```
 
