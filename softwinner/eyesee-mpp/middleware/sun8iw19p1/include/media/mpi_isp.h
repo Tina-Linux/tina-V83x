@@ -1175,7 +1175,6 @@ AW_S32 AW_MPI_ISP_SetSaveCTX(ISP_DEV IspDev);
  * get environment luminance value.
  */
 int AW_MPI_ISP_GetEnvLV(ISP_DEV IspDev);
-int AW_MPI_ISP_GetEvLvAdj(ISP_DEV IspDev);
 int AW_MPI_ISP_GetTemperature(ISP_DEV IspDev);
 AW_S32 AW_MPI_ISP_SetLocalExposureArea(ISP_DEV IspDev, SIZE_S Res, RECT_S RoiRgn);
 

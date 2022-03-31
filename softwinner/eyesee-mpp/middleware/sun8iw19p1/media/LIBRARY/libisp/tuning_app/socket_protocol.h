@@ -12,7 +12,6 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <errno.h>
-#include "../isp_version.h"
 
 #define SOCK_DEFAULT_TIMEOUT 30  // s
 
@@ -25,9 +24,6 @@ typedef struct sock_comm_packet_s
 	int           data_length;
 	int           reserved[4]; 
 	int	      framecount;
-#if(ISP_VERSION == 522)
-	int	      index;
-#endif
 } sock_packet;
 
 typedef enum sock_command_code_e

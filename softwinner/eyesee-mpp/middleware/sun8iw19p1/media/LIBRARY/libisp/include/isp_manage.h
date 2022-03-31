@@ -38,7 +38,6 @@
 #include "isp_base.h"
 #include "isp_rolloff.h"
 #include "isp_pltm.h"
-#include "isp_comm.h"
 
 #include "V4l2Camera/sunxi_camera_v2.h"
 #include "../isp_tuning/isp_tuning_priv.h"
@@ -71,18 +70,8 @@ extern unsigned int isp_lib_log_param;
 
 #endif
 
-#if (ISP_VERSION >= 520)
-
-#define ISP_AF_ROW	16
-#define ISP_AF_COL	24
-
-#else
-
 #define ISP_AF_ROW	8
 #define ISP_AF_COL	8
-
-#endif
-
 
 #define ISP_HIST_NUM	256
 #define ISP_AFS_NUM	128
@@ -155,18 +144,11 @@ struct isp_awb_stats_s {
 };
 
 struct isp_af_stats_s {
-#if (ISP_VERSION >= 520)
-	HW_U64 af_iir[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_fir[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_iir_cnt[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_fir_cnt[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_hlt_cnt[ISP_AF_ROW][ISP_AF_COL];
-#endif
-	HW_U64 af_count[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_h_d1[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_h_d2[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_v_d1[ISP_AF_ROW][ISP_AF_COL];
-	HW_U64 af_v_d2[ISP_AF_ROW][ISP_AF_COL];
+	HW_U32 af_count[ISP_AF_ROW][ISP_AF_COL];
+	HW_U32 af_h_d1[ISP_AF_ROW][ISP_AF_COL];
+	HW_U32 af_h_d2[ISP_AF_ROW][ISP_AF_COL];
+	HW_U32 af_v_d1[ISP_AF_ROW][ISP_AF_COL];
+	HW_U32 af_v_d2[ISP_AF_ROW][ISP_AF_COL];
 };
 
 struct isp_afs_stats_s {
@@ -193,30 +175,6 @@ struct isp_gtm_stats_s {
 	HW_U32 avg[ISP_AE_ROW*ISP_AE_COL];
 
 	HW_U32 hist[ISP_HIST_NUM];
-};
-
-struct isp_dynamic_judge_stats_s {
-	HW_U32 accum[ISP_AE_ROW][ISP_AE_COL];
-	HW_U32 accum_last1[ISP_AE_ROW][ISP_AE_COL];
-	HW_U32 accum_last2[ISP_AE_ROW][ISP_AE_COL];
-	HW_U32 accum_last3[ISP_AE_ROW][ISP_AE_COL];
-	HW_S32 mov_save[7];
-	HW_S32 mov_th[6];
-	HW_S32 tdnf_comp[STATUS_JUDGE_MAX];
-	HW_S32 tdnf_diff_comp[STATUS_JUDGE_MAX];
-	HW_S32 lp_th_ratio_comp[STATUS_JUDGE_MAX];
-	HW_S32 sharp_hfrq_comp[STATUS_JUDGE_MAX];
-	HW_S32 sharp_edge_comp[STATUS_JUDGE_MAX];
-	HW_S32 sharp_under_shoot_comp[STATUS_JUDGE_MAX];
-	HW_S32 tdnf_comp_target;
-	HW_S32 tdnf_diff_comp_target;
-	HW_S32 lp_th_ratio_comp_target;
-	HW_S32 sharp_hfrq_comp_target;
-	HW_S32 sharp_edge_comp_target;
-	HW_S32 sharp_under_shoot_comp_target;
-	HW_S32 mov;
-	HW_S32 mov_old;
-	bool enable;
 };
 
 struct isp_pltm_stats_s {
@@ -363,7 +321,6 @@ struct isp_stats_context {
 
 	struct isp_stats_s stats;
 	struct isp_wb_gain wb_gain_saved;
-	struct isp_dynamic_judge_stats_s dynamic_stats;
 	bool enabled;
 };
 struct gain_cfg {
@@ -393,13 +350,6 @@ typedef struct isp_adjust_setting {
 	HW_S32 brightness;
 	HW_S32 defog_value;
 } isp_adjust_setting_t;
-
-enum ColorChannel {
-	AWB_R_CH = 0,
-	AWB_G_CH,
-	AWB_B_CH,
-	AWB_CH_NUM,
-};
 
 /*
  *
@@ -470,26 +420,10 @@ struct isp_lib_context {
 
 	const struct isp_ctx_operations *ops;
 	pthread_mutex_t ctx_lock;
-	const void *isp_stat_buf;
+	void *isp_stat_buf;
 	void *load_reg_base;
     /* ISP ir flag */
     HW_U32 isp_ir_flag;
-	/* otp information*/
-	int otp_enable;
-	void *pmsc_table;		/*msc table  22x22x3 = ISP_MSC_TBL_LENGTH, default mode using 16x16x3  */
-	void *pwb_table;
-	float msc_golden_ratio[ISP_MSC_TBL_LENGTH];
-	float msc_r_ratio;
-	int   msc_golden_flag[ISP_MSC_TBL_LENGTH];
-	float msc_adjust_ratio[ISP_MSC_TEMP_NUM];
-	float msc_adjust_ratio_less[ISP_MSC_TEMP_NUM];
-	float wb_golden_ratio[AWB_CH_NUM];
-#if (ISP_VERSION == 520 || ISP_VERSION == 521)
-	/* WDR_BE */
-	//HW_U16 wdr_be_tbl_save[ISP_WDR_GAMMA_BE_MEM_SIZE/2];
-	//HW_U16 gamma_tbl_save[ISP_GAMMA_TBL_LENGTH];
-	HW_U16 anti_gamma_tbl[4096];
-#endif
 };
 
 /*
@@ -538,8 +472,8 @@ void isp_pltm_set_params_helper(isp_pltm_entity_context_t *isp_pltm_cxt, pltm_pa
 
 HW_S32 isp_ctx_algo_init(struct isp_lib_context *isp_gen, const struct isp_ctx_operations *ops);
 HW_S32 isp_ctx_algo_exit(struct isp_lib_context *isp_gen);
-HW_S32 isp_ctx_stats_prepare(struct isp_lib_context *isp_gen, const void *buffer);
-HW_S32 isp_ctx_stats_prepare_sync(struct isp_lib_context *isp_gen, const void *buffer0, const void *buffer1);
+HW_S32 isp_ctx_stats_prepare(struct isp_lib_context *isp_gen, void *buffer);
+HW_S32 isp_ctx_stats_prepare_sync(struct isp_lib_context *isp_gen, void *buffer0, void *buffer1);
 HW_S32 isp_ctx_stats_req(struct isp_lib_context *isp_gen, struct isp_stats_context *stats_ctx);
 HW_S32 isp_ctx_config_init(struct isp_lib_context *isp_gen);
 HW_S32 isp_ctx_config_exit(struct isp_lib_context *isp_gen);

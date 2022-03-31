@@ -2174,7 +2174,6 @@ static ERRORTYPE VideoEncConfigVencInputBufferRoiParam(VIDEOENCDATATYPE *pVideoE
     int i=0;
     int cfg_num = ARRAY_SIZE(pEncBuf->roi_param);
 
-    pEncBuf->bUseInputBufferRoi = 0;
     if (!list_empty(&pVideoEncData->mRoiCfgList))
     {
         //alogd("set frame roi");
@@ -2193,10 +2192,6 @@ static ERRORTYPE VideoEncConfigVencInputBufferRoiParam(VIDEOENCDATATYPE *pVideoE
             pEncBuf->roi_param[i].sRect.nTop = pEntry->mROI.Rect.Y;
             pEncBuf->roi_param[i].sRect.nWidth = pEntry->mROI.Rect.Width;
             pEncBuf->roi_param[i].sRect.nHeight = pEntry->mROI.Rect.Height;
-            if(pEntry->mROI.bEnable)
-            {
-                pEncBuf->bUseInputBufferRoi = 1;
-            }
             i++;
         }
     }

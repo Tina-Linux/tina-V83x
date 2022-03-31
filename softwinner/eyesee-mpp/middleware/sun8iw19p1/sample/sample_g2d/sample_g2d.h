@@ -1,63 +1,88 @@
-#ifndef __SAMPLE_G2D_H__
-#define __SAMPLE_G2D_H__ 
+#ifndef _SAMPLE_G2D_H_
+#define _SAMPLE_G2D_H_
 
-#include <plat_type.h>
+#include "linux/g2d_driver.h"
 
-#define MAX_FILE_PATH_LEN  (128)
-#define MAX_FILE_PATH_SIZE  (256)
+#define MAX_FILE_PATH_SIZE (256)
 
-typedef struct SampleG2dCmdLineParam_s
+#define SAMPLE_G2D_MODE            "g2d_mode"
+#define SAMPLE_G2D_SRC_IMG         "src_img"
+#define SAMPLE_G2D_SRC_IMG_W       "src_img_w"
+#define SAMPLE_G2D_SRC_IMG_H       "src_img_h"
+#define SAMPLE_G2D_SRC_RECT_X      "src_rect_x"
+#define SAMPLE_G2D_SRC_RECT_Y      "src_rect_y"
+#define SAMPLE_G2D_SRC_RECT_W      "src_rect_w"
+#define SAMPLE_G2D_SRC_RECT_H      "src_rect_h"
+
+#define SAMPLE_G2D_DST_IMG         "dst_img"
+#define SAMPLE_G2D_DST_IMG_W       "dst_img_w"
+#define SAMPLE_G2D_DST_IMG_H       "dst_img_h"
+#define SAMPLE_G2D_DST_RECT_X      "dst_rect_x"
+#define SAMPLE_G2D_DST_RECT_Y      "dst_rect_y"
+#define SAMPLE_G2D_DST_RECT_W      "dst_rect_w"
+#define SAMPLE_G2D_DST_RECT_H      "dst_rect_h"
+
+#define SAMPLE_G2D_OUTPUT          "output"
+
+#define SAMPLE_G2D_BLT_MODE 0
+#define SAMPLE_G2D_FILLRECT_MODE 1
+#define SAMPLE_G2D_STCHBLT_MODE 2
+#define SAMPLE_G2D_BLTH_MODE 4
+#define SAMPLE_G2D_BLDH_MODE 5
+#define SAMPLE_G2D_MASK_MODE 6
+
+typedef struct SampleCmdLineParam
 {
     char mConfigFilePath[MAX_FILE_PATH_SIZE];
-}SampleG2dCmdLineParam; 
 
-typedef struct SampleG2dConfig_s
+} SampleCmdLineParam;
+
+typedef struct SampleG2dInfo {
+    union {
+        g2d_blt blt;
+        g2d_fillrect fill_rect;
+        g2d_stretchblt stchblt;
+//        g2d_blt_h blt_h;
+//        g2d_bld bld;
+        g2d_maskblt mask;
+    } g2d_mode;
+    int iSrcIdx;
+    void *pSrcPhyAddr;
+    void *pSrcVirAddr;
+    int iDstIdx;
+    void *pDstPhyAddr;
+    void *pDstVirAddr;
+} SampleG2dInfo;
+
+typedef struct SampleG2dContext
 {
-    PIXEL_FORMAT_E  mPicFormat; 
-    PIXEL_FORMAT_E  mDstPicFormat;
-    int mSrcWidth;
-    int mSrcHeight;
-    int mSrcRectX;
-    int mSrcRectY;
-    int mSrcRectW;
-    int mSrcRectH;
-    
-    int mDstRotate; //0, 90, 180, 270, clock-wise.
-    
-    int mDstWidth;
-    int mDstHeight;
-    int mDstRectX;
-    int mDstRectY;
-    int mDstRectW;
-    int mDstRectH;
-    
-    
-    char SrcFile[MAX_FILE_PATH_LEN];
-    char DstFile[MAX_FILE_PATH_LEN];
+    int iG2dFd;
+    int iG2dMode;
+    int iG2dFlags;
 
-    int g2d_mod;
-}SampleG2dConfig; 
+    int iDispFd; // for memory alloc
 
-typedef struct frm_info_s
-{
-    unsigned int frm_width;
-    unsigned int frm_height;
-    void *p_vir_addr[3];
-    void *p_phy_addr[3];
-}FRM_INFO; 
+    char cstrSrcPath[MAX_FILE_PATH_SIZE];
+    int iSrcWidth;
+    int iSrcHeight;
+    int iSrcRectX;
+    int iSrcRectY;
+    int iSrcRectW;
+    int iSrcRectH;
+    char cstrDstPath[MAX_FILE_PATH_SIZE];
+    int iDstWidth;
+    int iDstHeight;
+    int iDstRectX;
+    int iDstRectY;
+    int iDstRectW;
+    int iDstRectH;
 
-typedef struct sample_g2d_ctx_s
-{ 
-    SampleG2dConfig mConfigPara; 
-    SampleG2dCmdLineParam mCmdLinePara;
-    MPP_SYS_CONF_S mSysConf;
-    
-    FRM_INFO src_frm_info;
-    FRM_INFO dst_frm_info; 
-    
-    FILE * fd_in;
-    FILE * fd_out;
-    int mG2dFd;
-}SAMPLE_G2D_CTX;
+    char cstrOutPath[MAX_FILE_PATH_SIZE];
 
-#endif
+    SampleCmdLineParam mCmdLinePara;
+
+    SampleG2dInfo mG2dInfo;
+} SampleG2dContext;
+
+#endif  /* _SAMPLE_G2D_H_ */
+

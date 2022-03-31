@@ -16,11 +16,9 @@ typedef struct isp_pltm_param {
 	int isp_platform_id;
 	int pltm_frame_id;
 	HW_BOOL pltm_enable;
-	HW_BOOL ae_enable;
 	pltm_ini_cfg_t pltm_ini;
 	isp_sensor_info_t sensor_info;
 	HW_U16 *pltm_table;
-	int wdr_bit_offset;
 } pltm_param_t;
 
 typedef struct isp_pltm_stats {

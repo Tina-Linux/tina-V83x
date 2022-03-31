@@ -103,7 +103,6 @@ void isp_md_close(struct hw_isp_media_dev *isp_md);
 int isp_dev_open(struct hw_isp_media_dev *isp_md, int id);
 void isp_dev_close(struct hw_isp_media_dev *isp_md, int id);
 int isp_video_open(struct hw_isp_media_dev *isp_md, unsigned int id);
-int isp_get_isp_id(int video_id);
 int isp_video_to_isp_id(int video_id);
 int isp_video_to_sensor_name(int video_id, char *sensor_name);
 void isp_video_close(struct hw_isp_media_dev *isp_md, unsigned int id);

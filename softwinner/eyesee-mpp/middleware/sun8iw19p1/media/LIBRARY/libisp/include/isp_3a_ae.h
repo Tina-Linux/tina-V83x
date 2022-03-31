@@ -94,7 +94,6 @@ struct ev_setting {
 	HW_U32 ev_digital_gain;
 	HW_U32 ev_total_gain;// ev_total_gain = ev_analog_gain x ev_digital_gain
 	HW_U32 ev_sensor_exp_line;
-	HW_U32 ev_sensor_true_exp_line;
 	HW_U32 ev_f_number;	//x100
 	HW_U32 ev_fno2;	//x10000
 
@@ -224,9 +223,6 @@ typedef struct isp_ae_param {
 	isp_sensor_info_t ae_sensor_info;
 	ae_test_config_t test_cfg;
 	int ae_target_comp;
-	int comanding_input_bits;
-	int comanding_output_bits;
-	bool nor_cmd_mode;
 } ae_param_t;
 
 typedef struct isp_ae_stats {

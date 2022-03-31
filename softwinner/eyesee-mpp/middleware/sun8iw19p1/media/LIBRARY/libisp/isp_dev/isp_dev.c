@@ -39,7 +39,6 @@
 #include "isp_v4l2_helper.h"
 #include "tools.h"
 
-#define ENTITY_SUNXI_VIDEO "vin_video"
 
 #define MEDIA_DEVICE "/dev/media0"
 #define SUNXI_VIDEO "vin_video"
@@ -100,7 +99,6 @@ struct isp_cid isp_cid_array[] = {
 #if ISP_LIB_USE_FLASH
 	{ "V4L2_CID_TAKE_PICTURE", V4L2_CID_TAKE_PICTURE, },
 	{ "V4L2_CID_FLASH_LED_MODE", V4L2_CID_FLASH_LED_MODE, },
-	{ "V4L2_CID_FLASH_LED_MODE_V1", V4L2_CID_FLASH_LED_MODE_V1, },
 #endif
 	{ "AE windows x1", V4L2_CID_AE_WIN_X1, },
 	{ "AE windows y1", V4L2_CID_AE_WIN_Y1, },
@@ -133,7 +131,7 @@ static void isp_subdev_handle_event(void *priv)
 	case V4L2_EVENT_CTRL:
 		for(i = 0; i < array_size(isp_cid_array); i++) {
 			if (isp_cid_array[i].id == event.id)
-				ISP_PRINT("name is %s, value is 0x%x\n", isp_cid_array[i].name, event.u.ctrl.value);
+				ISP_DEV_LOG(ISP_LOG_ISP, "name is %s, value is 0x%x\n", isp_cid_array[i].name, event.u.ctrl.value);
 		}
 		if(isp->ops->ctrl_process)
 			isp->ops->ctrl_process(isp, &event);
@@ -160,7 +158,7 @@ static int isp_subdev_open(struct hw_isp_device *isp)
 	struct hw_isp_media_dev *media = isp->priv;
 	char name[32];
 
-	snprintf(name, sizeof(name), SUNXI_ISP".%u", isp->id);
+	snprintf(name, sizeof(name), SUNXI_ISP".%d", (int)isp->id);
 	entity = media_get_entity_by_name(media->mdev, name);
 	if (entity == NULL)
 		return -ENOENT;
@@ -173,61 +171,6 @@ static int isp_subdev_open(struct hw_isp_device *isp)
 static void isp_subdev_close(struct hw_isp_device *isp)
 {
 	v4l2_subdev_close(&isp->subdev);
-}
-
-int isp_get_isp_id(int video_id)
-{
-	struct isp_video_device *video;
-	struct hw_isp_media_dev *media_dev_isp = NULL;
-	char name[32];
-	int ret = -1;
-	int isp_id = 0;
-
-	if (media_dev_isp != NULL) {
-		ISP_PRINT("mpi_vi already init\n");
-		return 0;
-	}
-	media_dev_isp = isp_md_open(MEDIA_DEVICE);
-
-	if (media_dev_isp == NULL) {
-		ISP_PRINT("unable to open media device %s\n", MEDIA_DEVICE);
-		return -1;
-	}
-
-	if (video_id >= HW_VIDEO_DEVICE_NUM) {
-		free(media_dev_isp);
-		return ret;
-	}
-	if (NULL != media_dev_isp->video_dev[video_id]) {
-		free(media_dev_isp);
-		return 0;
-	}
-
-	video = malloc(sizeof(struct isp_video_device));
-	if (video == NULL) {
-		free(media_dev_isp);
-		return -1;
-	}
-	memset(video, 0, sizeof(*video));
-
-	video->id = (unsigned int)video_id;
-	video->priv = media_dev_isp;
-	//video_set_priv_data(video, media_dev_isp);
-
-	snprintf(name, sizeof(name), ENTITY_SUNXI_VIDEO"%u", video->id);
-	ISP_PRINT("video device name is %s\n", name);
-	video->entity = media_get_entity_by_name(media_dev_isp->mdev, name);
-	if (video->entity == NULL) {
-		ISP_ERR("can not get entity by name %s\n", name);
-		free(video);
-		return -ENOENT;
-	}
-	isp_id = media_video_to_isp_id(video->entity);
-
-	isp_md_close(media_dev_isp);
-	free(video);
-
-	return isp_id;
 }
 
 static int isp_sensor_open(struct hw_isp_device *isp)
@@ -319,7 +262,7 @@ static int isp_stat_open(struct hw_isp_device *isp)
 	struct hw_isp_media_dev *media = isp->priv;
 	char name[32];
 
-	snprintf(name, sizeof(name), SUNXI_H3A".%u", isp->id);
+	snprintf(name, sizeof(name), SUNXI_H3A".%d", (int)isp->id);
 	ISP_DEV_LOG(ISP_LOG_SUBDEV, "stats device name is %s\n", name);
 	entity = media_get_entity_by_name(media->mdev, name);
 	if (entity == NULL)
@@ -339,7 +282,7 @@ int isp_dev_open(struct hw_isp_media_dev *isp_md, int id)
 {
 	int ret = -1;
 	struct hw_isp_device *isp;
-	//struct media_entity *entity = NULL;
+	struct media_entity *entity = NULL;
 
 	if (id >= HW_ISP_DEVICE_NUM)
 		return ret;
@@ -471,7 +414,6 @@ int isp_video_open(struct hw_isp_media_dev *isp_md, unsigned int video_id)
 	}
 
 	video->isp_id = media_video_to_isp_id(video->entity);
-
 	if (video->isp_id == -1) {
 		ISP_ERR("error: unable to initialize video device.\n");
 		video_cleanup(video);
@@ -479,7 +421,7 @@ int isp_video_open(struct hw_isp_media_dev *isp_md, unsigned int video_id)
 		goto error;
 	}
 
-	ISP_PRINT("open video device[%d], detect isp%d success!\n", video_id, video->isp_id);
+	ISP_PRINT("open video device[%d] success!\n", (int)video_id);
 	isp_md->video_dev[video_id] = video;
 	return 0;
 error:
@@ -534,7 +476,7 @@ int isp_video_to_sensor_name(int video_id, char *sensor_name)
 	struct media_entity *entity = NULL, *head = NULL;
 	struct media_device *mdev = NULL;
 	char name[32];
-	//int isp_id = 0;
+	int isp_id = 0;
 
 	if (video_id >= HW_VIDEO_DEVICE_NUM)
 		return -1;
@@ -564,7 +506,7 @@ int isp_video_to_sensor_name(int video_id, char *sensor_name)
 
 int isp_dev_start(struct hw_isp_device *isp)
 {
-	//enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	struct v4l2_event_subscription esub;
 	unsigned int enable = 1;
 	int i, ret;
@@ -624,7 +566,7 @@ int isp_dev_start(struct hw_isp_device *isp)
 
 int isp_dev_stop(struct hw_isp_device *isp)
 {
-	//enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	struct v4l2_event_subscription esub;
 	unsigned int enable = 0;
 

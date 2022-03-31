@@ -28,13 +28,10 @@
 
 
 #include "SENSOR_H/sc2232/sc2232_20fps_ini_ipc_default.h"
-#include "SENSOR_H/imx307/imx307_30fps_ini_cdr.h"
 
 #ifdef SENSOR_SC2232
 #include "SENSOR_H/sc2232/sc2232_20fps_ini_ipc_day.h"
 #include "SENSOR_H/sc2232/sc2232_20fps_ini_ipc_night.h"
-//#include "SENSOR_H/sp2305/sp2305_20fps_ini_ipc_day.h"
-//#include "SENSOR_H/sp2305/sp2305_20fps_ini_ipc_night.h"
 #endif
 
 #ifdef SENSOR_IMX335
@@ -70,8 +67,6 @@
 #include "SENSOR_H/imx386/imx386_240fps_v200.h"
 #include "SENSOR_H/imx386/imx386_full_v200.h"
 #endif
-
-#define ISP_TUNING_ENABLE 0
 
 
 unsigned int isp_cfg_log_param = ISP_LOG_CFG;
@@ -806,22 +801,20 @@ struct isp_cfg_array cfg_arr[] = {
 
 #ifdef SENSOR_GC2053
 //	{"gc2053_mipi",  "gc2053_20fps_ini_cdr", 1920, 1080, 20, 0, 0, &gc2053_20fps_ini_cdr},
-	{"gc2053_mipi",  "gc2053_30fps_ini_cdr", 1920, 1080, 30, 0, 0, &gc2053_30fps_ini_cdr},
+    {"gc2053_mipi",  "gc2053_30fps_ini_cdr", 1920, 1080, 30, 0, 0, &gc2053_30fps_ini_cdr},
 #endif
 
 #ifdef SENSOR_SC2232
 	{"sc2232_mipi",  "sc2232_20fps_ini_ipc_day", 1920, 1080, 20, 0, 0, &sc2232_20fps_ini_ipc_day},
-	{"sc2232_mipi",  "sc2232_20fps_ini_ipc_night", 1920, 1080, 20, 0, 1, &sc2232_20fps_ini_ipc_night},
-//	{"sp2305_mipi",  "sp2305_20fps_ini_ipc_day", 1920, 1080, 20, 0, 0, &sp2305_mipi_day_isp_cfg},
-//	{"sp2305_mipi",  "sp2305_20fps_ini_ipc_night", 1920, 1080, 20, 0, 1, &sp2305_mipi_night_isp_cfg},
+    {"sc2232_mipi",  "sc2232_20fps_ini_ipc_night", 1920, 1080, 20, 0, 1, &sc2232_20fps_ini_ipc_night},
 #endif
 
 #ifdef SENSOR_IMX386
-	{"imx386_mipi",  "imx386_60fps_v200", 1920, 1080, 30, 0, 0, &imx386_60fps_mipi_isp_cfg},
+	{"imx386_mipi",  "imx386_60fps_v200", 1920, 1080, 60, 0, 0, &imx386_60fps_mipi_isp_cfg},
 #endif
     /*---------------------------------------- v459 default isp_config ----------------------------------------*/
-	{"sc2232_mipi",  "sc2232_20fps_ini_ipc_default", 1920, 1080, 20, 0, 0, &sc2232_20fps_ini_ipc_default},
-	{"imx307_mipi",  "imx307_30fps_ini_cdr", 1920, 1080, 30, 0, 0, &imx307_30fps_ini_cdr},
+    {"sc2232_mipi",  "sc2232_20fps_ini_ipc_default", 1920, 1080, 20, 0, 0, &sc2232_20fps_ini_ipc_default},
+
 
 };
 
@@ -1053,104 +1046,52 @@ int parser_ini_info(struct isp_param_config *param, char *sensor_name,
 	int i, ret = 0;
 
 #if !ISP_LIB_USE_INIPARSER
+	struct isp_cfg_pt *cfg = NULL;
 
+	for (i = 0; i < array_size(cfg_arr); i++) {
+		if (!strncmp(sensor_name, cfg_arr[i].sensor_name, 6) &&
+		    (w == cfg_arr[i].width) && (h == cfg_arr[i].height) &&
+		    (fps == cfg_arr[i].fps) && (wdr == cfg_arr[i].wdr)) {
 
-
-#define ISP_TEST_PATH    "/mnt/extsd/isp/isp_test_settings.bin"
-#define ISP_3A_PATH      "/mnt/extsd/isp/isp_3a_settings.bin"
-#define ISP_ISO_PATH     "/mnt/extsd/isp/isp_iso_settings.bin"
-#define ISP_TUNNING_PATH "/mnt/extsd/isp/isp_tuning_settings.bin"
-
-    int fd;
-    struct stat buf;
-    FILE *file_fd = NULL;
-	struct load_isp_param_t {
-		char path[128];
-		char *isp_param_settings;
-		int size;
-	};
-
-	struct load_isp_param_t load_isp_param[4] = {
-		{ISP_TEST_PATH,(char *)&param->isp_test_settings, sizeof(struct isp_test_param)},
-		{ISP_3A_PATH, (char *)&param->isp_3a_settings, sizeof(struct isp_3a_param)},
-		{ISP_ISO_PATH, (char *)&param->isp_iso_settings, sizeof(struct isp_dynamic_param )},
-		{ISP_TUNNING_PATH, (char *)&param->isp_tunning_settings, sizeof(struct isp_tunning_param)},
-	};
-
-	if ( ISP_TUNING_ENABLE &&
-        !access(ISP_TEST_PATH, 0) &&
-	    !access(ISP_3A_PATH, 0) &&
-	    !access(ISP_ISO_PATH, 0) &&
-	    !access(ISP_TUNNING_PATH, 0)) {
-
-		ISP_PRINT("================ ISP will use external isp cfg ============ \n");
-
-		for(i=0; i<4; i++) {
-			file_fd = fopen(load_isp_param[i].path, "r");
-			fread(load_isp_param[i].isp_param_settings,
-			      load_isp_param[i].size, 1, file_fd);
-
-            fd = fileno(file_fd);
-            fstat(fd, &buf);
-            ISP_PRINT("isp_cfg version : %s\n", ctime(&buf.st_mtime));
-
-			fclose(file_fd);
-			file_fd = NULL;
+           if(cfg_arr[i].ir == ir)
+		    {
+                cfg = cfg_arr[i].cfg;
+                ISP_PRINT("find %s_%d_%d_%d_%d [%s] isp config\n", cfg_arr[i].sensor_name,
+	                cfg_arr[i].width, cfg_arr[i].height, cfg_arr[i].fps, cfg_arr[i].wdr, cfg_arr[i].isp_cfg_name);
+                break;
+           }
 		}
-
-		if(sync_mode)
-			parser_sync_info(param, "isp external effect", isp_id);
-
-	} else {
-
-		struct isp_cfg_pt *cfg = NULL;
-
-		for (i = 0; i < array_size(cfg_arr); i++) {
-			if (!strncmp(sensor_name, cfg_arr[i].sensor_name, 6) &&
-			    (w == cfg_arr[i].width) && (h == cfg_arr[i].height) &&
-			    (fps == cfg_arr[i].fps) && (wdr == cfg_arr[i].wdr)) {
-
-	           if(cfg_arr[i].ir == ir)
-			    {
-	                cfg = cfg_arr[i].cfg;
-	                ISP_PRINT("find %s_%d_%d_%d_%d [%s] isp config\n", cfg_arr[i].sensor_name,
-		                cfg_arr[i].width, cfg_arr[i].height, cfg_arr[i].fps, cfg_arr[i].wdr, cfg_arr[i].isp_cfg_name);
-	                break;
-	           }
-			}
-		}
-
-		if (i == array_size(cfg_arr)) {
-			for (i = 0; i < array_size(cfg_arr); i++) {
-				if (!strncmp(sensor_name, cfg_arr[i].sensor_name, 6) && (0 == cfg_arr[i].wdr)) {
-					cfg = cfg_arr[i].cfg;
-					ISP_WARN("cannot find %s_%d_%d_%d_%d_%d isp config, use %s_%d_%d_%d_%d_%d -> [%s]\n", sensor_name, w, h, fps, wdr, ir,
-						cfg_arr[i].sensor_name,	cfg_arr[i].width, cfg_arr[i].height, cfg_arr[i].fps, cfg_arr[i].wdr,
-						cfg_arr[i].ir, cfg_arr[i].isp_cfg_name);
-					break;
-				}
-			}
-
-			if (i == array_size(cfg_arr)) {
-				ISP_WARN("cannot find %s_%d_%d_%d_%d_%d isp config, use default config [%s]\n", sensor_name, w, h, fps, wdr, ir,
-	                    cfg_arr[i-1].isp_cfg_name);
-	            cfg = cfg_arr[i-1].cfg;     // use sc2232_20fps_ini_ipc_default
-				/*return -1;*/
-			}
-		}
-		param->isp_test_settings = *cfg->isp_test_settings;
-		param->isp_3a_settings = *cfg->isp_3a_settings;
-		param->isp_iso_settings = *cfg->isp_iso_settings;
-		param->isp_tunning_settings = *cfg->isp_tunning_settings;
-
-		//isp_save_tbl(param, "/mnt/extsd");
-
-		if(sync_mode)
-			parser_sync_info(param, cfg_arr[i].isp_cfg_name, isp_id);
 	}
 
-	return 0;
+	if (i == array_size(cfg_arr)) {
+		for (i = 0; i < array_size(cfg_arr); i++) {
+			if (!strncmp(sensor_name, cfg_arr[i].sensor_name, 6) && (0 == cfg_arr[i].wdr)) {
+				cfg = cfg_arr[i].cfg;
+				ISP_WARN("cannot find %s_%d_%d_%d_%d_%d isp config, use %s_%d_%d_%d_%d_%d -> [%s]\n", sensor_name, w, h, fps, wdr, ir,
+					cfg_arr[i].sensor_name,	cfg_arr[i].width, cfg_arr[i].height, cfg_arr[i].fps, cfg_arr[i].wdr,
+					cfg_arr[i].ir, cfg_arr[i].isp_cfg_name);
+				break;
+			}
+		}
+		if (i == array_size(cfg_arr)) {
+			ISP_WARN("cannot find %s_%d_%d_%d_%d_%d isp config, use default config [%s]\n", sensor_name, w, h, fps, wdr, ir,
+                    cfg_arr[i-1].isp_cfg_name);
+            cfg = cfg_arr[i-1].cfg;     // use sc2232_20fps_ini_ipc_default
+			/*return -1;*/
+		}
+	}
 
+	param->isp_test_settings = *cfg->isp_test_settings;
+	param->isp_3a_settings = *cfg->isp_3a_settings;
+	param->isp_iso_settings = *cfg->isp_iso_settings;
+	param->isp_tunning_settings = *cfg->isp_tunning_settings;
+
+	//isp_save_tbl(param, "/mnt/extsd");
+
+	if(sync_mode)
+		parser_sync_info(param, cfg_arr[i].isp_cfg_name, isp_id);
+
+	return 0;
 #else
 	char path[20] = "/mnt/extsd/";
 	char isp_cfg_path[128], isp_tbl_path[128], file_name[128];

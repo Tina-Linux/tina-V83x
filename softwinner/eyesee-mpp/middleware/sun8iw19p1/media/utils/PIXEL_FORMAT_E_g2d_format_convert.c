@@ -43,9 +43,6 @@ ERRORTYPE convert_PIXEL_FORMAT_E_to_g2d_fmt_enh(
         case MM_PIXEL_FORMAT_YUV_SEMIPLANAR_420:
             *pG2dFormat = G2D_FORMAT_YUV420UVC_U1V1U0V0;
             break;
-		case MM_PIXEL_FORMAT_RGB_888:
-            *pG2dFormat = G2D_FORMAT_RGB888;
-            break;
         default:
             aloge("fatal error! unsupport pixel format[0x%x]!", ePixelFormat);
             *pG2dFormat = G2D_FORMAT_YUV420UVC_V1U1V0U0;

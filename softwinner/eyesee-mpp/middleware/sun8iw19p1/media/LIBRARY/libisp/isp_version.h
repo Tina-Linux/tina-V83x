@@ -22,9 +22,9 @@ extern "C" {
 #define ISP_VERSION 521
 #define REPO_TAG "isp-500-520-v2.00"
 #define REPO_BRANCH "libisp-dev"
-#define REPO_COMMIT "6ebfc430bae8055af53560180c78de153e03b91b"
-#define REPO_DATE "Mon Nov 16 11:36:07 2020 +0800"
-#define RELEASE_AUTHOR "<zhenghanjie@allwinnertech.com>"
+#define REPO_COMMIT "b85b315cea5c3e303bfe5f441c071e0c1bfd1527"
+#define REPO_DATE "Fri Jan 10 09:50:14 2020 +0800"
+#define RELEASE_AUTHOR "jiangwei"
 
 static inline void isp_version_info(void)
 {

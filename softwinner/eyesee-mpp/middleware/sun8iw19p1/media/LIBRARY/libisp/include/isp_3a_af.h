@@ -130,7 +130,6 @@ typedef struct isp_af_param {
 	isp_sensor_info_t sensor_info;
 	af_test_config_t test_cfg;
 	HW_S32 auto_focus_trigger;
-	HW_S32 mov;
 } af_param_t;
 
 typedef struct isp_af_stats {

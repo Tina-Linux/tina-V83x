@@ -111,7 +111,8 @@ void *sock_handle_preview_thread(void *params)
 	int sock_fd = (int)params;
 	int timeout_times = 0, tmp = 0;
 	capture_format cap_fmt;
-	cap_fmt.buffer = NULL;
+	cap_fmt.buffer = (unsigned char *)malloc(1 << 24); // 16M
+
 	LOG("%s: starts - %d\n", __FUNCTION__, sock_fd);
 	g_thread_status |= TH_STATUS_PREVIEW;
 	while (1) {
@@ -130,9 +131,6 @@ void *sock_handle_preview_thread(void *params)
 			cap_fmt.fps = (tmp >> 16) & 0x0000ffff;
 			cap_fmt.wdr = tmp & 0x0000ffff;
 			cap_fmt.length = 0;
-			#if(ISP_VERSION == 522)
-			cap_fmt.index =  ntohl(comm_packet.index);
-			#endif
 			memset(cap_fmt.width_stride, 0, sizeof(cap_fmt.width_stride));
 			switch (cap_fmt.format) {
 			case V4L2_PIX_FMT_NV12:
@@ -152,12 +150,6 @@ void *sock_handle_preview_thread(void *params)
 			default:
 				cap_fmt.planes_count = 1;
 				break;
-			}
-			/* malloc  preview buf, size = w * h * 1.5 for yuv */
-			cap_fmt.buffer = (unsigned char *)malloc(cap_fmt.width * cap_fmt.height * 2);
-			if (cap_fmt.buffer == NULL) {
-				printf("ERRO can not malloc memory !!!!!!!!!!! \n");
-				break ;
 			}
 			/*LOG("%s: ready to get preview - fmt:%d,%dx%d@%d,wdr:%d,ch:%d,planes:%d\n", __FUNCTION__,
 					cap_fmt.format, cap_fmt.width, cap_fmt.height,
@@ -184,10 +176,6 @@ void *sock_handle_preview_thread(void *params)
 					ret = sock_write(sock_fd, (const void *)cap_fmt.buffer, cap_fmt.length, SOCK_DEFAULT_TIMEOUT);
 				}
 			}
-			if(cap_fmt.buffer) {
-				free(cap_fmt.buffer);
-				cap_fmt.buffer == NULL;
-			}
 		} else {
 			if (ETIMEDOUT == errno) {
 				timeout_times++;
@@ -201,6 +189,8 @@ void *sock_handle_preview_thread(void *params)
 		}
 	}
 	close(sock_fd);
+	free(cap_fmt.buffer);
+	cap_fmt.buffer = NULL;
 	g_thread_status &= ~TH_STATUS_PREVIEW;
 	LOG("%s: exits - %d\n", __FUNCTION__, sock_fd);
 
@@ -243,9 +233,6 @@ void *sock_handle_capture_thread(void *params)
 			cap_fmt.wdr = tmp & 0x0000ffff;
 			cap_fmt.length = 0;
 			cap_fmt.framecount = ntohl(comm_packet.framecount);
-			#if(ISP_VERSION == 522)
-			cap_fmt.index =  ntohl(comm_packet.index);
-			#endif
 			memset(cap_fmt.width_stride, 0, sizeof(cap_fmt.width_stride));
 			cap_fmt.buffer = (unsigned char *)malloc(TRANSFER_SIZE* cap_fmt.framecount); // 4M*cap_fmt.framecount
 			switch (cap_fmt.format) {
@@ -326,7 +313,7 @@ void *sock_handle_capture_thread(void *params)
 					LOG("begin transfer......\n");
 					while((length > TRANSFER_SIZE) && (length > 0))
 					{
-						memset(buffer, 0, TRANSFER_SIZE * sizeof(unsigned char));
+						memset(buffer, 0, sizeof(buffer));
 						memcpy(buffer, &cap_fmt.buffer[len], TRANSFER_SIZE);
 						ret = sock_write(sock_fd, (const void *)buffer, 1<<22, SOCK_DEFAULT_TIMEOUT);
 						length -= TRANSFER_SIZE;
@@ -335,7 +322,7 @@ void *sock_handle_capture_thread(void *params)
 					}
 					if(length > 0)
 					{
-						memset(buffer, 0, TRANSFER_SIZE * sizeof(unsigned char));
+						memset(buffer, 0, sizeof(buffer));
 						memcpy(buffer, &cap_fmt.buffer[len], length);
 						ret = sock_write(sock_fd, (const void *)buffer, length, SOCK_DEFAULT_TIMEOUT);
 						len += length;
@@ -858,10 +845,7 @@ void *sock_handle_set_input_thread(void *params)
 			tmp = ntohl(comm_packet.reserved[2]);
 			sensor_in.fps = (tmp >> 16) & 0x0000ffff;
 			sensor_in.wdr = tmp & 0x0000ffff;
-			#if(ISP_VERSION == 522)
-			sensor_in.index =  ntohl(comm_packet.index);
-			#endif
-			LOG("%s: isp %d, vich %d, %dx%d@%d, wdr %d.\n", __FUNCTION__,
+			LOG("%s: isp %d, vich %d, %dx%d@%d, wdr %d\n", __FUNCTION__,
 				sensor_in.isp, sensor_in.channel,
 				sensor_in.width, sensor_in.height,
 				sensor_in.fps, sensor_in.wdr);
@@ -925,9 +909,6 @@ void *sock_handle_raw_flow_thread(void *params)
 			cap_fmt.height = tmp & 0x0000ffff;
 			cap_fmt.channel = ntohl(comm_packet.reserved[2]);
 			cap_fmt.length = 0;
-			#if(ISP_VERSION == 522)
-			cap_fmt.index =  ntohl(comm_packet.index);
-			#endif
 			memset(cap_fmt.width_stride, 0, sizeof(cap_fmt.width_stride));
 			if (SOCK_CMD_RAW_FLOW_START == type) {
 				ret = start_raw_flow(&cap_fmt);
@@ -1038,6 +1019,4 @@ void *sock_handle_isp_version_thread(void *params)
 	buffer = NULL;
 	g_thread_status &= ~TH_STATUS_TUNING;
 	LOG("%s: exits - %d\n", __FUNCTION__, sock_fd);
-
-	return 0;
 }

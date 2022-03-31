@@ -23,6 +23,7 @@
 int media_dev_init(void);
 void media_dev_exit(void);
 int isp_reset(int dev_id, int mode_flag);
+
 int isp_init(int dev_id);
 int isp_update(int dev_id);
 int isp_get_imageparams(int dev_id, isp_image_params_t *pParams);
@@ -44,9 +45,6 @@ HW_S32 isp_get_version(char* version);
 
 /*******************isp for video buffer*********************/
 HW_S32 isp_get_lv(int dev_id);
-HW_S32 isp_get_ev_lv_adj(int dev_id);
-HW_S32 isp_get_debug_msg(int dev_id, void* msg);
-HW_S32 isp_get_3a_parameters(int dev_id, void* params);
 
 #endif /*_ISP_H_*/
 

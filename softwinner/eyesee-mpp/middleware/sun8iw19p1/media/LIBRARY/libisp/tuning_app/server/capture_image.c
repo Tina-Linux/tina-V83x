@@ -381,13 +381,12 @@ int start_video(capture_params *cap_pa, capture_format *cap_fmt)
 	cap_pa->priv_cap.vi_fmt.format.field = V4L2_FIELD_NONE;
 	cap_pa->priv_cap.vi_fmt.format.width = cap_fmt->width;
 	cap_pa->priv_cap.vi_fmt.format.height = cap_fmt->height;
-	cap_pa->priv_cap.vi_fmt.nbufs = 3;
+	cap_pa->priv_cap.vi_fmt.nbufs = 6;
 	cap_pa->priv_cap.vi_fmt.nplanes = cap_fmt->planes_count;
 	cap_pa->priv_cap.vi_fmt.capturemode = V4L2_MODE_VIDEO;
 	cap_pa->priv_cap.vi_fmt.fps = cap_fmt->fps;
 	cap_pa->priv_cap.vi_fmt.wdr_mode = cap_fmt->wdr;
 	cap_pa->priv_cap.vi_fmt.use_current_win = 1;  //!!! not to change sensor input format
-	cap_pa->priv_cap.vi_fmt.index = cap_fmt->index;
 
 	ret = set_video_fmt(g_media_dev, cap_fmt->channel, &cap_pa->priv_cap.vi_fmt);
 	if (ret) {
@@ -586,13 +585,12 @@ int set_sensor_input(const sensor_input *sensor_in)
 		cap_handle->priv_cap.vi_fmt.format.field = V4L2_FIELD_NONE;
 		cap_handle->priv_cap.vi_fmt.format.width = sensor_in->width;
 		cap_handle->priv_cap.vi_fmt.format.height = sensor_in->height;
-		cap_handle->priv_cap.vi_fmt.nbufs = 3;
+		cap_handle->priv_cap.vi_fmt.nbufs = 6;
 		cap_handle->priv_cap.vi_fmt.nplanes = 2;
 		cap_handle->priv_cap.vi_fmt.capturemode = V4L2_MODE_VIDEO;
 		cap_handle->priv_cap.vi_fmt.fps = sensor_in->fps;
 		cap_handle->priv_cap.vi_fmt.wdr_mode = sensor_in->wdr;
 		cap_handle->priv_cap.vi_fmt.use_current_win = 0;  //!!! try to change sensor input format
-		cap_handle->priv_cap.vi_fmt.index = sensor_in->index;
 
 		ret = set_video_fmt(g_media_dev, sensor_in->channel, &cap_handle->priv_cap.vi_fmt);
 		if (ret) {

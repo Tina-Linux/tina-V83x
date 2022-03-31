@@ -43,7 +43,6 @@ struct video_fmt {
 	unsigned int use_current_win;
 	unsigned int wdr_mode;
 	unsigned int drop_frame_num;
-	int index;
 };
 
 struct osd_fmt {

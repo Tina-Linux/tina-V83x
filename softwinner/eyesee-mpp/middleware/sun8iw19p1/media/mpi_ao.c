@@ -189,13 +189,13 @@ ERRORTYPE AW_MPI_AO_EnableChn(AUDIO_DEV AudioDevId, AO_CHN AoChn)
     AO_CHANNEL_S *pChn = NULL;
     ERRORTYPE ret = SUCCESS;
 
+    audioHw_AO_Dev_lock(AudioDevId);
     if (audioHw_AO_IsDevStarted(AudioDevId)) {
         alogw("AODev has started when enableChn(%d)! It must be started by other chns!", AoChn);
     }
     if (audioHw_AO_IsDevConfigured(AudioDevId)) {
         AW_MPI_AO_Enable(AudioDevId);
     }
-    audioHw_AO_Dev_lock(AudioDevId);
     if (SUCCESS == audioHw_AO_searchChannel_l(AudioDevId, AoChn, &pChn)) {
         audioHw_AO_Dev_unlock(AudioDevId);
         return ERR_AO_EXIST;

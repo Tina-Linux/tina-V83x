@@ -54,9 +54,6 @@ typedef struct isp_gtm_ini_cfg {
 	gtm_type_t gtm_type;
 	gtm_gamma_type_t gamma_type;
 	HW_U32 AutoAlphaEn;//if enable, Need BrightPixellValue DarkPixelValue;
-	HW_S32 hist_pix_cnt;
-	HW_S32 bright_minval;
-	HW_S32 dark_minval;
 	HW_S16 plum_var[9][9];
 	HW_S32 gtm_cfg[GTM_HEQ_MAX];
 }gtm_ini_cfg_t;
@@ -80,8 +77,6 @@ typedef struct isp_gtm_param {
 
 	int contrast;	//for interface
 	int brightness; 	//for interface
-	int gtm_bit_offset;
-	bool wdr_en;
 
 	int BrightPixellValue;
 	int DarkPixelValue;
@@ -100,7 +95,6 @@ typedef struct isp_gtm_result {
 	HW_U16 Hist_MaxVal;
 	HW_U16 avg_lum;
 	HW_U16 avg_var;
-	HW_U16 hist_div;
 	double hratio_last;
 	HW_S32 hdr_req;
 } gtm_result_t;

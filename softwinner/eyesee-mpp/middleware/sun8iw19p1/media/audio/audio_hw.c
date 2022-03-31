@@ -153,7 +153,6 @@ typedef struct AudioOutputDevice
 
     struct list_head mChnList;
     pthread_mutex_t mChnListLock; 
-    pthread_mutex_t mAOApiCallLock;   // to protect the api call,when used in two thread asynchronously.
     
     int snd_card_id;
 } AudioOutputDevice;
@@ -180,19 +179,19 @@ ERRORTYPE audioHw_Construct(void)
             alogw("audio_hw has already been constructed!");
             return SUCCESS;
         }
-        memset(pDev, 0, sizeof(AudioHwDevice));
+
         if(0 == i)
         {
             err = alsaOpenMixer(&pDev->mMixer, SOUND_MIXER_AUDIOCODEC);
             if (err != 0) {
-                aloge("AIO device %d open mixer failed, err[%d]!", i, err);
+                aloge("AIO device %d open mixer failed!", i);
             }
             pDev->mMixer.snd_card_id = 0;
             pDev->mCap.snd_card_id = 0;
             pDev->mCap.mCfg.snd_card_id = 0;
             pDev->mPlay.snd_card_id = 0;
             pDev->mPlay.mCfg.snd_card_id = 0;
-
+            
         }
         else if(1 == i)
         {
@@ -212,7 +211,6 @@ ERRORTYPE audioHw_Construct(void)
         INIT_LIST_HEAD(&pDev->mCap.mChnList);
         INIT_LIST_HEAD(&pDev->mPlay.mChnList); 
         pthread_mutex_init(&pDev->mCap.mApiCallLock, NULL);
-        pthread_mutex_init(&pDev->mPlay.mAOApiCallLock, NULL);
         pDev->mEnableFlag = TRUE;
     }
     return SUCCESS;
@@ -234,7 +232,6 @@ ERRORTYPE audioHw_Destruct(void)
         }
         
         pthread_mutex_destroy(&pDev->mCap.mApiCallLock);
-        pthread_mutex_destroy(&pDev->mPlay.mAOApiCallLock);
         pDev->mCap.mState = AI_STATE_INVALID;
         pDev->mPlay.mState = AO_STATE_INVALID;
         pDev->mEnableFlag = FALSE;
@@ -1725,14 +1722,11 @@ ERRORTYPE audioHw_AO_Enable(AUDIO_DEV AudioDevId)
 
     int ret;
 
-    pthread_mutex_lock(&pPlay->mAOApiCallLock);
     if (pPlay->mState == AO_STATE_INVALID) {
         aloge("%s failed,error_state:%d",__FUNCTION__,pPlay->mState);
-        pthread_mutex_unlock(&pPlay->mAOApiCallLock);
         return ERR_AO_NOT_CONFIG;
     }
     if (pPlay->mState == AO_STATE_STARTED) {
-        pthread_mutex_unlock(&pPlay->mAOApiCallLock);
         return SUCCESS;
     }
 
@@ -1760,7 +1754,6 @@ ERRORTYPE audioHw_AO_Enable(AUDIO_DEV AudioDevId)
     ret = alsaOpenPcm(&pPlay->mCfg, pCardType, 1);
     if (ret != 0) {
         aloge("%s,l:%d,open_pcm failed",__FUNCTION__,__LINE__);
-        pthread_mutex_unlock(&pPlay->mAOApiCallLock);
         return FAILURE;
     }
 
@@ -1768,7 +1761,6 @@ ERRORTYPE audioHw_AO_Enable(AUDIO_DEV AudioDevId)
     ret = alsaOpenPcm(&pPlay_daudio0->mCfg, SOUND_CARD_SNDDAUDIo0, 1);  // to open the second snd card
     if (ret != 0) {
         aloge("%s,l:%d,open_pcm failed",__FUNCTION__,__LINE__);
-        pthread_mutex_unlock(&pPlay->mAOApiCallLock);
         return FAILURE;
     }
 
@@ -1797,7 +1789,7 @@ ERRORTYPE audioHw_AO_Enable(AUDIO_DEV AudioDevId)
     //pthread_create(&pPlay->mThdId, NULL, audioHw_AO_PlayThread, &pPlay);
 
     pPlay->mState = AO_STATE_STARTED;
-    pthread_mutex_unlock(&pPlay->mAOApiCallLock);
+
     return SUCCESS;
     
 #if (MPPCFG_AEC == OPTION_AEC_ENABLE  && !AEC_SOFT_LOOPBACK_SOLUTION)
@@ -1807,7 +1799,6 @@ ERR_SET_PCM_PARAM2:
 
 ERR_SET_PCM_PARAM:
     alsaClosePcm(&pPlay->mCfg, 1);  // 1: playback
-    pthread_mutex_unlock(&pPlay->mAOApiCallLock);
     return FAILURE;
 }
 
@@ -1821,13 +1812,11 @@ ERRORTYPE audioHw_AO_Disable(AUDIO_DEV AudioDevId)
     AIO_MIXER_S *pMixer_daudio0 = &gAudioHwDev[AudioDevId+1].mMixer;
 
 #endif
-    pthread_mutex_lock(&pPlay->mAOApiCallLock);
+
     if (pPlay->mState == AO_STATE_INVALID) {
-        pthread_mutex_unlock(&pPlay->mAOApiCallLock);
         return ERR_AO_NOT_CONFIG;
     }
     if (pPlay->mState != AO_STATE_STARTED) {
-        pthread_mutex_unlock(&pPlay->mAOApiCallLock);
         return SUCCESS;
     }
 
@@ -1841,7 +1830,6 @@ ERRORTYPE audioHw_AO_Disable(AUDIO_DEV AudioDevId)
         {
             alogw("AoCardType[%d] AoChn[%d] still run!", pPlay->mAttr.mPcmCardId, pEntry->mId);
         }
-        pthread_mutex_unlock(&pPlay->mAOApiCallLock);
         return SUCCESS;
     }
 
@@ -1858,7 +1846,6 @@ ERRORTYPE audioHw_AO_Disable(AUDIO_DEV AudioDevId)
     alogd("close pcm! current AoCardType:[%d]", pPlay->mAttr.mPcmCardId);
     alsaClosePcm(&pPlay->mCfg, 1);  // 1: playback
     pPlay->mState = AO_STATE_CONFIGURED;
-    pthread_mutex_unlock(&pPlay->mAOApiCallLock);
 
     return SUCCESS;
 }

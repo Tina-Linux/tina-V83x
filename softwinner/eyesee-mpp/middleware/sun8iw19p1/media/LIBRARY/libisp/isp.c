@@ -46,7 +46,6 @@
 
 #include "include/isp_manage.h"
 #include "isp_version.h"
-#include "isp.h"
 
 #include "iniparser/src/iniparser.h"
 #include "include/isp_cmd_intf.h"
@@ -287,13 +286,13 @@ void isp_flash_update_status(struct hw_isp_device *isp)
 		}
 		break;
 	case FLASH_MODE_OFF:
+		if (isp_gen->ae_settings.exposure_lock)
+			isp_gen->ae_settings.exposure_lock = false;
 		if (isp_gen->ae_settings.flash_switch_flag) {
 			ae_result->ae_flash_led = V4L2_FLASH_LED_MODE_NONE;
 			isp_flash_ctrl(isp, V4L2_FLASH_LED_MODE_NONE);
 			isp_gen->ae_settings.flash_switch_flag = false;
 		}
-		if (isp_gen->ae_settings.exposure_lock)
-			isp_gen->ae_settings.exposure_lock = false;
 		break;
 	case FLASH_MODE_RED_EYE:
 	case FLASH_MODE_NONE:
@@ -344,7 +343,6 @@ static void __isp_stats_process(struct hw_isp_device *isp,	const void *buffer)
 			isp_act_set_pos(isp, af_result->real_code_output);
 			af_result->last_code_output = af_result->real_code_output;
 		}
-		ISP_DEV_LOG(ISP_LOG_ISP, "set sensor pos real_code_output: %d.\n", af_result->real_code_output);
 	}
 
 #if ISP_LIB_USE_FLASH
@@ -354,7 +352,6 @@ static void __isp_stats_process(struct hw_isp_device *isp,	const void *buffer)
 	ae_result = &ctx->ae_entity_ctx.ae_result;
 	awb_result = &ctx->awb_entity_ctx.awb_result;
 	exp_gain.exp_val = ae_result->sensor_set.ev_set_curr.ev_sensor_exp_line;
-	//exp_gain.ae_wdr_ratio = ae_result->ae_wdr_ratio.sensor;
 	exp_gain.gain_val = ae_result->sensor_set.ev_set_curr.ev_analog_gain >> 4;
 	exp_gain.r_gain = awb_result->wb_gain_output.r_gain * 256 / awb_result->wb_gain_output.gr_gain;
 	exp_gain.b_gain = awb_result->wb_gain_output.b_gain * 256 / awb_result->wb_gain_output.gb_gain;
@@ -395,15 +392,14 @@ static void __isp_stats_process(struct hw_isp_device *isp,	const void *buffer)
 
 static void __isp_fsync_process(struct hw_isp_device *isp, struct v4l2_event *event)
 {
-	struct isp_lib_context *ctx = isp_dev_get_ctx(isp);
+    struct isp_lib_context *ctx = isp_dev_get_ctx(isp);
     MPP_AtraceBegin(ATRACE_TAG_ISP, __FUNCTION__);
 
-	if(ctx->sensor_info.color_space != event->u.data[1]) {
-		ctx->sensor_info.color_space = event->u.data[1];
-		ctx->isp_3a_change_flags |= ISP_SET_HUE;
-	}
-
-	isp_lib_log_param = (event->u.data[3] << 8) | event->u.data[2] | ctx->isp_ini_cfg.isp_test_settings.isp_log_param;
+    if(ctx->sensor_info.color_space != event->u.data[1]) {
+        ctx->sensor_info.color_space = event->u.data[1];
+        ctx->isp_3a_change_flags |= ISP_SET_HUE;
+  }
+    isp_lib_log_param = (event->u.data[3] << 8) | event->u.data[2] | ctx->isp_ini_cfg.isp_test_settings.isp_log_param;
     MPP_AtraceEnd(ATRACE_TAG_ISP);
 }
 
@@ -418,6 +414,7 @@ void __isp_ctrl_process(struct hw_isp_device *isp, struct v4l2_event *event)
 		MPP_AtraceEnd(ATRACE_TAG_ISP);
 		return;
 	}
+
 
 	switch(event->id) {
 	case V4L2_CID_BRIGHTNESS:
@@ -515,9 +512,6 @@ void __isp_ctrl_process(struct hw_isp_device *isp, struct v4l2_event *event)
 		break;
 	case V4L2_CID_FLASH_LED_MODE:
 		isp_s_flash_mode(isp_gen, event->u.ctrl.value);
-		break;
-	case V4L2_CID_FLASH_LED_MODE_V1:
-		isp_s_flash_mode_v1(isp_gen, event->u.ctrl.value);
 		break;
 	default:
 		ISP_ERR("Unknown ctrl.\n");
@@ -701,8 +695,6 @@ int isp_init(int dev_id)
 	isp_dev_banding_ctx(isp, &isp_ctx[dev_id]);
 
 	isp_ctx[dev_id].isp_id = dev_id;
-
-//	isp_sensor_otp_init(isp);
 	isp_config_sensor_info(isp);
 
 	isp_ctx_save_init(&isp_ctx[dev_id]);
@@ -725,14 +717,12 @@ int isp_init(int dev_id)
 	FUNCTION_LOG;
 	isp_ctx_algo_init(&isp_ctx[dev_id], &isp_ctx_ops);
 	FUNCTION_LOG;
-
 	tuning[dev_id] = isp_tuning_init(isp, &isp_ctx[dev_id].isp_ini_cfg);
 	if (tuning[dev_id] == NULL) {
 		ISP_ERR("error: unable to initialize isp tuning\n");
 		return -1;
 	}
 	FUNCTION_LOG;
-
 
 	if (isp_ctx[dev_id].isp_ini_cfg.isp_test_settings.af_en || isp_ctx[dev_id].isp_ini_cfg.isp_test_settings.isp_test_focus)
 		isp_act_init_range(isp, isp_ctx[dev_id].isp_ini_cfg.isp_3a_settings.vcm_min_code, isp_ctx[dev_id].isp_ini_cfg.isp_3a_settings.vcm_max_code);
@@ -841,7 +831,6 @@ int isp_exit(int dev_id)
 	isp_ctx_save_exit(&isp_ctx[dev_id]);
 	isp_tuning_exit(isp);
 	isp_ctx_algo_exit(&isp_ctx[dev_id]);
-//	isp_sensor_otp_exit(isp);
 	isp_dev_close(&media_params, dev_id);
 
 	ISP_DEV_LOG(ISP_LOG_ISP, "isp%d exit end!!!\n", dev_id);
@@ -871,7 +860,6 @@ int isp_run(int dev_id)
 	ret = pthread_create(&media_params.isp_tid[dev_id], NULL, __isp_thread, isp);
 	if(ret != 0)
 		ISP_ERR("%s: %s\n",__func__, strerror(ret));
-	pthread_setname_np(media_params.isp_tid[dev_id], "isp_thread");
 
 	return ret;
 }
@@ -1006,6 +994,7 @@ int isp_get_temp(int dev_id)
 	return sensor_temperature;
 }
 
+
 /*******************isp for video buffer*********************/
 HW_S32 isp_get_lv(int dev_id)
 {
@@ -1024,27 +1013,7 @@ HW_S32 isp_get_lv(int dev_id)
 		return -1;
 	}
 
-	return ctx->ae_entity_ctx.ae_result.sensor_set.ev_set_curr.ev_lv;
-}
-
-HW_S32 isp_get_ev_lv_adj(int dev_id)
-{
-	struct hw_isp_device *isp;
-	struct isp_lib_context *ctx;
-
-	isp = media_params.isp_dev[dev_id];
-	if (!isp) {
-		//ISP_ERR("isp%d device is NULL!\n", dev_id);
-		return -1;
-	}
-
-	ctx = isp_dev_get_ctx(isp);
-	if (ctx == NULL) {
-		//ISP_ERR("isp%d get isp ctx failed!\n", dev_id);
-		return -1;
-	}
-
-	return ctx->ae_entity_ctx.ae_result.ev_lv_adj;
+    return ctx->ae_entity_ctx.ae_result.ev_lv_adj;
 }
 
 HW_S32 isp_get_attr_cfg(int dev_id, HW_U32 ctrl_id, void *value)
@@ -1072,9 +1041,6 @@ HW_S32 isp_get_attr_cfg(int dev_id, HW_U32 ctrl_id, void *value)
 			break;
 		case ISP_CTRL_PLTMWDR_STR:
 			*(HW_S32 *)value = isp_gen->tune.pltmwdr_level;
-			break;
-        case ISP_CTRL_PLTM_HARDWARE_STR:
-			*(HW_S32 *)value = isp_gen->pltm_entity_ctx.pltm_result.pltm_next_stren;
 			break;
 		case ISP_CTRL_DN_STR:
 			*(HW_S32 *)value = isp_gen->tune.denoise_level;
@@ -1125,7 +1091,6 @@ HW_S32 isp_set_attr_cfg(int dev_id, HW_U32 ctrl_id, void *value)
 		ISP_ERR("isp%d device is NULL!\n", dev_id);
 		return -1;
 	}
-
 	struct isp_lib_context *isp_gen = isp_dev_get_ctx(isp);
 	if (isp_gen == NULL)
 		return -1;
@@ -1166,132 +1131,16 @@ HW_S32 isp_set_attr_cfg(int dev_id, HW_U32 ctrl_id, void *value)
 			}
 			break;
 		case ISP_CTRL_AE_ROI:
+		{
+			//struct isp_h3a_coor_win *coor = (struct isp_h3a_coor_win *)value;
+			//ISP_PRINT("Point_1(%d, %d) Point_2(%d, %d)\n", coor->x1, coor->y1, coor->x2, coor->y2);
 			isp_s_ae_roi(isp_gen, AE_METERING_MODE_SPOT, value);
 			break;
-		case ISP_CTRL_AF_METERING:
-			isp_s_af_metering_mode(isp_gen, value);
-			break;
+		}
 		default:
 			ISP_ERR("Unknown ctrl.\n");
 			break;
 	}
-	return 0;
-}
-
-HW_S32 isp_get_info_length(HW_S32* i3a_length, HW_S32* debug_length)
-{
-	HW_S32 data_len = 0;
-
-	*i3a_length =
-		sizeof(ae_result_t) + sizeof(ae_param_t)+ sizeof(struct isp_ae_stats_s) // ae info
-		+ sizeof(awb_result_t)+ sizeof(awb_param_t)+ sizeof(struct isp_awb_stats_s) // awb info
-		+ sizeof(af_result_t)+ sizeof(af_param_t)+ sizeof(struct isp_af_stats_s); // af info
-
-	*debug_length =
-		sizeof(iso_result_t)
-		+sizeof(iso_param_t) // iso info
-		+sizeof(struct isp_module_config)  // isp module info
-		+sizeof(int) 						// otp enable flag
-		+16*16*3*sizeof(unsigned short)	// msc tbl
-		+4*2*sizeof(unsigned short);	// wb otp data
-
-	ISP_PRINT("i3a_length:%d, debug_length:%d.\n", *i3a_length, *debug_length);
-	ISP_PRINT("af_result_t:%d, af_param_t:%d, isp_af_stats_s:%d.\n", sizeof(ae_result_t), sizeof(ae_param_t), sizeof(struct isp_ae_stats_s));
- 	ISP_PRINT("af_result_t:%d, af_param_t:%d, isp_af_stats_s:%d.\n", sizeof(awb_result_t), sizeof(awb_param_t), sizeof(struct isp_awb_stats_s));
-	ISP_PRINT("af_result_t:%d, af_param_t:%d, isp_af_stats_s:%d.\n", sizeof(af_result_t), sizeof(af_param_t), sizeof(struct isp_af_stats_s));
-	return 0;
-}
-
-
-
-HW_S32 isp_get_3a_parameters(int dev_id, void* params)
-{
-	struct hw_isp_device *isp = NULL;
-
-	if (dev_id >= HW_ISP_DEVICE_NUM)
-	return -1;
-
-	isp = media_params.isp_dev[dev_id];
-	if (!isp) {
-		ISP_ERR("isp%d device is NULL!\n", dev_id);
-		return -1;
-	}
-	struct isp_lib_context *isp_gen = isp_dev_get_ctx(isp);
-	if (isp_gen == NULL)
-		return -1;
-
-	void * ptr = params;
-	// ae info
-	memcpy(ptr, &(isp_gen->ae_entity_ctx.ae_result), sizeof(ae_result_t));
-	ptr += sizeof(ae_result_t);
-
-	memcpy(ptr, isp_gen->ae_entity_ctx.ae_param, sizeof(ae_param_t));
-	ptr += sizeof(ae_param_t);
-
-	memcpy(ptr, isp_gen->ae_entity_ctx.ae_stats.ae_stats, sizeof(struct isp_ae_stats_s));
-	ptr += sizeof(struct isp_ae_stats_s);
-
-	// awb info
-	memcpy(ptr, &(isp_gen->awb_entity_ctx.awb_result), sizeof(awb_result_t));
-	ptr += sizeof(awb_result_t);
-
-	memcpy(ptr, isp_gen->awb_entity_ctx.awb_param, sizeof(awb_param_t));
-	ptr += sizeof(awb_param_t);
-
-	memcpy(ptr, isp_gen->awb_entity_ctx.awb_stats.awb_stats, sizeof(struct isp_awb_stats_s));
-	ptr += sizeof(struct isp_awb_stats_s);
-
-	// af info
-	memcpy(ptr, &(isp_gen->af_entity_ctx.af_result), sizeof(af_result_t));
-	ptr += sizeof(af_result_t);
-
-	memcpy(ptr, isp_gen->af_entity_ctx.af_param, sizeof(af_param_t));
-	ptr += sizeof(af_param_t);
-
-	memcpy(ptr, isp_gen->af_entity_ctx.af_stats.af_stats, sizeof(struct isp_af_stats_s));
-	ptr += sizeof(struct isp_af_stats_s);
-
-	ptr = NULL;
-	return 0;
-}
-
-HW_S32 isp_get_debug_msg(int dev_id, void* msg)
-{
-	struct hw_isp_device *isp = NULL;
-	if (dev_id >= HW_ISP_DEVICE_NUM)
-		return -1;
-
-	isp = media_params.isp_dev[dev_id];
-	if (!isp) {
-		ISP_ERR("isp%d device is NULL!\n", dev_id);
-		return -1;
-	}
-	struct isp_lib_context *isp_gen = isp_dev_get_ctx(isp);
-	if (isp_gen == NULL)
-		return -1;
-
-	void * ptr = msg;
-	memcpy(ptr, &(isp_gen->iso_entity_ctx.iso_result), sizeof(iso_result_t));
-	ptr += sizeof(iso_result_t);
-
-	memcpy(ptr, isp_gen->iso_entity_ctx.iso_param, sizeof(iso_param_t));
-	ptr += sizeof(iso_param_t);
-
-	memcpy(ptr, &isp_gen->module_cfg, sizeof(struct isp_module_config));
-	ptr += sizeof(struct isp_module_config);
-
-	memcpy(ptr, &isp_gen->otp_enable, sizeof(int));
-	ptr += sizeof(int);
-
-	// shading msc rgb tbl 16x16x3
-	memcpy(ptr, isp_gen->pmsc_table, 16*16*3*sizeof(unsigned short));
-	ptr += 16*16*3*sizeof(unsigned short);
-
-	// wb otp & golden data
-	memcpy(ptr, isp_gen->pwb_table, 4*2*sizeof(unsigned short));
-	ptr += 4*2*sizeof(unsigned short);
-
-	ptr = NULL;
 	return 0;
 }
 

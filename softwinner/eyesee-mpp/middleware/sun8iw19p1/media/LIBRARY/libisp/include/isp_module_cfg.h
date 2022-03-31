@@ -81,12 +81,6 @@ struct isp_ae_config {
 struct isp_af_config {
 	HW_U16 af_sap_lim;
 	struct isp_h3a_reg_win af_reg_win;
-#if (ISP_VERSION >= 520)
-	enum isp_af_mode af_mode;
-	struct isp_af_en_config af_en_cfg;
-	struct isp_af_filter_config af_filter_cfg;
-	unsigned char isp_af_square_lut[ISP_AF_SQUARE_TBL_LUT_SIZE];
-#endif
 };
 
 /*
@@ -276,11 +270,10 @@ enum isp_features_flags {
 	ISP_FEATURES_GCA		=  (1 << 28),
 	ISP_FEATURES_MSC		=  (1 << 29),
 #endif
-	ISP_FEATURES_RGB2YUV		=  (1 << 30),
-	//ISP_FEATURES_MAX,
+	ISP_FEATURES_MAX,
 
 	/* all possible flags raised */
-	//ISP_FEATURES_All = (((ISP_FEATURES_MAX -1 ) << 1) -1 ),
+	ISP_FEATURES_All = (((ISP_FEATURES_MAX -1 ) << 1) -1 ),
 };
 
 void isp_hardware_update(struct isp_module_config *module_cfg);

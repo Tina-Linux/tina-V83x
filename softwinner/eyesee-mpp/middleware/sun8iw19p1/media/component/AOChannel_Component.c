@@ -1049,11 +1049,10 @@ ERRORTYPE AOChannel_ComponentInit(PARAM_IN COMP_HANDLETYPE hComponent)
     }
 
     err = pthread_create(&pChnData->mThreadId, NULL, AOChannel_ComponentThread, pChnData);
-    if (err) {
+    if (err || !pChnData->mThreadId) {
         eError = FAILURE;
         goto ERR_EXIT6;
     }
-    alogd("create AOChannel threadId[0x%lx]", pChnData->mThreadId);
     return eError;
 
 ERR_EXIT6:
@@ -1474,10 +1473,10 @@ PROCESS_MESSAGE:
                 aio_attr.enSamplerate = pFirstFrame->mSamplerate;
                 aio_attr.enBitwidth = pFirstFrame->mBitwidth;
                 aio_attr.u32ChnCnt = pFirstFrame->mSoundmode==AUDIO_SOUND_MODE_MONO ? 1:2;
-                audioHw_AO_Dev_lock(pChnData->mMppChnInfo.mDevId);
+                audioHw_AI_Dev_lock(pChnData->mMppChnInfo.mDevId);
                 AudioHw_AO_SetPubAttr(pChnData->mMppChnInfo.mDevId, &aio_attr);
                 audioHw_AO_Enable(pChnData->mMppChnInfo.mDevId);
-                audioHw_AO_Dev_unlock(pChnData->mMppChnInfo.mDevId);
+                audioHw_AI_Dev_unlock(pChnData->mMppChnInfo.mDevId);
                 alogd("audio render hal init and run ok!");
                 pChnData->audio_rend_flag &= ~AUDIO_RENDER_INIT_RENDER_FLAG;
             }

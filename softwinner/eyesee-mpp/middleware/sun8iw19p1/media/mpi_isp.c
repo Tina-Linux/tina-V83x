@@ -194,11 +194,6 @@ int AW_MPI_ISP_GetEnvLV(ISP_DEV IspDev)
     return isp_get_lv(IspDev);
 }
 
-int AW_MPI_ISP_GetEvLvAdj(ISP_DEV IspDev)
-{
-    return isp_get_ev_lv_adj(IspDev);
-}
-
 int AW_MPI_ISP_GetTemperature(ISP_DEV IspDev)
 {
     return isp_get_temp(IspDev);

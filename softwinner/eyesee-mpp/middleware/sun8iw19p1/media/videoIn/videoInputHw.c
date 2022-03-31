@@ -435,7 +435,7 @@ ERRORTYPE videoInputHw_SetVippShutterTime(VI_DEV Vipp_id, VI_SHUTTIME_CFG_S *pSh
             video_set_control(video, V4L2_CID_EXPOSURE_AUTO, 0); /* auto exp */
             video_set_control(video, V4L2_CID_AUTOGAIN, 1);      /* auto gain */
 
-//            video_set_vin_reset_time(video, 0);
+            video_set_vin_reset_time(video, 0);
             if (isp_set_fps(iIspId, iCurFps) < 0) {
                 aloge("Set sensor fps %d failed, isp id %d", iCurFps, iIspId);
                 goto failed;
@@ -449,7 +449,7 @@ ERRORTYPE videoInputHw_SetVippShutterTime(VI_DEV Vipp_id, VI_SHUTTIME_CFG_S *pSh
             video_get_control(video, V4L2_CID_EXPOSURE_ABSOLUTE, &iSensorExpVal);
 
             if (iCurFps <= time) {
-//                video_set_vin_reset_time(video, 0);
+                video_set_vin_reset_time(video, 0);
 
                 video_set_control(video, V4L2_CID_EXPOSURE_AUTO, 1); // 1:manual exp 2:shutter prio
                 video_set_control(video, V4L2_CID_AUTOGAIN, 0); //manual gain
@@ -480,10 +480,10 @@ ERRORTYPE videoInputHw_SetVippShutterTime(VI_DEV Vipp_id, VI_SHUTTIME_CFG_S *pSh
                 /* (time = 0) has been excluded */
                 if (time > 0) {
                     iExpNewTimeUs = 1000000 / time;
-//                    video_set_vin_reset_time(video, 0);
+                    video_set_vin_reset_time(video, 0);
                 } else if (time < 0) {
                     iExpNewTimeUs = 1000000 * (0-time);
-//                    video_set_vin_reset_time(video, (0-time));
+                    video_set_vin_reset_time(video, (0-time));
                 }
 
                 iSensorGainVal = iSensorGainVal * iSensorExpVal / iExpNewTimeUs;

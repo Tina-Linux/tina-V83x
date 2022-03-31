@@ -10,13 +10,12 @@ include $(PACKAGE_TOP)/config/mpp_config.mk
 
 #set source files here.
 SRCCS := \
-    sample_g2d.c sample_g2d_mem.c
+    sample_g2d.c
 
 #include directories
 INCLUDE_DIRS := \
     $(CUR_PATH) \
     $(EYESEE_MPP_INCLUDE)/system/public/include \
-    $(EYESEE_MPP_INCLUDE)/system/public/libion/include \
     $(EYESEE_MPP_INCLUDE)/system/public/include/utils \
     $(EYESEE_MPP_INCLUDE)/system/public/include/kernel-headers \
     $(PACKAGE_TOP)/include/utils \
@@ -37,28 +36,14 @@ INCLUDE_DIRS := \
 
 ifeq ($(MPPCFG_COMPILE_DYNAMIC_LIB), Y)
 LOCAL_SHARED_LIBS := \
-    liblog \
-    libpthread \
-    librt \
     libdl \
-    libmedia_utils \
-    libmpp_component \
+    librt \
+    libpthread \
+    libcdx_common \
+    libmedia_mpp \
+    liblog \
     libsample_confparser \
-    libmedia_mpp
-
-ifeq ($(MPPCFG_VI),Y)
-LOCAL_SHARED_LIBS += \
-    libmpp_vi \
-    libmpp_isp
-endif
-ifeq ($(MPPCFG_VO),Y)
-LOCAL_SHARED_LIBS += \
-    libmpp_vo
-endif
-ifeq ($(MPPCFG_ISE),Y)
-LOCAL_SHARED_LIBS += \
-    libmpp_ise
-endif
+    libmedia_utils
 LOCAL_STATIC_LIBS :=
 else
 LOCAL_SHARED_LIBS := \
@@ -74,10 +59,10 @@ LOCAL_SHARED_LIBS := \
     libcdx_common \
     libcdx_base
 
-ifeq ($(MPPCFG_DEMUXER),Y)
-LOCAL_SHARED_LIBS += \
-    libcdx_parser
-endif
+  ifeq ($(MPPCFG_VIDEOSTABILIZATION),Y)
+    LOCAL_SHARED_LIBS += libIRIDALABS_ViSta
+  endif
+
 LOCAL_STATIC_LIBS := \
     libaw_mpp \
     libmedia_utils \
@@ -108,72 +93,6 @@ LOCAL_STATIC_LIBS := \
     libisp_rolloff \
     libcedarxstream \
     libion
-
-ifeq ($(MPPCFG_VO),Y)
-LOCAL_STATIC_LIBS += \
-    libcedarxrender
-endif
-
-ifeq ($(MPPCFG_TEXTENC),Y)
-LOCAL_STATIC_LIBS += \
-    libcedarx_tencoder
-endif
-
-ifeq ($(MPPCFG_VDEC),Y)
-LOCAL_STATIC_LIBS += \
-    libvdecoder \
-    libvideoengine \
-    libawh264 \
-    libawh265 \
-    libawmjpegplus
-endif
-
-ifeq ($(MPPCFG_MUXER),Y)
-LOCAL_STATIC_LIBS += \
-    libmuxers \
-    libmp4_muxer \
-    libraw_muxer \
-    libmpeg2ts_muxer \
-    libaac_muxer \
-    libmp3_muxer \
-    libffavutil \
-    libFsWriter
-endif
-
-ifeq ($(MPPCFG_DEMUXER),Y)
-LOCAL_STATIC_LIBS += \
-    libcedarxdemuxer
-endif
-ifeq ($(MPPCFG_AEC),Y)
-LOCAL_STATIC_LIBS += \
-    libAec
-endif
-ifeq ($(MPPCFG_SOFTDRC),Y)
-LOCAL_STATIC_LIBS += \
-    libDrc
-endif
-ifeq ($(MPPCFG_AGC),Y)
-LOCAL_STATIC_LIBS += \
-    libAgc
-else ifeq ($(MPPCFG_AI_AGC),Y)
-LOCAL_STATIC_LIBS += \
-    libAgc    
-endif
-ifeq ($(MPPCFG_ANS),Y)
-LOCAL_STATIC_LIBS += \
-    libAns
-endif
-    ifeq ($(MPPCFG_EIS),Y)
-        LOCAL_STATIC_LIBS += \
-            libEIS \
-            lib_eis
-    endif
-    ifeq ($(MPPCFG_ISE_BI),Y)
-        LOCAL_STATIC_LIBS += lib_ise_bi
-    endif
-    ifeq ($(MPPCFG_ISE_MO),Y)
-        LOCAL_STATIC_LIBS += lib_ise_mo
-    endif
 
 endif
 
@@ -234,9 +153,6 @@ LIB_SEARCH_PATHS := \
     $(PACKAGE_TOP)/media/LIBRARY/audioEffectLib/lib \
     $(PACKAGE_TOP)/media/LIBRARY/textEncLib \
     $(PACKAGE_TOP)/media/LIBRARY/aec_lib/out \
-    $(PACKAGE_TOP)/media/LIBRARY/drc_lib/out \
-    $(PACKAGE_TOP)/media/LIBRARY/agc_lib/out \
-    $(PACKAGE_TOP)/media/LIBRARY/ans_lib/out \
     $(PACKAGE_TOP)/media/LIBRARY/libisp \
     $(PACKAGE_TOP)/media/LIBRARY/libisp/out \
     $(PACKAGE_TOP)/media/LIBRARY/libisp/isp_cfg \

@@ -112,12 +112,13 @@ int video_init(struct isp_video_device *video)
 	if (video->entity->fd != -1)
 		return 0;
 
-	video->entity->fd = open(video->entity->devname, O_RDWR | O_NONBLOCK | O_CLOEXEC, 0);
+	video->entity->fd = open(video->entity->devname, O_RDWR | O_NONBLOCK, 0);
 	if (video->entity->fd == -1) {
 		ISP_ERR("%s: Failed to open subdev device node %s\n", __func__,
 			video->entity->devname);
 		return -errno;
 	}
+
 	return 0;
 }
 
@@ -143,7 +144,7 @@ int video_set_fmt(struct isp_video_device *video, struct video_fmt *vfmt)
 	int frame_mode;
 
 	memset(&inp, 0, sizeof inp);
-	inp.index = vfmt->index;
+	inp.index = 0;
 	if (-1 == ioctl(video->entity->fd, VIDIOC_S_INPUT, &inp)) {
 		ISP_ERR("VIDIOC_S_INPUT %d error!\n", 0);
 		return -1;
@@ -161,10 +162,10 @@ int video_set_fmt(struct isp_video_device *video, struct video_fmt *vfmt)
 		ISP_ERR("VIDIOC_S_PARM error\n");
 		return -1;
 	}
+
 	memset(&fmt, 0, sizeof fmt);
 	fmt.type = vfmt->type;
 	fmt.fmt.pix_mp = vfmt->format;
-
 	if (-1 == ioctl(video->entity->fd, VIDIOC_S_FMT, &fmt)) {
 		ISP_ERR("VIDIOC_S_FMT error!\n");
 		return -1;
@@ -678,9 +679,9 @@ int overlay_set_fmt(struct isp_video_device *video, struct osd_fmt *ofmt)
 	if (ofmt->bitmap[0] != NULL) {
 		for (i = 0; i < ofmt->clipcount; i++) {
 			fmt.fmt.win.clips[i].c = ofmt->region[i];
-			fmt.fmt.win.clips[i + ofmt->clipcount].c.top = ofmt->glb_alpha[i];
-			fmt.fmt.win.clips[i + ofmt->clipcount].c.left = ofmt->reverse_close[i] + (ofmt->inv_th << 8);
-			fmt.fmt.win.clips[i + ofmt->clipcount].c.width = ofmt->inv_w_rgn[i];
+			fmt.fmt.win.clips[i + ofmt->clipcount].c.top    = ofmt->glb_alpha[i];
+			fmt.fmt.win.clips[i + ofmt->clipcount].c.left   = ofmt->reverse_close[i] + (ofmt->inv_th << 8);
+			fmt.fmt.win.clips[i + ofmt->clipcount].c.width  = ofmt->inv_w_rgn[i];
 			fmt.fmt.win.clips[i + ofmt->clipcount].c.height = ofmt->inv_h_rgn[i];
 			bitmap_size += ofmt->region[i].width * ofmt->region[i].height;
 		}
@@ -750,33 +751,38 @@ int overlay_update(struct isp_video_device *video, int on_off)
 int orl_set_fmt(struct isp_video_device *video, struct orl_fmt *pOrlFmt)
 {
 	struct v4l2_format fmt;
+	void *bitmap = NULL;
+	unsigned int bitmap_size = 0, pix_size = 0;
 	int i, ret = 0;
-	memset(&fmt, 0, sizeof(fmt));
 
+	memset(&fmt, 0, sizeof(fmt));
 	fmt.type = V4L2_BUF_TYPE_VIDEO_OVERLAY;
 	fmt.fmt.win.field = V4L2_FIELD_NONE;//now use for reverse close;
 	fmt.fmt.win.clips = calloc(pOrlFmt->clipcount * 2, sizeof(struct v4l2_clip));
 	fmt.fmt.win.clipcount = pOrlFmt->clipcount;
 	fmt.fmt.win.bitmap = NULL;
 	fmt.fmt.win.global_alpha = 16;
-
-	if(pOrlFmt->clipcount > 0) {
-		for (i = 0; i < pOrlFmt->clipcount; i++) {
+	if(pOrlFmt->clipcount > 0)
+	{
+		for (i = 0; i < pOrlFmt->clipcount; i++)
+		{
 			fmt.fmt.win.clips[i].c = pOrlFmt->region[i];
 			fmt.fmt.win.clips[i + pOrlFmt->clipcount].c.top = pOrlFmt->mRgbColor[i];
 		}
 		fmt.fmt.win.clips[pOrlFmt->clipcount].c.width = pOrlFmt->mThick;
 	}
-
 	ret = ioctl(video->entity->fd, VIDIOC_S_FMT, &fmt);
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		ISP_ERR("fatal error! VIDIOC_S_FMT overlay return %d!\n", ret);
 	}
-	free(fmt.fmt.win.clips);
 
-	if(fmt.fmt.win.bitmap != NULL) {
+	free(fmt.fmt.win.clips);
+	if(fmt.fmt.win.bitmap != NULL)
+	{
 		free(fmt.fmt.win.bitmap);
 	}
+
 	return ret;
 }
 
@@ -904,3 +910,17 @@ int video_set_top_clk(struct isp_video_device *video, unsigned int rate)
 	}
 	return 0;
 }
+
+int video_set_vin_reset_time(struct isp_video_device *video, unsigned int time)
+{
+    struct vin_reset_time reset_time;
+
+    reset_time.reset_time = time;
+
+    if (-1 == ioctl(video->entity->fd, VIDIOC_VIN_RESET_TIME, &reset_time)) {
+        ISP_ERR("video%d VIDIOC_VIN_RESET_TIME failed\n", (int)video->id);
+        return -1;
+    }
+    return 0;
+}
+

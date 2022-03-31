@@ -1970,12 +1970,11 @@ int mov_write_packet(AVFormatContext *s, AVPacket *pkt)
 		return 0;
 	}
 
-    /* if(2 == pkt->stream_index && gps_pack_method==GPS_PACK_IN_MDAT)      // pkt with gps info
+    if(2 == pkt->stream_index && gps_pack_method==GPS_PACK_IN_MDAT)      // pkt with gps info
     {
         mov_write_gps_packet(s,pkt);
-		mov->last_stream_index = pkt->stream_index;
         return 0;
-    } */
+    }
     
     trk = &mov->tracks[pkt->stream_index];
 	if(s->streams[pkt->stream_index]->codec.codec_id == CODEC_ID_MJPEG) {  /* gushiming compressed source */
@@ -2096,13 +2095,6 @@ int mov_write_packet(AVFormatContext *s, AVPacket *pkt)
     }
 	
     mov->last_stream_index = pkt->stream_index;
-
-    if(2 == pkt->stream_index && gps_pack_method==GPS_PACK_IN_MDAT)      // pkt with gps info
-    {
-        mov_write_gps_packet(s,pkt);
-        return 0;
-    }
-
     if(s->streams[pkt->stream_index]->codec.codec_id == CODEC_ID_PCM)   //uncompressed audio need not write stsz field, because sample size is fixed.
     {
         trk->stsz_size+=size/(trk->enc->channels*(trk->enc->bits_per_sample>>3)); //av stsz size

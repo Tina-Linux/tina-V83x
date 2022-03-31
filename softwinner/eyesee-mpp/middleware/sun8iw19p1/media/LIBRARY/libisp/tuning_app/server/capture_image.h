@@ -34,7 +34,6 @@ typedef struct _capture_format_s {
 	int                      planes_count; // planes count
 	int			 framecount;//frame count
 	int                      width_stride[3]; // width stride for each plane
-	int						index; //rear:0 front:1
 } capture_format;
 
 typedef struct _sensor_input_s {
@@ -44,7 +43,6 @@ typedef struct _sensor_input_s {
 	int                      height;
 	int                      fps;
 	int                      wdr;
-	int						index; //rear:0 front:1
 } sensor_input;
 
 

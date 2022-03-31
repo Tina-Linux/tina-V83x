@@ -62,9 +62,7 @@ struct isp_test_param {
 	HW_S32 drc_en;
 	HW_S32 cem_en;
 	HW_S32 lsc_en;
-#if (ISP_VERSION >= 521)
 	HW_S32 msc_en;
-#endif
 	HW_S32 gamma_en;
 	HW_S32 cm_en;
 	HW_S32 ae_en;
@@ -78,10 +76,8 @@ struct isp_test_param {
 	HW_S32 cfa_en;
 	HW_S32 tdf_en;
 	HW_S32 cnr_en;
-#if (ISP_VERSION >= 521)
 	HW_S32 lca_en;
 	HW_S32 gca_en;
-#endif
 	HW_S32 satur_en;
 	HW_S32 defog_en;
 	HW_S32 linear_en;
@@ -121,7 +117,7 @@ struct isp_3a_param {
 	HW_S32 ae_touch_dist_ind;
 	HW_S32 ae_iso2gain_ratio;
 	HW_S32 ae_fno_step[16];
-	HW_S32 wdr_cfg[ISP_WDR_CFG_MAX];
+	HW_S32 wdr_cfg[3];
 	//HW_S32 ae_table_length[SCENE_MODE_MAX];
 	HW_S32 gain_ratio;
 
@@ -196,9 +192,7 @@ struct isp_dynamic_config {
 	HW_S32 color_denoise;
 	HW_S32 ae_cfg[ISP_EXP_CFG_MAX];
 	HW_S32 gtm_cfg[ISP_GTM_HEQ_MAX];
-#if  (ISP_VERSION >= 521)
 	HW_S32 lca_cfg[ISP_LCA_MAX];
-#endif
 	//HW_S32 reserved[0];
 };
 
@@ -227,9 +221,7 @@ typedef struct isp_param_triger {
 	enum isp_triger_type color_denoise_triger;
 	enum isp_triger_type ae_cfg_triger;
 	enum isp_triger_type gtm_cfg_triger;
-#if  (ISP_VERSION >= 521)
 	enum isp_triger_type lca_cfg_triger;
-#endif
 } isp_dynamic_triger_t;
 
 struct isp_dynamic_param {
@@ -255,10 +247,7 @@ struct isp_tunning_param {
 	HW_S32 gtm_type;
 	HW_S32 gamma_type;
 	HW_S32 auto_alpha_en;
-	HW_S32 hist_pix_cnt;
-	HW_S32 dark_minval;
-	HW_S32 bright_minval;
-	HW_S16 plum_var[GTM_LUM_IDX_NUM][GTM_VAR_IDX_NUM];
+	HW_S16 plum_var[9][9];
 
 	/*cfa param*/
 	HW_S32 cfa_dir_th;
@@ -290,8 +279,6 @@ struct isp_tunning_param {
 	HW_S32 mff_mod;
 	HW_S32 msc_blw_lut[ISP_MSC_TBL_LUT_SIZE];
 	HW_S32 msc_blh_lut[ISP_MSC_TBL_LUT_SIZE];
-	HW_S32 msc_blw_dlt_lut[ISP_MSC_TBL_LUT_DLT_SIZE];
-	HW_S32 msc_blh_dlt_lut[ISP_MSC_TBL_LUT_DLT_SIZE];
 	HW_U16 msc_trig_cfg[ISP_MSC_TEMP_NUM]; //Color temp trigger points
 	HW_U16 msc_tbl[ISP_MSC_TEMP_NUM+ISP_MSC_TEMP_NUM][ISP_MSC_TBL_LENGTH];
 #endif
@@ -303,11 +290,11 @@ struct isp_tunning_param {
 	HW_U16 disc_tbl[512];
 	struct isp_rgb2rgb_gain_offset color_matrix_ini[3];
 	HW_U16 cm_trig_cfg[3]; //Color temp trigger points
-#if (ISP_VERSION >= 521)
+
 	HW_S32 gca_cfg[ISP_GCA_MAX];
 	HW_U16  lca_pf_satu_lut[ISP_REG_TBL_LENGTH];
 	HW_U16  lca_gf_satu_lut[ISP_REG_TBL_LENGTH];
-#endif
+
 	HW_S32 pltm_cfg[ISP_PLTM_MAX];
 
 	HW_U16 isp_bdnf_th[ISP_REG_TBL_LENGTH];

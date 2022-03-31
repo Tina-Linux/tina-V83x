@@ -54,64 +54,22 @@ struct isp_tuning {
 
 int isp_params_parse(struct hw_isp_device *isp, struct isp_param_config *params, int ir, int wdr, int sync_mode)
 {
-	struct isp_lib_context *ctx = isp_dev_get_ctx(isp);
+    struct isp_lib_context *ctx = isp_dev_get_ctx(isp);
 
-	if (ctx == NULL)
-		return -1;
+    if (ctx == NULL)
+        return -1;
 
-	return parser_ini_info(params, ctx->sensor_info.name,
-		ctx->sensor_info.sensor_width, ctx->sensor_info.sensor_height,
+    return parser_ini_info(params, ctx->sensor_info.name,
+        ctx->sensor_info.sensor_width, ctx->sensor_info.sensor_height,
         ctx->sensor_info.fps_fixed, wdr, ir, sync_mode, ctx->isp_id);
 }
 
-int isp_sensor_otp_init(struct hw_isp_device *isp)
-{
-	struct isp_lib_context *ctx = isp_dev_get_ctx(isp);
-	int ret = 0;
-	int i = 0;
-
-	if (ctx == NULL)
-		return -1;
-
-	// shading
-	ctx->pmsc_table = malloc(ISP_MSC_TBL_LENGTH*sizeof(unsigned short));
-	memset(ctx->pmsc_table, 0, ISP_MSC_TBL_LENGTH*sizeof(unsigned short));
-
-	if (!ctx->pmsc_table) {
-		ISP_ERR("msc_table alloc failed, no memory!\n");
-		return -1;
-	}
-
-	ctx->otp_enable = 1;
-	ret = ioctl(isp->sensor.fd, VIDIOC_VIN_GET_SENSOR_OTP_INFO, ctx->pmsc_table);
-	if(ret < 0) {
-		ISP_ERR("VIDIOC_VIN_GET_SENSOR_OTP_INFO return error:%s\n", strerror(errno));
-		ctx->otp_enable = -1;
-	}
-	//ctx->otp_enable = -1;
-	ctx->pwb_table = (void *)((HW_U64)(ctx->pmsc_table) + 16*16*3*sizeof(unsigned short));
-
-	return 0;
-}
-
-int isp_sensor_otp_exit(struct hw_isp_device *isp)
-{
-	struct isp_lib_context *ctx = isp_dev_get_ctx(isp);
-
-	if (ctx == NULL)
-		return -1;
-
-	// shading
-	free(ctx->pmsc_table);
-
-	return 0;
-}
 
 int isp_config_sensor_info(struct hw_isp_device *isp)
 {
 	struct sensor_config cfg;
-	struct isp_lib_context *ctx = isp_dev_get_ctx(isp);
-	int i = 0, j = 0;
+	struct isp_lib_context *ctx = isp_dev_get_ctx(isp);;
+
 	memset(&cfg, 0, sizeof(cfg));
 
 	if (ctx == NULL)
@@ -183,15 +141,7 @@ int isp_config_sensor_info(struct hw_isp_device *isp)
 
 	ctx->stats_ctx.pic_w = cfg.width;
 	ctx->stats_ctx.pic_h = cfg.height;
-#if 1
-	// update otp infomation
-	if(ctx->otp_enable == -1){
-		ISP_PRINT("otp disabled, msc use 1024\n");
-		for(i = 0; i < 16*16*3; i++) {
-			((unsigned short*)(ctx->pmsc_table))[i] = 1024;
-		}
-	}
-#endif
+
 	return 0;
 }
 
@@ -662,12 +612,7 @@ HW_S32 isp_tuning_get_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			isp_tuning_gtm->type = tuning->params.isp_tunning_settings.gtm_type;
 			isp_tuning_gtm->gamma_type = tuning->params.isp_tunning_settings.gamma_type;
 			isp_tuning_gtm->auto_alpha_en = tuning->params.isp_tunning_settings.auto_alpha_en;
-			isp_tuning_gtm->hist_pix_cnt= tuning->params.isp_tunning_settings.hist_pix_cnt;
-			isp_tuning_gtm->dark_minval= tuning->params.isp_tunning_settings.dark_minval;
-			isp_tuning_gtm->bright_minval= tuning->params.isp_tunning_settings.bright_minval;
 
-			memcpy(isp_tuning_gtm->plum_var, tuning->params.isp_tunning_settings.plum_var,
-				sizeof(isp_tuning_gtm->plum_var));
 			/* offset */
 			data_ptr += sizeof(struct isp_tuning_gtm_cfg);
 			ret += sizeof(struct isp_tuning_gtm_cfg);
@@ -753,6 +698,24 @@ HW_S32 isp_tuning_get_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			/* offset */
 			data_ptr += sizeof(struct isp_tuning_gca_cfg);
 			ret += sizeof(struct isp_tuning_gca_cfg);
+		}
+		if (cfg_ids & HW_ISP_CFG_TUNING_MSC) /* isp_tuning_msc */
+		{
+			struct isp_tuning_msc_table_cfg *isp_tuning_msc = (struct isp_tuning_msc_table_cfg *)data_ptr;
+			isp_tuning_msc->mff_mod = tuning->params.isp_tunning_settings.mff_mod;
+			isp_tuning_msc->msc_mode = tuning->params.isp_tunning_settings.msc_mode;
+			memcpy(isp_tuning_msc->msc_blw_lut, tuning->params.isp_tunning_settings.msc_blw_lut,
+				sizeof(isp_tuning_msc->msc_blw_lut));
+			memcpy(isp_tuning_msc->msc_blh_lut, tuning->params.isp_tunning_settings.msc_blh_lut,
+				sizeof(isp_tuning_msc->msc_blh_lut));
+			memcpy(&(isp_tuning_msc->value[0][0]), &(tuning->params.isp_tunning_settings.msc_tbl[0][0]),
+				sizeof(isp_tuning_msc->value));
+			memcpy(isp_tuning_msc->color_temp_triggers, tuning->params.isp_tunning_settings.msc_trig_cfg,
+				sizeof(isp_tuning_msc->color_temp_triggers));
+
+			/* offset */
+			data_ptr += sizeof(struct isp_tuning_msc_table_cfg);
+			ret += sizeof(struct isp_tuning_msc_table_cfg);
 		}
 #endif
 		break;
@@ -871,7 +834,6 @@ HW_S32 isp_tuning_get_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			data_ptr += sizeof(struct isp_tuning_cem_table_cfg);
 			ret += sizeof(struct isp_tuning_cem_table_cfg);
 		}
-#if (ISP_VERSION != 522)
 		if (cfg_ids & HW_ISP_CFG_TUNING_PLTM_TBL) /* isp_tuning_pltm_table */
 		{
 			memcpy(data_ptr, tuning->params.isp_tunning_settings.isp_pltm_table, sizeof(struct isp_tuning_pltm_table_cfg));
@@ -888,7 +850,6 @@ HW_S32 isp_tuning_get_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			data_ptr += sizeof(struct isp_tuning_wdr_table_cfg);
 			ret += sizeof(struct isp_tuning_wdr_table_cfg);
 		}
-#endif
 #if (ISP_VERSION >= 521)
 		if (cfg_ids & HW_ISP_CFG_TUNING_LCA_TBL) /* isp_tuning_lca  */
 		{
@@ -902,28 +863,6 @@ HW_S32 isp_tuning_get_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			data_ptr += sizeof(struct isp_tuning_lca_gf_satu_lut);
 			ret += sizeof(struct isp_tuning_lca_gf_satu_lut);
 
-		}
-		if (cfg_ids & HW_ISP_CFG_TUNING_MSC) /* isp_tuning_msc */
-		{
-			struct isp_tuning_msc_table_cfg *isp_tuning_msc = (struct isp_tuning_msc_table_cfg *)data_ptr;
-			isp_tuning_msc->mff_mod = tuning->params.isp_tunning_settings.mff_mod;
-			isp_tuning_msc->msc_mode = tuning->params.isp_tunning_settings.msc_mode;
-			memcpy(isp_tuning_msc->msc_blw_lut, tuning->params.isp_tunning_settings.msc_blw_lut,
-				sizeof(isp_tuning_msc->msc_blw_lut));
-			memcpy(isp_tuning_msc->msc_blh_lut, tuning->params.isp_tunning_settings.msc_blh_lut,
-				sizeof(isp_tuning_msc->msc_blh_lut));
-			memcpy(isp_tuning_msc->msc_blw_dlt_lut, tuning->params.isp_tunning_settings.msc_blw_dlt_lut,
-				sizeof(isp_tuning_msc->msc_blw_dlt_lut));
-			memcpy(isp_tuning_msc->msc_blh_dlt_lut, tuning->params.isp_tunning_settings.msc_blh_dlt_lut,
-				sizeof(isp_tuning_msc->msc_blh_dlt_lut));
-			memcpy(&(isp_tuning_msc->value[0][0]), &(tuning->params.isp_tunning_settings.msc_tbl[0][0]),
-				sizeof(isp_tuning_msc->value));
-			memcpy(isp_tuning_msc->color_temp_triggers, tuning->params.isp_tunning_settings.msc_trig_cfg,
-				sizeof(isp_tuning_msc->color_temp_triggers));
-
-			/* offset */
-			data_ptr += sizeof(struct isp_tuning_msc_table_cfg);
-			ret += sizeof(struct isp_tuning_msc_table_cfg);
 		}
 #endif
 		break;
@@ -1555,12 +1494,7 @@ HW_S32 isp_tuning_set_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			tuning->params.isp_tunning_settings.gtm_type = isp_tuning_gtm->type;
 			tuning->params.isp_tunning_settings.gamma_type = isp_tuning_gtm->gamma_type;
 			tuning->params.isp_tunning_settings.auto_alpha_en = isp_tuning_gtm->auto_alpha_en;
-			tuning->params.isp_tunning_settings.hist_pix_cnt= isp_tuning_gtm->hist_pix_cnt;
-			tuning->params.isp_tunning_settings.dark_minval= isp_tuning_gtm->dark_minval;
-			tuning->params.isp_tunning_settings.bright_minval= isp_tuning_gtm->bright_minval;
 
-			memcpy(tuning->params.isp_tunning_settings.plum_var, isp_tuning_gtm->plum_var,
-				sizeof(isp_tuning_gtm->plum_var));
 			/* offset */
 			data_ptr += sizeof(struct isp_tuning_gtm_cfg);
 			ret += sizeof(struct isp_tuning_gtm_cfg);
@@ -1646,6 +1580,24 @@ HW_S32 isp_tuning_set_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			/* offset */
 			data_ptr += sizeof(struct isp_tuning_gca_cfg);
 			ret += sizeof(struct isp_tuning_gca_cfg);
+		}
+		if (cfg_ids & HW_ISP_CFG_TUNING_MSC) /* isp_tuning_msc */
+		{
+			struct isp_tuning_msc_table_cfg *isp_tuning_msc = (struct isp_tuning_msc_table_cfg *)data_ptr;
+			tuning->params.isp_tunning_settings.mff_mod = isp_tuning_msc->mff_mod;
+			tuning->params.isp_tunning_settings.msc_mode = isp_tuning_msc->msc_mode;
+			memcpy(tuning->params.isp_tunning_settings.msc_blw_lut, isp_tuning_msc->msc_blw_lut,
+				sizeof(isp_tuning_msc->msc_blw_lut));
+			memcpy(tuning->params.isp_tunning_settings.msc_blh_lut, isp_tuning_msc->msc_blh_lut,
+				sizeof(isp_tuning_msc->msc_blh_lut));
+			memcpy(&(tuning->params.isp_tunning_settings.msc_tbl[0][0]), &(isp_tuning_msc->value[0][0]),
+				sizeof(isp_tuning_msc->value));
+			memcpy(tuning->params.isp_tunning_settings.msc_trig_cfg, isp_tuning_msc->color_temp_triggers,
+				sizeof(isp_tuning_msc->color_temp_triggers));
+
+			/* offset */
+			data_ptr += sizeof(struct isp_tuning_msc_table_cfg);
+			ret += sizeof(struct isp_tuning_msc_table_cfg);
 		}
 #endif
 		break;
@@ -1763,7 +1715,6 @@ HW_S32 isp_tuning_set_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			data_ptr += sizeof(struct isp_tuning_cem_table_cfg);
 			ret += sizeof(struct isp_tuning_cem_table_cfg);
 		}
-#if (ISP_VERSION != 522)
 		if (cfg_ids & HW_ISP_CFG_TUNING_PLTM_TBL) /* isp_tuning_pltm_table */
 		{
 			memcpy(tuning->params.isp_tunning_settings.isp_pltm_table, data_ptr, sizeof(struct isp_tuning_pltm_table_cfg));
@@ -1780,7 +1731,6 @@ HW_S32 isp_tuning_set_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 			data_ptr += sizeof(struct isp_tuning_wdr_table_cfg);
 			ret += sizeof(struct isp_tuning_wdr_table_cfg);
 		}
-#endif
 #if (ISP_VERSION >= 521)
 		if (cfg_ids & HW_ISP_CFG_TUNING_LCA_TBL)
 		{
@@ -1792,28 +1742,6 @@ HW_S32 isp_tuning_set_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
 		    // lca_gf_satu_lut offset
 			data_ptr += sizeof(struct isp_tuning_lca_gf_satu_lut);
 			ret += sizeof(struct isp_tuning_lca_gf_satu_lut);
-		}
-		if (cfg_ids & HW_ISP_CFG_TUNING_MSC) /* isp_tuning_msc */
-		{
-			struct isp_tuning_msc_table_cfg *isp_tuning_msc = (struct isp_tuning_msc_table_cfg *)data_ptr;
-			tuning->params.isp_tunning_settings.mff_mod = isp_tuning_msc->mff_mod;
-			tuning->params.isp_tunning_settings.msc_mode = isp_tuning_msc->msc_mode;
-			memcpy(tuning->params.isp_tunning_settings.msc_blw_lut, isp_tuning_msc->msc_blw_lut,
-				sizeof(isp_tuning_msc->msc_blw_lut));
-			memcpy(tuning->params.isp_tunning_settings.msc_blh_lut, isp_tuning_msc->msc_blh_lut,
-				sizeof(isp_tuning_msc->msc_blh_lut));
-			memcpy(tuning->params.isp_tunning_settings.msc_blw_dlt_lut, isp_tuning_msc->msc_blw_dlt_lut,
-				sizeof(isp_tuning_msc->msc_blw_dlt_lut));
-			memcpy(tuning->params.isp_tunning_settings.msc_blh_dlt_lut, isp_tuning_msc->msc_blh_dlt_lut,
-				sizeof(isp_tuning_msc->msc_blh_dlt_lut));
-			memcpy(&(tuning->params.isp_tunning_settings.msc_tbl[0][0]), &(isp_tuning_msc->value[0][0]),
-				sizeof(isp_tuning_msc->value));
-			memcpy(tuning->params.isp_tunning_settings.msc_trig_cfg, isp_tuning_msc->color_temp_triggers,
-				sizeof(isp_tuning_msc->color_temp_triggers));
-
-			/* offset */
-			data_ptr += sizeof(struct isp_tuning_msc_table_cfg);
-			ret += sizeof(struct isp_tuning_msc_table_cfg);
 		}
 #endif
 		break;

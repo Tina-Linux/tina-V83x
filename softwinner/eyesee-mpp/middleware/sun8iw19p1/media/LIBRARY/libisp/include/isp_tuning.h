@@ -111,6 +111,7 @@ typedef enum {
 	HW_ISP_CFG_TUNING_PLTM				= 0x00000400,
 #if (ISP_VERSION >= 521)
 	HW_ISP_CFG_TUNING_GCA				= 0x00000800,
+	HW_ISP_CFG_TUNING_MSC				= 0x00001000,
 #endif
 } hw_isp_cfg_tuning_ids;
 
@@ -129,7 +130,6 @@ typedef enum {
 	HW_ISP_CFG_TUNING_PLTM_TBL			= 0x00000400,
 	HW_ISP_CFG_TUNING_WDR				= 0x00000800,
 #if (ISP_VERSION >= 521)
-	HW_ISP_CFG_TUNING_MSC				= 0x00001000,
 	HW_ISP_CFG_TUNING_LCA_TBL			= 0x00002000,
 #endif
 } hw_isp_cfg_tuning_table_ids;
@@ -170,10 +170,8 @@ typedef enum {
 	ISP_CTRL_AGAIN_DGAIN,
 	ISP_CTRL_COLOR_EFFECT,
 	ISP_CTRL_AE_ROI,
-	ISP_CTRL_AF_METERING,
 	ISP_CTRL_COLOR_TEMP,
 	ISP_CTRL_EV_IDX,
-	ISP_CTRL_PLTM_HARDWARE_STR,
 } hw_isp_ctrl_cfg_ids;
 
 struct isp_test_pub_cfg {
@@ -407,10 +405,6 @@ struct isp_tuning_gtm_cfg {
 	HW_S32		type;
 	HW_S32		gamma_type;
 	HW_S32		auto_alpha_en;
-	HW_S32		hist_pix_cnt;
-	HW_S32		dark_minval;
-	HW_S32		bright_minval;
-	HW_S16		plum_var[GTM_LUM_IDX_NUM][GTM_VAR_IDX_NUM];
 };
 
 struct isp_tuning_cfa_cfg {
@@ -473,8 +467,6 @@ struct isp_tuning_msc_table_cfg {
 	HW_S32		msc_mode;
 	HW_S32		msc_blw_lut[ISP_MSC_TBL_LUT_SIZE];
 	HW_S32		msc_blh_lut[ISP_MSC_TBL_LUT_SIZE];
-	HW_S32 		msc_blw_dlt_lut[ISP_MSC_TBL_LUT_DLT_SIZE];
-	HW_S32 		msc_blh_dlt_lut[ISP_MSC_TBL_LUT_DLT_SIZE];
 	HW_U16		value[ISP_MSC_TEMP_NUM + ISP_MSC_TEMP_NUM][ISP_MSC_TBL_LENGTH];
 	HW_U16		color_temp_triggers[ISP_MSC_TEMP_NUM];
 };
@@ -529,7 +521,6 @@ struct isp_tuning_cem_table_cfg {
 	HW_U8		value[ISP_CEM_MEM_SIZE];
 };
 
-#if (ISP_VERSION != 522)
 struct isp_tuning_pltm_table_cfg {
 	HW_U8		value[ISP_PLTM_MEM_SIZE];
 };
@@ -537,7 +528,6 @@ struct isp_tuning_pltm_table_cfg {
 struct isp_tuning_wdr_table_cfg {
 	HW_U8       value[ISP_WDR_MEM_SIZE];
 };
-#endif
 
 /* isp_tuning_param cfg */
 struct isp_tuning_param_cfg {
@@ -563,10 +553,8 @@ struct isp_tuning_param_cfg {
 	struct isp_tuning_sharp_table_cfg	sharp;			/* id: 0x0400000080 */
 	struct isp_tuning_cem_table_cfg		cem;			/* id: 0x0400000100 */
 	struct isp_tuning_cem_table_cfg		cem_1;			/* id: 0x0400000200 */
-#if (ISP_VERSION != 522)
 	struct isp_tuning_pltm_table_cfg	pltm_tbl;		/* id: 0x0400000400 */
 	struct isp_tuning_wdr_table_cfg		wdr;			/* id: 0x0400000800 */
-#endif
 #if (ISP_VERSION >= 521)
 	struct isp_tuning_lca_pf_satu_lut	lca_pf;			/* id: 0x0400001000 */
 	struct isp_tuning_lca_gf_satu_lut	lca_gf;			/* id: 0x0400002000 */
@@ -767,10 +755,9 @@ HW_S32 isp_tuning_get_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_
  * @returns: cfg data length, negative if something went wrong
  */
 HW_S32 isp_tuning_set_cfg(struct hw_isp_device *isp, HW_U8 group_id, HW_U32 cfg_ids, void *cfg_data);
-int isp_sensor_otp_init(struct hw_isp_device *isp);
-int isp_sensor_otp_exit(struct hw_isp_device *isp);
 int isp_config_sensor_info(struct hw_isp_device *isp);
 int isp_params_parse(struct hw_isp_device *isp, struct isp_param_config *params, int ir, int wdr, int sync_mode);
+
 int isp_tuning_reset(struct hw_isp_device *isp, struct isp_param_config *param);
 
 int isp_tuning_update(struct hw_isp_device *isp);

@@ -21,31 +21,14 @@
 #include <stdio.h>
 #include <errno.h>
 
-//#define ANDROID_PLATFORM
-
-#ifdef ANDROID_PLATFORM
-#include <log/log.h>
-#endif
-
-
 //#define ISP_DGB_FL
 
-#ifdef ANDROID_PLATFORM
-#define ISP_WARN(fmt,arg...) ALOGW(fmt, ##arg)
-#define ISP_PRINT(fmt,arg...) ALOGV(fmt, ##arg)
-#define ISP_ERR(fmt, arg...) ALOGE(fmt, ##arg)
-#else
 #define ISP_ERR(x, arg...) printf("[ISP_ERR]%s, line: %d," x , __FUNCTION__, __LINE__, ##arg)
 #define ISP_WARN(x, arg...) printf("[ISP_WARN]" x , ##arg)
 #define ISP_PRINT(x, arg...) printf("[ISP]" x , ##arg)
-#endif
 
 #ifdef ISP_DGB_FL
-#ifdef ANDROID_PLATFORM
-    #define  FUNCTION_LOG do { ALOGV("%s, line: %d\n", __FUNCTION__, __LINE__); } while(0)
-#else
-    #define  FUNCTION_LOG do { printf("%s, line: %d\n", __FUNCTION__, __LINE__); } while(0)
-#endif
+#define  FUNCTION_LOG do { printf("%s, line: %d\n", __FUNCTION__, __LINE__); } while(0)
 #else
 #define  FUNCTION_LOG do { } while(0)
 #endif
@@ -70,28 +53,6 @@
 #define ISP_LOG_ISP				(1 << 16)	//0x10000
 #define ISP_LOG_FLASH				(1 << 17)	//0x20000
 
-#ifdef ANDROID_PLATFORM
-
-#define ISP_DEV_LOG(flag, msg...)\
-	do {\
-		if (isp_dev_log_param & flag)\
-		ALOGV("[ISP_DEBUG]: " msg);\
-	} while (0);\
-
-#define ISP_LIB_LOG(flag, msg...)\
-	do {\
-		if (isp_lib_log_param & flag)\
-		ALOGV("[ISP_DEBUG]: " msg);\
-	} while (0);\
-
-#define ISP_CFG_LOG(flag, msg...)\
-	do {\
-		if (isp_cfg_log_param & flag)\
-		ALOGV("[ISP_DEBUG]: " msg);\
-	} while (0);\
-
-#else
-
 #define ISP_DEV_LOG(flag, msg...)\
 	do {\
 		if (isp_dev_log_param & flag)\
@@ -104,13 +65,12 @@
 		printf("[ISP_DEBUG]: " msg);\
 	} while (0);\
 
+
 #define ISP_CFG_LOG(flag, msg...)\
 	do {\
 		if (isp_cfg_log_param & flag)\
 		printf("[ISP_DEBUG]: " msg);\
 	} while (0);\
-
-#endif
 
 #endif /*_DEBUG_H_*/
 
