@@ -33,11 +33,11 @@ size = 4096
 ;********************************************************************************************************
 [partition_start]
 
-;[partition]
-;    name         = boot-res
-;    size         = 1024
-;    downloadfile = "boot-resource.fex"
-;    user_type    = 0x8000
+[partition]
+    name         = boot-res
+    size         = 1024
+    downloadfile = "boot-resource.fex"
+    user_type    = 0x8000
 
 [partition]
     name         = env
@@ -52,41 +52,15 @@ size = 4096
     downloadfile = "boot.fex"
     user_type    = 0x8000
 
-;[partition]
-;    name         = cfg
-;    size         = 4096
-;    downloadfile = "config.fex"
-;    user_type    = 0x8000
-
 [partition]
     name         = rootfs
     size         = 262144
     downloadfile = "rootfs.fex"
     user_type    = 0x8000
 
-;[partition]
-;    name         = rootfs_data
-;    size         = 102400
-;    user_type    = 0x8000
-
-;[partition]
-;    name         = recovery
-;    size         = 12288
-;    user_type    = 0x8000
-;
-;[partition]
-;    name         = misc
-;    size         = 512
-;    user_type    = 0x8000
-;
-;[partition]
-;    name         = private
-;    size         = 512
-;    user_type    = 0x8000
-
 [partition]
-    name         = swap
-    size         = 163840
+    name         = rootfs_data
+    size         = 102400
     user_type    = 0x8000
 
 [partition]

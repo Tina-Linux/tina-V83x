@@ -10,7 +10,7 @@
 ;    mbr的大小, 以Kbyte为单位
 ;****************************************************
 [mbr]
-size = 16
+size = 4096
 
 ;********************************************************************************************************
 ;                                              分区配置
@@ -33,38 +33,62 @@ size = 16
 ;********************************************************************************************************
 [partition_start]
 
+;[partition]
+;    name         = boot-res
+;    size         = 1024
+;    downloadfile = "boot-resource.fex"
+;    user_type    = 0x8000
+
+[partition]
+    name         = env
+    size         = 512
+    downloadfile = "env.fex"
+    user_type    = 0x8000
 
 [partition]
     name         = boot
-    size         = 6144
+    ;size         = 4096
+    size         = 12288
     downloadfile = "boot.fex"
     user_type    = 0x8000
 
+;[partition]
+;    name         = cfg
+;    size         = 4096
+;    downloadfile = "config.fex"
+;    user_type    = 0x8000
+
 [partition]
     name         = rootfs
-    size         = 12032
+    size         = 262144
     downloadfile = "rootfs.fex"
     user_type    = 0x8000
 
-[partition]
-    name         = extend
-    size         = 10496
-    downloadfile = "usr.fex"
-    user_type    = 0x8000
-
-[partition]
-    name         = rootfs_data
-    size         = 1024
-    user_type    = 0x8000
-
-[partition]
-   name         = env
-   size         = 512
-   downloadfile = "env_nor.fex"
-   user_type    = 0x8000
+;[partition]
+;    name         = rootfs_data
+;    size         = 102400
+;    user_type    = 0x8000
 
 ;[partition]
-;   name         = misc
-;   size         = 128
-;   user_type    = 0x8000
+;    name         = recovery
+;    size         = 12288
+;    user_type    = 0x8000
+;
+;[partition]
+;    name         = misc
+;    size         = 512
+;    user_type    = 0x8000
+;
+;[partition]
+;    name         = private
+;    size         = 512
+;    user_type    = 0x8000
 
+[partition]
+    name         = swap
+    size         = 163840
+    user_type    = 0x8000
+
+[partition]
+    name         = UDISK
+    user_type    = 0x8100

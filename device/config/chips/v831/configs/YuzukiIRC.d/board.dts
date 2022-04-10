@@ -727,7 +727,7 @@
 			lcd_rb_swap			= <0>;
 
 			lcd_gpio_0 = <&pio PH 5 1 0 3 0>; /* rst */
-			lcd_gpio_1 = <&pio PD 21 1 0 3 0>; /* cs */
+			lcd_gpio_1 = <&pio PH 6 1 0 3 0>; /* cs */
 
 			pinctrl-0 = <&rgb8_pins_a>;
 			pinctrl-1 = <&rgb8_pins_b>;
