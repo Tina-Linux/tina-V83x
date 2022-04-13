@@ -108,7 +108,6 @@ CONFIG_REDUCE_KERNEL_SIZE=y
 #
 # Boot Time Optimization
 #
-CONFIG_BOOT_TIME_OPTIMIZATION=y
 
 #
 # Global build settings
