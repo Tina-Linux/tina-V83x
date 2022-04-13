@@ -675,8 +675,7 @@
 			degree0					= <0>;
 			fb0_format				= <8>;
 			fb0_width				= <240>;
-			fb0_height				= <240>;
-			// fb0_height				= <320>;
+			fb0_height				= <320>;
 
 			lcd0_backlight			= <50>;
 			lcd0_bright				= <50>;
@@ -726,8 +725,9 @@
 			lcd_bright_curve_en = <0>;
 			lcd_rb_swap			= <0>;
 
-			lcd_gpio_0 = <&pio PH 5 1 0 3 0>; /* rst */
-			lcd_gpio_1 = <&pio PD 21 1 0 3 0>; /* cs */
+			//lcd_gpio_0 = <&pio PH 5 1 0 3 0>; /* rst */
+			//lcd_gpio_1 = <&pio PD 21 1 0 3 0>; /* cs */
+			//lcd_bl_en = <&pio PD 21 1 0 3 1>;
 
 			pinctrl-0 = <&rgb8_pins_a>;
 			pinctrl-1 = <&rgb8_pins_b>;

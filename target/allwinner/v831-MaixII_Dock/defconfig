@@ -80,11 +80,11 @@ CONFIG_SUNXI_RECOVERY_INITRAMFS_KERNEL_FORMAT_UIMAGE=y
 # CONFIG_CUSTOMIZE_IMAGE_NAME is not set
 # CONFIG_CUSTOMIZE_CONFIG_FILE is not set
 CONFIG_TARGET_ROOTFS_PARTSIZE=128
-CONFIG_TARGET_ROOTFS_INCLUDE_KERNEL=y
+# CONFIG_TARGET_ROOTFS_INCLUDE_KERNEL is not set
 CONFIG_TARGET_ROOTFS_INCLUDE_UIMAGE=y
 CONFIG_TARGET_ROOTFS_INCLUDE_ZIMAGE=y
 CONFIG_TARGET_ROOTFS_INCLUDE_FIT=y
-CONFIG_TARGET_ROOTFS_INCLUDE_DTB=y
+# CONFIG_TARGET_ROOTFS_INCLUDE_DTB is not set
 
 #
 # Kernel Image Compression Mode setting
@@ -108,7 +108,7 @@ CONFIG_REDUCE_KERNEL_SIZE=y
 #
 # Boot Time Optimization
 #
-# CONFIG_BOOT_TIME_OPTIMIZATION is not set
+CONFIG_BOOT_TIME_OPTIMIZATION=y
 
 #
 # Global build settings
@@ -2606,7 +2606,7 @@ CONFIG_FIRMWARE_PATH="/lib/firmware/"
 # CONFIG_PACKAGE_kmod-fs-udf is not set
 # CONFIG_PACKAGE_kmod-fs-vfat is not set
 # CONFIG_PACKAGE_kmod-fs-xfs is not set
-CONFIG_PACKAGE_kmod-fuse=y
+# CONFIG_PACKAGE_kmod-fuse is not set
 
 #
 # Hardware Monitoring Support
@@ -4446,7 +4446,7 @@ CONFIG_PACKAGE_fbviewer=y
 # CONFIG_PACKAGE_googletest is not set
 # CONFIG_PACKAGE_gpio_ir_test is not set
 # CONFIG_PACKAGE_gpioctl-sysfs is not set
-CONFIG_PACKAGE_htop=y
+# CONFIG_PACKAGE_htop is not set
 # CONFIG_PACKAGE_hwclock is not set
 CONFIG_PACKAGE_i2c-tools=y
 # CONFIG_PACKAGE_iconv is not set
