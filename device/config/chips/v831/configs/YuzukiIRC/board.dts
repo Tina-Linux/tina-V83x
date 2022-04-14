@@ -505,11 +505,11 @@
 
 			sensor0:sensor@0 {
 				device_type = "sensor0";
-				// sensor0_mname = "ov9732_mipi";
-				sensor0_mname = "sp2305_mipi";
+				sensor0_mname = "ov9732_mipi";
+				// sensor0_mname = "sp2305_mipi";
 				sensor0_twi_cci_id = <1>;
-				// sensor0_twi_addr = <0x6c>;
-				sensor0_twi_addr = <0x78>;
+				sensor0_twi_addr = <0x6c>; // ov9732_mipi
+				// sensor0_twi_addr = <0x78>; // sp2305_mipi
 				sensor0_mclk_id = <0>;
 				sensor0_pos = "rear";
 				sensor0_isp_used = <1>;
