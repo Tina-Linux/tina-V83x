@@ -2828,7 +2828,7 @@ CONFIG_FIRMWARE_PATH="/lib/firmware/"
 #
 # CONFIG_PACKAGE_kmod-mmc-spi is not set
 # CONFIG_PACKAGE_kmod-spi-bitbang is not set
-CONFIG_PACKAGE_kmod-spi-dev=y
+# CONFIG_PACKAGE_kmod-spi-dev is not set
 # CONFIG_PACKAGE_kmod-spi-gpio is not set
 # CONFIG_PACKAGE_kmod-spi-gpio-custom is not set
 # CONFIG_PACKAGE_kmod-spi-gpio-old is not set
