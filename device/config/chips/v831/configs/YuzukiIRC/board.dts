@@ -443,7 +443,7 @@
 		spi@05010000 {
 			pinctrl-0 = <&spi0_pins_a &spi0_pins_b>;
 			pinctrl-1 = <&spi0_pins_c>;
-			status = "disable";
+			status = "disabled";
 			spi_board0 {
 				device_type = "spi_board0";
 				compatible = "m25p80";
@@ -466,7 +466,7 @@
 			pinctrl-1 = <&spi1_pins_c>;
 			spi1_cs_number = <2>;
 			spi1_cs_bitmap = <3>;
-			status = "okay";
+			status = "disabled";
 			spi_board1 {
 				device_type = "spi_board1";
 				compatible = "spidev";
@@ -674,8 +674,8 @@
 			disp_rotation_used 		= <1>;
 			degree0					= <0>;
 			fb0_format				= <8>;
-			fb0_width				= <240>;
-			fb0_height				= <320>;
+			fb0_width				= <320>;
+			fb0_height				= <480>;
 
 			lcd0_backlight			= <50>;
 			lcd0_bright				= <50>;
@@ -687,29 +687,21 @@
 		lcd0: lcd0@01c0c000 {
 			lcd_used            = <1>;
 
-			lcd_size			= "1.3";
-			lcd_model_name		= "inv";
-			lcd_driver_name     = "st7789v_cpu";
+			lcd_driver_name     = "ili9481";
 
-			lcd_x               = <240>;
-			lcd_y               = <240>;
+			lcd_x               = <320>;
+			lcd_y               = <480>;
 			lcd_width           = <108>;
 			lcd_height          = <64>;
-			lcd_dclk_freq       = <10>;
-
-			lcd_backlight       = <50>;
+			lcd_dclk_freq       = <5>;
 
 			lcd_pwm_used        = <0>;
-			lcd_pwm_ch          = <1>;
-			lcd_pwm_freq        = <50000>;
-			lcd_pwm_pol         = <1>;
-			lcd_pwm_max_limit   = <255>;
 
-			lcd_hbp             = <60>;
-			lcd_ht              = <298>;
-			lcd_hspw            = <30>;
-			lcd_vbp             = <250>;
-			lcd_vt              = <265>;
+			lcd_hbp             = <20>;
+			lcd_ht              = <382>;
+			lcd_hspw            = <2>;
+			lcd_vbp             = <2>; // 320
+			lcd_vt              = <486>; // 320
 			lcd_vspw            = <2>;
 
 			lcd_if              = <1>;
@@ -723,11 +715,11 @@
 			lcd_gamma_en        = <0>;
 			lcd_cmap_en         = <0>;
 			lcd_bright_curve_en = <0>;
-			lcd_rb_swap			= <0>;
+			lcd_rb_swap         = <0>;
 
-			//lcd_gpio_0 = <&pio PH 5 1 0 3 0>; /* rst */
-			//lcd_gpio_1 = <&pio PD 21 1 0 3 0>; /* cs */
-			//lcd_bl_en = <&pio PD 21 1 0 3 1>;
+			lcd_gpio_0 = <&pio PH 5 1 0 3 0>; /* rst */
+			lcd_gpio_1 = <&pio PD 21 1 0 3 0>; /* cs */
+			lcd_bl_en = <&pio PH 6 1 0 3 1>;
 
 			pinctrl-0 = <&rgb8_pins_a>;
 			pinctrl-1 = <&rgb8_pins_b>;
