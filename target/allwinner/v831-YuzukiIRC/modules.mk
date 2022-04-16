@@ -10,14 +10,14 @@ define KernelPackage/vin-v4l2
   DEPENDS:=
   FILES:=$(LINUX_DIR)/drivers/media/v4l2-core/videobuf2-core.ko
   FILES+=$(LINUX_DIR)/drivers/media/v4l2-core/videobuf2-memops.ko
+  FILES+=$(LINUX_DIR)/drivers/media/v4l2-core/videobuf2-dma-contig.ko
   FILES+=$(LINUX_DIR)/drivers/media/v4l2-core/videobuf2-v4l2.ko
-  FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/videobuf2-dma-contig.ko
-  FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/vin_io.ko
-  FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/vin_v4l2.ko
+  FILES+=$(LINUX_DIR)/drivers/media/platform/sunxi-vin/vin_io.ko
   FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/sp2305_mipi.ko
   FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/ov9732_mipi.ko
-  FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/sensor_power.ko
-  AUTOLOAD:=$(call AutoProbe,videobuf2-core videobuf2-dma-contig videobuf2-memops videobuf2-v4l2 vin_io vin_v4l2 sp2305_mipi ov9732_mipi sensor_power)
+  FILES+=$(LINUX_DIR)/drivers/media/platform/sunxi-vin/modules/sensor_power/sensor_power.ko
+  FILES+=$(LINUX_DIR)/drivers/media/platform/sunxi-vin/vin_v4l2.ko
+  AUTOLOAD:=$(call AutoProbe,videobuf2-core videobuf2-dma-contig videobuf2-memops videobuf2-v4l2 vin_io sp2305_mipi ov9732_mipi sensor_power vin_v4l2)
 endef
 
 define KernelPackage/vin_v4l2/description
