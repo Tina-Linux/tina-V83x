@@ -26,6 +26,13 @@ sudo apt-get install build-essential subversion git-core libncurses5-dev zlib1g-
 ```
 
 ## Download dl/ files
+
+The dl folder is very large, with 4.7GiB, so it is uploaded to the network disk. Please download and unzip it from the network disk and put it in the dl folder
+
+https://drive.google.com/drive/folders/1PzVQIhMdAj6FnqjhwyWq9vbwgjbGUWSj?usp=sharing
+
+or
+
 链接：https://pan.baidu.com/s/17DilyerV0pBrK7j0lEkhsA 
 提取码：yz8a 
 
