@@ -125,3 +125,16 @@ dram_tpr10          = 0x00000000
 dram_tpr11          = 0x00120000
 dram_tpr12          = 0x00000023
 dram_tpr13          = 0x34000903
+
+
+;----------------------------------------------------------------------------------
+;uart configuration
+;uart_type ---  2 (2 wire), 4 (4 wire), 8 (8 wire, full function)
+;----------------------------------------------------------------------------------
+[uart0]
+uart0_used       = 1
+uart0_port       = 0
+uart0_type       = 2
+uart0_tx         = port:PH09<5><1><default><default>
+uart0_rx         = port:PH10<5><1><default><default>
+

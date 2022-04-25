@@ -1,0 +1,208 @@
+diff -Naur squashfs4.3-orig/squashfs-tools/Makefile squashfs4.3/squashfs-tools/Makefile
+--- squashfs4.3-orig/squashfs-tools/Makefile	2014-05-12 02:56:00.000000000 +0800
++++ squashfs4.3/squashfs-tools/Makefile	2018-03-28 10:43:02.000000000 +0800
+@@ -123,6 +123,12 @@
+        -Wall
+
+ LIBS = -lpthread -lm
++
++ifeq ($(SELINUX_SUPPORT),1)
++CFLAGS += -DSELINUX_SUPPORT
++LIBS += -lpcre -lselinux
++endif
++
+ ifeq ($(GZIP_SUPPORT),1)
+ CFLAGS += -DGZIP_SUPPORT
+ MKSQUASHFS_OBJS += gzip_wrapper.o
+diff -Naur squashfs4.3-orig/squashfs-tools/mksquashfs.c squashfs4.3/squashfs-tools/mksquashfs.c
+--- squashfs4.3-orig/squashfs-tools/mksquashfs.c	2014-05-13 06:18:20.000000000 +0800
++++ squashfs4.3/squashfs-tools/mksquashfs.c	2018-03-28 10:36:38.000000000 +0800
+@@ -84,6 +84,10 @@
+ /* filesystem flags for building */
+ int comp_opts = FALSE;
+ int no_xattrs = XATTR_DEF;
++#ifdef SELINUX_SUPPORT
++char *context_file = NULL;
++char *mount_point = NULL;
++#endif
+ int noX = FALSE;
+ int duplicate_checking = TRUE;
+ int noF = FALSE;
+@@ -5264,6 +5268,25 @@
+		else if(strcmp(argv[i], "-xattrs") == 0)
+			no_xattrs = FALSE;
+
++#ifdef SELINUX_SUPPORT
++		else if(strcmp(argv[i], "-context-file") == 0) {
++			if(++i == argc) {
++				ERROR("%s: -context-file: missing file name\n",
++					argv[0]);
++				exit(1);
++			}
++			context_file = argv[i];
++		}
++		else if(strcmp(argv[i], "-mount-point") == 0) {
++			if(++i == argc) {
++				ERROR("%s: -mount-point: missing mount point name\n",
++					argv[0]);
++				exit(1);
++			}
++			mount_point = argv[i];
++		}
++#endif
++
+		else if(strcmp(argv[i], "-nopad") == 0)
+			nopad = TRUE;
+
+@@ -5312,6 +5335,15 @@
+				NOXOPT_STR "\n");
+			ERROR("-xattrs\t\t\tstore extended attributes" XOPT_STR
+				"\n");
++#ifdef SELINUX_SUPPORT
++			ERROR("-context-file <file>\tApply selinux security "
++				"xattrs from context-file instead\n\t\t\t"
++				"of reading xattrs from file system\n");
++			ERROR("-mount-point <name>\tNeed to be provided when "
++				"context-file are enabled\n\t\t\t"
++				"enabled and source directory is not mount point\n");
++#endif
++
+			ERROR("-noI\t\t\tdo not compress inode table\n");
+			ERROR("-noD\t\t\tdo not compress data blocks\n");
+			ERROR("-noF\t\t\tdo not compress fragment blocks\n");
+diff -Naur squashfs4.3-orig/squashfs-tools/xattr.c squashfs4.3/squashfs-tools/xattr.c
+--- squashfs4.3-orig/squashfs-tools/xattr.c	2014-05-10 12:54:13.000000000 +0800
++++ squashfs4.3/squashfs-tools/xattr.c	2018-03-28 10:39:52.000000000 +0800
+@@ -43,6 +43,13 @@
+ #include "error.h"
+ #include "progressbar.h"
+
++#ifdef SELINUX_SUPPORT
++#include <selinux/label.h>
++#include <selinux/selinux.h>
++
++static struct selabel_handle *sehnd = NULL;
++#endif
++
+ /* compressed xattr table */
+ static char *xattr_table = NULL;
+ static unsigned int xattr_size = 0;
+@@ -77,6 +84,13 @@
+ extern int fd;
+ extern unsigned int xattr_bytes, total_xattr_bytes;
+
++#ifdef SELINUX_SUPPORT
++extern char *context_file;
++extern char *mount_point;
++
++extern char *subpathname(struct dir_ent *);
++#endif
++
+ /* helper functions from mksquashfs.c */
+ extern unsigned short get_checksum(char *, int, unsigned short);
+ extern void write_destination(int, long long, int, void *);
+@@ -110,6 +124,77 @@
+	return prefix_table[i].type;
+ }
+
++#ifdef SELINUX_SUPPORT
++static int get_prefix(struct xattr_list *xattr, char *name);
++#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
++
++static struct selabel_handle *get_sehnd(const char *context_file) {
++    struct selinux_opt seopts[] = {
++        {
++            .type = SELABEL_OPT_PATH,
++            .value = context_file
++        }
++    };
++    struct selabel_handle *sehnd =
++        selabel_open(SELABEL_CTX_FILE, seopts, ARRAY_SIZE(seopts));
++
++    if (!sehnd) {
++        ERROR("Error running selabel_open.");
++	return 0;
++    }
++    return sehnd;
++}
++
++static char *set_selabel(const char *path, unsigned int mode, struct selabel_handle *sehnd) {
++    char *secontext;
++    if (sehnd != NULL) {
++        int full_name_size = strlen(path) + 2;
++        char* full_name = (char*) malloc(full_name_size);
++        if (full_name == NULL) {
++            ERROR("Malloc Failure.");
++	    return 0;
++        }
++
++        full_name[0] = '/';
++        strncpy(full_name + 1, path, full_name_size - 1);
++
++        if (selabel_lookup(sehnd, &secontext, full_name, mode)) {
++            secontext = strdup("u:object_r:unlabeled:s0");
++        }
++
++        free(full_name);
++        return secontext;
++    }
++    ERROR("Selabel handle is NULL.");
++    return 0;
++}
++
++void alloc_mounted_path(const char *mount_point, const char *subpath, char **mounted_path) {
++    *mounted_path = malloc(strlen(mount_point) + strlen(subpath) + 1);
++    if (*mounted_path == NULL) {
++        ERROR("Malloc Failure.");
++        exit(EXIT_FAILURE);
++    }
++    strcpy(*mounted_path, mount_point);
++    strcat(*mounted_path, subpath);
++}
++
++static int read_xattrs_from_context_file(char *filename, int mode,
++	struct selabel_handle *sehnd, struct xattr_list **xattrs)
++{
++	char *attr_val;
++	struct xattr_list *x = malloc(sizeof(*x));
++	if(x == NULL)
++		ERROR("Out of memory in read_xattrs_from_context_file\n");
++
++	x->type = get_prefix(x, "security.selinux");
++	attr_val = set_selabel(filename, mode, sehnd);
++	x->value = (void *)attr_val;
++	x->vsize = strlen(attr_val);
++	*xattrs = x;
++	return 1;
++}
++#endif
+
+ static int read_xattrs_from_system(char *filename, struct xattr_list **xattrs)
+ {
+@@ -614,7 +699,27 @@
+	if(no_xattrs || IS_PSEUDO(inode) || inode->root_entry)
+		return SQUASHFS_INVALID_XATTR;
+
++#ifdef SELINUX_SUPPORT
++	if (context_file) {
++		if (sehnd == NULL)
++			sehnd = get_sehnd(context_file);
++		if (mount_point) {
++			char *mounted_path;
++			alloc_mounted_path(mount_point, subpathname(dir_ent), &mounted_path);
++			xattrs = read_xattrs_from_context_file(mounted_path, inode->buf.st_mode,
++					sehnd, &xattr_list);
++			free(mounted_path);
++		} else {
++			xattrs = read_xattrs_from_context_file(filename, inode->buf.st_mode,
++					sehnd, &xattr_list);
++		}
++	} else {
++		xattrs = read_xattrs_from_system(filename, &xattr_list);
++	}
++#else
+	xattrs = read_xattrs_from_system(filename, &xattr_list);
++#endif
++
+	if(xattrs == 0)
+		return SQUASHFS_INVALID_XATTR;
