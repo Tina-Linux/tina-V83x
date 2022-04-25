@@ -3,3 +3,4 @@ conf
 zconf.hash.c
 zconf.lex.c
 zconf.tab.c
+mconf
