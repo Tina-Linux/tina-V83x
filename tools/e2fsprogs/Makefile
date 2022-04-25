@@ -9,18 +9,20 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=e2fsprogs
 PKG_CPE_ID:=cpe:/a:e2fsprogs_project:e2fsprogs
-PKG_VERSION:=1.44.3
-PKG_HASH:=5d899f7d30f481cc0c6a049ebe26ebe145f1b524182ea1ecde4086162d4e4bb6
+PKG_VERSION:=1.45.4
+PKG_HASH:=65faf6b590ca1da97440d6446bd11de9e0914b42553740ba5d9d2a796fa0dc02
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/kernel/people/tytso/e2fsprogs/v$(PKG_VERSION)/
 
 HOST_BUILD_PARALLEL:=1
-HOST_PREPARED_DEPENDS += CONFIG_USE_SELINUX
 
 include $(BUILD_DIR)/host-build.mk
 
+ifneq ($(shell $(HOSTCC) --version | grep clang),)
+  HOST_CFLAGS += -D__GNUC_PREREQ\(...\)=0
+endif
 HOST_CFLAGS += $(FPIC)
 
 HOST_CONFIGURE_ARGS += \
@@ -34,15 +36,6 @@ define Host/Prepare
 	rm -rf $(HOST_BUILD_DIR)/doc
 endef
 
-define Host/Compile
-	$(call Host/Compile/Default)
-ifneq ($(CONFIG_USE_SELINUX),)
-	$(MAKE) -C $(HOST_BUILD_DIR)/contrib/android \
-		CFLAGS="$(HOST_CFLAGS)" \
-		LDFLAGS="$(HOST_LDFLAGS)"
-endif
-endef
-
 define Host/Install
 	$(Host/Install/Default)
 	$(MAKE) -C $(HOST_BUILD_DIR)/lib/uuid install
@@ -50,18 +43,11 @@ define Host/Install
 	$(CP) $(STAGING_DIR_HOST)/include/uuid $(STAGING_DIR_HOST)/include/e2fsprogs/
 	rm -rf $(STAGING_DIR_HOST)/include/uuid
 	$(INSTALL_DATA) $(HOST_BUILD_DIR)/lib/uuid/libuuid.a $(STAGING_DIR_HOST)/lib/
-
-ifneq ($(CONFIG_USE_SELINUX),)
-	$(INSTALL_BIN) $(HOST_BUILD_DIR)/contrib/android/e2fsdroid $(STAGING_DIR_HOST)/bin
-endif
 endef
 
 define Host/Clean
 	rm -f $(STAGING_DIR_HOST)/bin/e2fsck
 	rm -f $(STAGING_DIR_HOST)/bin/tune2fs
-ifneq ($(CONFIG_USE_SELINUX),)
-	rm -f $(STAGING_DIR_HOST)/bin/e2fsdroid
-endif
 endef
 
 $(eval $(call HostBuild))

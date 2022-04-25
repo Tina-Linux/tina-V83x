@@ -1,5 +1,6 @@
 #
 # Copyright (C) 2015 OpenWrt.org
+# Copyright (C) 2016 LEDE project
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -7,14 +8,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=make-ext4fs
-PKG_VERSION:=2015-12-02
+PKG_VERSION:=2016-08-14
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://git.openwrt.org/project/make_ext4fs.git
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_VERSION:=bd53eaafbc2a89a57b8adda38f53098a431fa8f4
+PKG_SOURCE_VERSION:=484903e4332be6c317f531b008cb2a841a18c506
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
-PKG_MIRROR_MD5SUM:=742ed45a833c81de5732a3adb827cde5
+PKG_MIRROR_MD5SUM:=b80d6ddcd6f6925e2f5b80775bb96f3e
 PKG_CAT:=zcat
 
 HOST_BUILD_DIR:=$(COMPILE_DIR_HOST)/$(PKG_NAME)-$(PKG_VERSION)

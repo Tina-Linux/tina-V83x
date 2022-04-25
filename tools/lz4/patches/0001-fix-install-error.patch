@@ -1,0 +1,16 @@
+diff -Naur lz4-1.9.2/programs/Makefile lz4-1.9.2-new/programs/Makefile
+--- lz4-1.9.2/programs/Makefile	2019-08-15 19:59:59.000000000 +0800
++++ lz4-1.9.2-new/programs/Makefile	2020-10-13 15:37:40.045848000 +0800
+@@ -149,9 +149,9 @@
+	@echo Installing binaries
+	@$(INSTALL_DIR) $(DESTDIR)$(bindir)/ $(DESTDIR)$(man1dir)/
+	@$(INSTALL_PROGRAM) lz4$(EXT) $(DESTDIR)$(bindir)/lz4$(EXT)
+-	@$(LN_S) lz4$(EXT) $(DESTDIR)$(bindir)/lz4c$(EXT)
+-	@$(LN_S) lz4$(EXT) $(DESTDIR)$(bindir)/lz4cat$(EXT)
+-	@$(LN_S) lz4$(EXT) $(DESTDIR)$(bindir)/unlz4$(EXT)
++	@$(LN_SF) lz4$(EXT) $(DESTDIR)$(bindir)/lz4c$(EXT)
++	@$(LN_SF) lz4$(EXT) $(DESTDIR)$(bindir)/lz4cat$(EXT)
++	@$(LN_SF) lz4$(EXT) $(DESTDIR)$(bindir)/unlz4$(EXT)
+	@echo Installing man pages
+	@$(INSTALL_DATA) lz4.1 $(DESTDIR)$(man1dir)/lz4.1
+	@$(LN_SF) lz4.1 $(DESTDIR)$(man1dir)/lz4c.1

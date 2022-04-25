@@ -1,0 +1,28 @@
+From 3a06396dee05566144f8e119852002a03c63c5be Mon Sep 17 00:00:00 2001
+From: zhijinzeng <zhijinzeng@allwinnertech.com>
+Date: Thu, 17 Dec 2020 18:46:22 +0800
+Subject: [PATCH] mkimage: support riscv
+
+Signed-off-by: zhijinzeng <zhijinzeng@allwinnertech.com>
+---
+ common/image.c | 1 +
+ 1 file changed, 1 insertion(+)
+ mode change 100644 => 100755 common/image.c
+
+diff --git a/common/image.c b/common/image.c
+old mode 100644
+new mode 100755
+index 14be3ca..8de3441
+--- a/common/image.c
++++ b/common/image.c
+@@ -86,6 +86,7 @@ static const table_entry_t uimage_arch[] = {
+ 	{	IH_ARCH_ARC,		"arc",		"ARC",		},
+ 	{	IH_ARCH_X86_64,		"x86_64",	"AMD x86_64",	},
+ 	{	IH_ARCH_XTENSA,		"xtensa",	"Xtensa",	},
++	{	IH_ARCH_RISCV,		"riscv",	"RISC-V",	},
+ 	{	-1,			"",		"",		},
+ };
+ 
+-- 
+2.29.0
+

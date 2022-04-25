@@ -1,0 +1,15 @@
+diff -Naur squashfskit-v4.14/squashfs-tools/Makefile squashfskit-v4.14-new/squashfs-tools/Makefile
+--- squashfskit-v4.14/squashfs-tools/Makefile	2019-02-19 09:47:03.000000000 +0800
++++ squashfskit-v4.14-new/squashfs-tools/Makefile	2020-09-27 14:59:00.467832810 +0800
+@@ -194,7 +194,12 @@
+ CFLAGS += -DLZ4_SUPPORT
+ MKSQUASHFS_OBJS += lz4_wrapper.o
+ UNSQUASHFS_OBJS += lz4_wrapper.o
++ifneq ($(LZ4_LIB),)
++MKSQUASHFS_OBJS += $(LZ4_LIB)
++UNSQUASHFS_OBJS += $(LZ4_LIB)
++else
+ LIBS += -llz4
++endif
+ COMPRESSORS += lz4
+ endif

@@ -24,17 +24,16 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
   endif
 endif
 tools-$(BUILD_TOOLCHAIN) += gmp mpfr mpc libelf expat
-tools-y += m4 libtool autoconf automake flex bison pkg-config sed mklibs flux
+tools-y += m4 libtool autoconf automake flex bison pkg-config sed mklibs flux zlib
 tools-y += sstrip make-ext4fs e2fsprogs mtd-utils mkimage
 tools-y += firmware-utils patch-image patch quilt padjffs2
-tools-y += mm-macros missing-macros xz cmake scons bc findutils gengetopt patchelf
-tools-y += mtools dosfstools
-tools-y += lzma squashfs4 pack-bintools lzo lzop
+tools-y += mm-macros missing-macros xz cmake scons bc findutils gengetopt patchelf lz4
+tools-y += mtools dosfstools fakeroot
+tools-y += lzma squashfskit4 pack-bintools lzo lzop
 #tools-y += lzma squashfs4 pack-bintools lzo lzop bsdiff
 tools-$(BUILD_PPL_CLOOG) += ppl cloog
 tools-$(BUILD_ISL) += isl
 tools-$(CONFIG_USE_SPARSE) += sparse
-tools-$(CONFIG_USE_SELINUX) += pcre selinux
 
 # builddir dependencies
 $(curdir)/bison/compile := $(curdir)/flex/install
@@ -42,11 +41,7 @@ $(curdir)/flex/compile := $(curdir)/libtool/install
 $(curdir)/pkg-config/compile := $(curdir)/sed/install
 $(curdir)/libtool/compile := $(curdir)/sed/install $(curdir)/m4/install $(curdir)/autoconf/install $(curdir)/automake/install $(curdir)/missing-macros/install
 $(curdir)/squashfs/compile := $(curdir)/lzma-old/install
-ifeq ($(CONFIG_USE_SELINUX),)
-$(curdir)/squashfs4/compile := $(curdir)/xz/install
-else
-$(curdir)/squashfs4/compile := $(curdir)/xz/install $(curdir)/selinux/install
-endif
+$(curdir)/squashfskit4/compile := $(curdir)/xz/install $(curdir)/zlib/install $(curdir)/lz4/install
 $(curdir)/quilt/compile := $(curdir)/sed/install $(curdir)/autoconf/install $(curdir)/findutils/install
 $(curdir)/autoconf/compile := $(curdir)/m4/install
 $(curdir)/automake/compile := $(curdir)/m4/install $(curdir)/autoconf/install $(curdir)/pkg-config/install $(curdir)/xz/install
@@ -55,17 +50,14 @@ $(curdir)/mpc/compile := $(curdir)/mpfr/install $(curdir)/gmp/install
 $(curdir)/mpfr/compile := $(curdir)/gmp/install
 $(curdir)/ppl/compile := $(curdir)/gmp/install
 $(curdir)/cloog/compile := $(curdir)/ppl/install
-$(curdir)/mtd-utils/compile := $(curdir)/e2fsprogs/install $(curdir)/xz/install
+$(curdir)/mtd-utils/compile := $(curdir)/libtool/install $(curdir)/e2fsprogs/install $(curdir)/zlib/install $(curdir)/xz/install
 $(curdir)/mkimage/compile := $(curdir)/sed/install
 $(curdir)/mklibs/compile := $(curdir)/libtool/install
+$(curdir)/qemu/compile := $(curdir)/e2fsprogs/install $(curdir)/zlib/install
 $(curdir)/upslug2/compile := $(curdir)/libtool/install
 $(curdir)/mm-macros/compile := $(curdir)/libtool/install
 $(curdir)/missing-macros/compile := $(curdir)/autoconf/install
-ifeq ($(CONFIG_USE_SELINUX),)
 $(curdir)/e2fsprogs/compile := $(curdir)/libtool/install
-else
-$(curdir)/e2fsprogs/compile := $(curdir)/libtool/install $(curdir)/selinux/install
-endif
 $(curdir)/libelf/compile := $(curdir)/libtool/install
 $(curdir)/sdcc/compile := $(curdir)/bison/install
 $(curdir)/padjffs2/compile := $(curdir)/findutils/install
@@ -75,12 +67,16 @@ $(curdir)/bc/compile := $(curdir)/bison/install
 $(curdir)/findutils/compile := $(curdir)/bison/install
 $(curdir)/gengetopt/compile := $(curdir)/libtool/install
 $(curdir)/patchelf/compile := $(curdir)/libtool/install
+$(curdir)/dosfstools/compile := $(curdir)/autoconf/install $(curdir)/automake/install
+$(curdir)/zlib/compile := $(curdir)/cmake/install
 $(curdir)/flux/compile := $(curdir)/libtool/install
 $(curdir)/lzo/compile := $(curdir)/libtool/install
+$(curdir)/lz4/compile := $(curdir)/libtool/install
 $(curdir)/lzop/compile := $(curdir)/lzo/install
 #$(curdir)/bsdiff/compile := $(curdir)/bsdiff/install
-$(curdir)/pcre/compile := $(curdir)/libtool/install
-$(curdir)/selinux/compile := $(curdir)/pcre/install
+$(curdir)/fakeroot/compile := $(curdir)/libtool/install
+$(curdir)/lzma-old/compile := $(curdir)/zlib/compile
+$(curdir)/make-ext4fs/compile := $(curdir)/zlib/install
 
 ifneq ($(CONFIG_CCACHE)$(CONFIG_SDK),)
 $(foreach tool, $(filter-out patch,$(tools-y)), $(eval $(curdir)/$(tool)/compile += $(curdir)/ccache/install))

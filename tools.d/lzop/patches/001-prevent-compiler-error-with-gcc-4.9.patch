@@ -1,0 +1,11 @@
+--- a/src/help.c	2017-08-10 07:19:45.000000000 -0400
++++ b/src/help.c	2018-03-22 04:50:24.738981640 -0400
+@@ -179,7 +179,7 @@
+ **************************************************************************/
+
+ #ifndef LZOP_BUILD_DATE_TIME
+-#define LZOP_BUILD_DATE_TIME __DATE__ " " __TIME__
++#define LZOP_BUILD_DATE_TIME " "
+ #endif
+
+ const char lzop_rcsid[] =
