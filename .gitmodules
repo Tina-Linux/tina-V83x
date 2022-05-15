@@ -4,3 +4,6 @@
 [submodule "lichee/brandy-2.0/u-boot-2018"]
 	path = lichee/brandy-2.0/u-boot-2018
 	url = https://github.com/Tina-V833/tina-v83x-u-boot-2018
+[submodule "softwinner"]
+	path = softwinner
+	url = https://github.com/Tina-Linux/tina-v83x-softwinner
