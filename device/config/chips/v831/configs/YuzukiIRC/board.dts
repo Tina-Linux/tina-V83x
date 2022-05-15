@@ -438,6 +438,11 @@
 			pinctrl-1 = <&twi2_pins_b>;
 			clock-frequency = <400000>;
 			status = "okay";
+			mlx90640: mlx90640@33 {
+				compatible = "melexis,mlx90640";
+				reg = <0x33>;
+				status = "okay";
+			};
 		};
 
 		spi@05010000 {

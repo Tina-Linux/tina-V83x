@@ -15,9 +15,9 @@ start() {
 
     insmod $MODULES_DIR/sensor_power.ko dvdd0_vol="1800000" mclk0="27000000"
 #    insmod $MODULES_DIR/sp2305_mipi.ko
-#    insmod $MODULES_DIR/ov9732_mipi.ko
-    insmod $MODULES_DIR/vin_v4l2.ko ccm0="sp2305_mipi" i2c0_addr="0x78"
-    # insmod $MODULES_DIR/vin_v4l2.ko ccm0="ov9732_mipi" i2c0_addr="0x6c"
+    insmod $MODULES_DIR/ov9732_mipi.ko
+#    insmod $MODULES_DIR/vin_v4l2.ko ccm0="sp2305_mipi" i2c0_addr="0x78"
+    insmod $MODULES_DIR/vin_v4l2.ko ccm0="ov9732_mipi" i2c0_addr="0x6c"
 }
 
 stop() {
@@ -27,7 +27,7 @@ stop() {
 
     rmmod $MODULES_DIR/vin_v4l2.ko
 #    rmmod $MODULES_DIR/sp2305_mipi.ko
-#    rmmod $MODULES_DIR/ov9732_mipi.ko
+    rmmod $MODULES_DIR/ov9732_mipi.ko
 
     rmmod $MODULES_DIR/vin_io.ko
     rmmod $MODULES_DIR/videobuf2-v4l2.ko
