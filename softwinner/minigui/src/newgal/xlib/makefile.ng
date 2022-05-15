@@ -1,3 +1,0 @@
-include Makefile.am
-include ../../../rules.make
-

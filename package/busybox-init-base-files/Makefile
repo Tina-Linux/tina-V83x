@@ -51,6 +51,10 @@ define Package/busybox-init-base-files/conffiles
 $(call $(TARGET)/conffiles)
 endef
 
+define Package/$(PKG_NAME)/extra_provides
+  echo "libstdc++.so.6";
+endef
+
 define Package/busybox-init-base-files/description
  This package contains a busybox init base filesystem and system scripts for OpenWrt.
 endef

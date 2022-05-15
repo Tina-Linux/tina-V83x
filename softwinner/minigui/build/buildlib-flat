@@ -1,5 +1,0 @@
-#!/bin/sh
-
-./configure \
-    --disable-static \
-    --with-style=flat

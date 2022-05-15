@@ -1,4 +1,0 @@
-# Defs-mgext.win32 : Global defines for mgext library Win32 builds.
-#
-
-COMPILE_MGEXTLIB=1
