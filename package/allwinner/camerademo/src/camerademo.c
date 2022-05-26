@@ -485,7 +485,7 @@ static long long test_time(camera_handle *camera)
     /* wait for sensor capture data */
     tv.tv_sec = 2;
     tv.tv_usec = 0;
-
+    
     ret = select(camera->videofd+1,&fds,NULL,NULL,&tv);
     if (ret == -1){
         camera_err(" select error\n");
@@ -494,7 +494,7 @@ static long long test_time(camera_handle *camera)
         camera_err(" select timeout,end capture thread!\n");
         goto TEST_EXIT;
     }
-
+    
     gettimeofday(&tv, NULL);
     dqbufTime = secs_to_msecs(tv.tv_sec, tv.tv_usec);
 
@@ -659,6 +659,11 @@ static int capture_photo(camera_handle *camera)
                 sprintf(bmp_data_path,"%s/%s%s_%d%s",camera->save_path, "bmp_", get_format_name(camera->pixelformat), np+1,".bmp");
                 YUVToBMP(bmp_data_path,camera->buffers[buf.index].start[0], camera->ToRGB24, width, height);
             }
+
+            if( ((camera->photo_type == ALL_TYPE) || (camera->photo_type == JPG_TYPE)) && (camera->ToRGB24 != NULL) ){
+                sprintf(bmp_data_path,"%s/%s%s_%04d%s",camera->save_path, "jpg_", get_format_name(camera->pixelformat), np+1,".jpg");
+                YUVToJPG(bmp_data_path,camera->buffers[buf.index].start[0], camera->ToRGB24, width, height);
+            }
         }else{ /* MJPEG or H264 */
             sprintf(source_data_path, "%s/%s%d.%s", camera->save_path, "source_data", np+1, get_format_name(camera->pixelformat));
             save_frame_to_file(source_data_path, camera->buffers[buf.index].start[0], buf.bytesused);
@@ -794,7 +799,7 @@ int main(int argc,char *argv[])
                 i++;
             camera.ToRGB24 = fmt_fourcc[i].ToRGB24Func;
         }
-
+        
         camera.win_width = atoi(argv[2]);
         camera.win_height = atoi(argv[3]);
         camera.use_wm = atoi(argv[4]);
@@ -803,6 +808,8 @@ int main(int argc,char *argv[])
             camera.photo_type = ALL_TYPE;
         }else if(strcmp(argv[5],"bmp") == 0){
             camera.photo_type = BMP_TYPE;
+        }else if(strcmp(argv[5],"jpg") == 0){
+            camera.photo_type = JPG_TYPE;
         }else if(strcmp(argv[5],"yuv") == 0){
             camera.photo_type = YUV_TYPE;
         }else{
@@ -837,6 +844,8 @@ int main(int argc,char *argv[])
             camera.photo_type = ALL_TYPE;
         }else if(strcmp(argv[5],"bmp") == 0){
             camera.photo_type = BMP_TYPE;
+        }else if(strcmp(argv[5],"jpg") == 0){
+            camera.photo_type = JPG_TYPE;
         }else if(strcmp(argv[5],"yuv") == 0){
             camera.photo_type = YUV_TYPE;
         }else{
@@ -870,6 +879,8 @@ int main(int argc,char *argv[])
                 camera.photo_type = ALL_TYPE;
             }else if(strcmp(argv[5],"bmp") == 0){
                 camera.photo_type = BMP_TYPE;
+            }else if(strcmp(argv[5],"jpg") == 0){
+                camera.photo_type = JPG_TYPE;
             }else if(strcmp(argv[5],"yuv") == 0){
                 camera.photo_type = YUV_TYPE;
             }else{
@@ -906,6 +917,8 @@ int main(int argc,char *argv[])
                 camera.photo_type = ALL_TYPE;
             }else if(strcmp(argv[5],"bmp") == 0){
                 camera.photo_type = BMP_TYPE;
+            }else if(strcmp(argv[5],"jpg") == 0){
+                camera.photo_type = JPG_TYPE;
             }else if(strcmp(argv[5],"yuv") == 0){
                 camera.photo_type = YUV_TYPE;
             }else{
@@ -1458,11 +1471,11 @@ SET_FORMAT:
         return -1;
     }
 
-    camera_dbg("***************************************************************\n");
-    camera_dbg(" Performance Testing---format:%s size:%u * %u\n", get_format_name(camera.pixelformat),
-                                                                camera.win_width, camera.win_height);
-    camera_dbg(" The interval from open to streaming is %lld ms.\n", test_time(&camera));
-    camera_dbg("***************************************************************\n");
+    // camera_dbg("***************************************************************\n");
+    // camera_dbg(" Performance Testing---format:%s size:%u * %u\n", get_format_name(camera.pixelformat),
+    //                                                             camera.win_width, camera.win_height);
+    // camera_dbg(" The interval from open to streaming is %lld ms.\n", test_time(&camera));
+    // camera_dbg("***************************************************************\n");
 
     return 0;
 }

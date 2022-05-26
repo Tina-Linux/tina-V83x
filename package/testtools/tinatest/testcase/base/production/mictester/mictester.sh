@@ -45,9 +45,6 @@ case $target in
         #play
         amixer cset iface=MIXER,name='head phone volume' $headphone_volume
     ;;
-    v833-*)
-        amixer cset iface=MIXER,name='Left Input Mixer MIC1 Boost Switch' on
-    ;;
     *)
         echo "This test case does not support current platform."
         exit 1
@@ -55,10 +52,9 @@ case $target in
 esac
 
 mkdir -p `dirname $record_audio_path`
-arecord -d $record_duration_sec -f cd -c 1 $record_audio_path -v
+arecord -d $record_duration_sec -f cd $record_audio_path -v
 if [ $? -ne "0" ]; then
     echo "Record failed!"
     exit 1
 fi
 aplay $record_audio_path -v
-amixer cset iface=MIXER,name='Left Input Mixer MIC1 Boost Switch' off

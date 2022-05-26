@@ -37,17 +37,13 @@ if TINATEST_BASE_PRODUCTION_LINEINTESTER_ENABLE
     config TINATEST_BASE_PRODUCTION_LINEINTESTER_EXIT_ONCE_FAILED
         default n
 
-    config TINATEST_BASE_PRODUCTION_LINEINTESTER_RECORD_DURATION_SEC
-        int "record_duration_sec"
-        default 10
-
-    config TINATEST_BASE_PRODUCTION_LINEINTESTER_RECORD_AUDIO_PATH
-        string "record_audio_path"
-        default "/tmp/lineintester_record.wav"
-
     config TINATEST_BASE_PRODUCTION_LINEINTESTER_HEADPHONE_VOLUME
         int "headphone_volume"
         default 35
+
+    config TINATEST_BASE_PRODUCTION_LINEINTESTER_DURATION_SEC
+        int "duration_sec"
+        default 5
 
     comment "Advanced Customized"
     config TINATEST_BASE_PRODUCTION_LINEINTESTER_ADVANCED

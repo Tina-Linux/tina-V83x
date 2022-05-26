@@ -1,6 +1,6 @@
 TARGET = camerademo
 INCLUDES += -I$(STAGING_DIR)/usr/include/allwinner/include -I$(STAGING_DIR)/usr/include/allwinner
-LIBS +=  -lpthread -ldl -lrt \
+LIBS +=  -lpthread -ldl -lrt -ljpeg \
 
 ifeq ($(USE_VIN_ISP),y)
 	CompileFlags += -D__USE_VIN_ISP__
@@ -8,7 +8,7 @@ ifeq ($(USE_VIN_ISP),y)
 	LIBS += -lm -lisp -lisp_ini -lAWIspApi
 endif
 
-SRCS = camerademo.c add_water.c water_mark.c convert.c common.c
+SRCS = camerademo.c add_water.c water_mark.c convert.c common.c fb_display.c
 OBJS = $(SRCS:.c=.o)
 
 %.o: %.c

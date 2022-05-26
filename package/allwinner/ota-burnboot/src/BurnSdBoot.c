@@ -26,7 +26,6 @@
 #include "mmc.h"
 #include "private_boot0.h"
 #include "private_toc.h"
-#include "dram.h"
 
 #define DEVNODE_PATH_SD "/dev/mmcblk0"
 
@@ -147,32 +146,10 @@ static int updateBoot0Info(void *in_buffer, void *out_buffer,unsigned int buffer
     return 0;
 }
 
-static void dump_dram_para(void* dram, uint size)
-{
-        int i;
-        uint *addr = (uint *)dram;
-
-        for(i = 0; i < size; i++) {
-                printf("dram para[%d] = %x\n", i, addr[i]);
-        }
-}
-
-static void set_boot_dram_update_flag(u32 *dram_para)
-{
-        /* dram_tpr13:bit31 */
-        /* 0:uboot update boot0  1: not */
-        u32 flag             = 0;
-        __dram_para_t *pdram = (__dram_para_t *)dram_para;
-        flag                 = pdram->dram_tpr13;
-        flag |= (0x1U << 31);
-        pdram->dram_tpr13 = flag;
-}
-
 static int updateSdBoot0(int fd, BufferExtractCookie *cookie) {
     int ret = 0;
     unsigned char* buffer = (unsigned char *)(malloc(cookie->len));
     readSdBoot(fd, sd_boot0_start, cookie->len, buffer);
-
     if (check_soc_is_secure()) {
         sbrom_toc0_config_t *oldToc0Config = (sbrom_toc0_config_t *)(buffer + 0x80);
         sbrom_toc0_config_t *newToc0Config = (sbrom_toc0_config_t *)(cookie->buffer + 0x80);
@@ -181,12 +158,6 @@ static int updateSdBoot0(int fd, BufferExtractCookie *cookie) {
         boot0_file_head_t *oldBoot0  = (boot0_file_head_t *)(buffer);
         boot0_file_head_t *newBoot0  = (boot0_file_head_t *)(cookie->buffer);
         ret = updateBoot0Info((void *)oldBoot0->prvt_head.storage_data, (void *)newBoot0->prvt_head.storage_data, STORAGE_BUFFER_SIZE);
-
-        /* copy the ddr param from old to new */
-        memcpy((void *)newBoot0->prvt_head.dram_para, (void *)oldBoot0->prvt_head.dram_para, (32 *4));
-
-        /*show dram param*/
-        dump_dram_para((void *)newBoot0->prvt_head.dram_para, 32);
     }
     if (ret == 0) genBoot0CheckSum(cookie->buffer);
     free(buffer);

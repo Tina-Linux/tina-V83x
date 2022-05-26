@@ -69,6 +69,7 @@ int YUVToRGBfile(const char *rgb_path,char *yuv_data,ConverFunc func,int width,i
 int YUVToBMP565(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int height);
 int YUVToBMP555(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int height);
 int YUVToBMP(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int height);
+int YUVToJPG(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int height);
 int saveYUV_NV21(char *path, void *NV21, int width, int height);
 int saveY_UV_NV21(char *path, void *NV21, int width, int height);
 

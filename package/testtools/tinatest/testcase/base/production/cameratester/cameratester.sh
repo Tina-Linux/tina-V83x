@@ -12,7 +12,7 @@ dir=`mjson_fetch ${tt_base}/image_directory`
 ### argv[1]:tinatest flag
 ### argv[2]:/dev/videoX
 ### argv[3]:image directory
-for i in `seq 0 0`
+for i in `seq 0 5`
 do
 	[ ! -c "/dev/video$i" ] && [ $i = 0 ] && echo "/dev/video$i does not exist" && exit 1
 	[ ! -c "/dev/video$i" ] && break
@@ -20,8 +20,6 @@ do
 	echo " [cameratester] test /dev/video$i"
 	echo " [cameratester] image directory: $dir"
     echo "------------------- END -------------------"
-        /usr/bin/dspo_720p.sh
-        sleep 1
 	camerademo tinatest $i ${dir}
 
 	[ $? = 0 ] || exit 1

@@ -990,6 +990,58 @@ int YUVToBMP565(const char *bmp_path,char *yuv_data,ConverFunc func,int width,in
     return 0;
 }
 
+#include "config.h"
+
+unsigned char * rotate(unsigned char *i, int ox, int oy, int rot)
+{
+	unsigned char * n, * p;
+	int x, y;
+	n = (unsigned char*) malloc(ox * oy * 3);
+
+	switch(rot)
+	{
+		case 1: /* 90 deg right */
+			p = n + (oy - 1) * 3;
+			for(y = 0; y<oy; y++, p -= 3)
+			{
+				unsigned char * r = p;
+				for(x = 0; x<ox; x++, r += oy * 3)
+				{
+					r[0] = *(i++);
+					r[1] = *(i++);
+					r[2] = *(i++);
+				}
+			}
+			break;
+		case 2: /* 180 deg */
+			i += ox * oy * 3; p = n;
+			for(y = ox * oy; y > 0; y--)
+			{
+				i -= 3;
+				p[0] = i[0];
+				p[1] = i[1];
+				p[2] = i[2];
+				p += 3;
+			}
+			break;
+		case 3: /* 90 deg left */
+			p = n;
+			for(y = 0; y<oy; y++, p += 3)
+			{
+				unsigned char * r = p + ((ox * 3) * oy);
+				for(x = 0; x<ox; x++)
+				{
+					r -= oy * 3;
+					r[0] = *(i++);
+					r[1] = *(i++);
+					r[2] = *(i++);
+				}
+			}
+			break;
+	}
+	return n;
+}
+
 int YUVToBMP(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int height)
 {
     unsigned char *rgb_24 = NULL;
@@ -1004,33 +1056,41 @@ int YUVToBMP(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int h
         return -1;
     }
 
-   /* Fill header information */
-   BmpFileHeader.bfType = 0x4d42;
-   BmpFileHeader.bfSize = width*height*3 + sizeof(BmpFileHeader) + sizeof(BmpInfoHeader);
-   BmpFileHeader.bfReserved1 = 0;
-   BmpFileHeader.bfReserved2 = 0;
-   BmpFileHeader.bfOffBits = sizeof(BmpFileHeader) + sizeof(BmpInfoHeader);
+    /* Fill header information */
+    BmpFileHeader.bfType = 0x4d42;
+    BmpFileHeader.bfSize = width*height*3 + sizeof(BmpFileHeader) + sizeof(BmpInfoHeader);
+    BmpFileHeader.bfReserved1 = 0;
+    BmpFileHeader.bfReserved2 = 0;
+    BmpFileHeader.bfOffBits = sizeof(BmpFileHeader) + sizeof(BmpInfoHeader);
 
-   BmpInfoHeader.biSize = sizeof(BmpInfoHeader);
-   BmpInfoHeader.biWidth = width;
-   BmpInfoHeader.biHeight = -height;
-   BmpInfoHeader.biPlanes = 0x01;
-   BmpInfoHeader.biBitCount = 24;
-   BmpInfoHeader.biCompression = 0;
-   BmpInfoHeader.biSizeImage = 0;
-   //BmpInfoHeader.biXPelsPerMeter = 0;
-   //BmpInfoHeader.biYPelsPerMeter = 0;
-   BmpInfoHeader.biClrUsed = 0;
-   BmpInfoHeader.biClrImportant = 0;
+    BmpInfoHeader.biSize = sizeof(BmpInfoHeader);
+    BmpInfoHeader.biWidth = width;
+    BmpInfoHeader.biHeight = -height;
+    BmpInfoHeader.biPlanes = 0x01;
+    BmpInfoHeader.biBitCount = 24;
+    BmpInfoHeader.biCompression = 0;
+    BmpInfoHeader.biSizeImage = 0;
+    //BmpInfoHeader.biXPelsPerMeter = 0;
+    //BmpInfoHeader.biYPelsPerMeter = 0;
+    BmpInfoHeader.biClrUsed = 0;
+    BmpInfoHeader.biClrImportant = 0;
 
     rgb_24 = (unsigned char *)malloc(width*height*3);
     if(rgb_24 == NULL)
     {
-       printf(" YUVToBMP alloc failed!\n");
-       return -1;
+        printf(" YUVToBMP alloc failed!\n");
+        return -1;
     }
 
     func(rgb_24,yuv_data,width,height);
+
+    // fb_display(rgb_24, 0, width, height, 0, 0, (1024 - width) / 2, (600 - height) / 2);
+
+    unsigned char *buf = rotate(rgb_24, width, height, 3);
+    if (buf) {
+      fb_display(buf, 0, height, width, 0, 0, (600 - height) / 2, (1024 - width) / 2);
+      free(buf);
+    }
 
     /* Create bmp file */
     fp = fopen(bmp_path,"wb+");
@@ -1050,6 +1110,85 @@ int YUVToBMP(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int h
     free(rgb_24);
 
     fclose(fp);
+
+    return 0;
+}
+
+#include "jpeglib.h"
+
+int YUVToJPG(const char *bmp_path,char *yuv_data,ConverFunc func,int width,int height)
+{
+    unsigned char *rgb_24 = NULL;
+    FILE *fp = NULL;
+
+    if(bmp_path == NULL || yuv_data == NULL || func == NULL || width <= 0 || height <= 0)
+    {
+        printf(" YUVToJPG incorrect input parameter!\n");
+        return -1;
+    }
+
+    rgb_24 = (unsigned char *)malloc(width*height*3);
+    if(rgb_24 == NULL)
+    {
+        printf(" YUVToJPG alloc failed!\n");
+        return -1;
+    }
+
+    func(rgb_24,yuv_data,width,height);
+
+    // fb_display(rgb_24, 0, width, height, 0, 0, (1024 - width) / 2, (600 - height) / 2);
+
+    unsigned char *buf = rotate(rgb_24, width, height, 3);
+    if (buf) {
+      fb_display(buf, 0, height, width, 0, 0, (600 - height) / 2, (1024 - width) / 2);
+      free(buf);
+    }
+
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    long unsigned int outSize = 0;
+    unsigned char *outbuffer = NULL;
+    JSAMPROW row_pointer[1];
+
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
+    jpeg_mem_dest(&cinfo, &outbuffer, &outSize);
+    cinfo.image_width = width;
+    cinfo.image_height = height;
+    cinfo.input_components = 3;  // 3 / 1
+    cinfo.in_color_space = JCS_RGB; // JCS_RGB / JCS_GRAYSCALE
+    jpeg_set_defaults(&cinfo);
+    jpeg_set_quality(&cinfo, 95, TRUE); // default 75
+    jpeg_start_compress(&cinfo, TRUE);
+    int row_stride = width * 3;
+    while (cinfo.next_scanline < cinfo.image_height)
+    {
+      row_pointer[0] = (unsigned char *)&rgb_24[cinfo.next_scanline * row_stride];
+      (void)jpeg_write_scanlines(&cinfo, row_pointer, 1);
+    }
+    jpeg_finish_compress(&cinfo);
+
+    // ((const char *)outbuffer, outSize);
+
+    /* Create bmp file */
+    fp = fopen(bmp_path,"wb+");
+    if(!fp)
+    {
+        free(rgb_24);
+        printf(" Create bmp file:%s faled!\n", bmp_path);
+        return -1;
+    }
+
+    fwrite(outbuffer,outSize,1,fp);
+
+    fclose(fp);
+
+    free(rgb_24);
+
+    if (NULL != outbuffer)
+      free(outbuffer), outbuffer = NULL;
+
+    jpeg_destroy_compress(&cinfo);
 
     return 0;
 }

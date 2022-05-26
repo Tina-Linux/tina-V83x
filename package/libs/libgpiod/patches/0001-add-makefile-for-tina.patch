@@ -1,0 +1,215 @@
+From 5bbce48708d5a72069724c19a07bf9e162f5511b Mon Sep 17 00:00:00 2001
+From: xel <xel1995@163.com>
+Date: Tue, 22 Dec 2020 15:52:04 +0800
+Subject: [PATCH] add makefile for tian
+
+---
+ Makefile           |  12 ++++++
+ src/lib/Makefile   |  51 ++++++++++++++++++++++
+ src/lib/core.c     |   3 +-
+ src/tools/Makefile | 103 +++++++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 168 insertions(+), 1 deletion(-)
+ create mode 100644 Makefile
+ create mode 100644 src/lib/Makefile
+ create mode 100644 src/tools/Makefile
+
+diff --git a/Makefile b/Makefile
+new file mode 100644
+index 0000000..6d39aa7
+--- /dev/null
++++ b/Makefile
+@@ -0,0 +1,12 @@
++# Makefile for libgpiod
++
++
++.PHONY: all
++all:
++	$(MAKE) -C src/lib all
++	$(MAKE) -C src/tools all
++
++.PHONY: clean
++clean:
++	$(MAKE) -C src/lib clean
++	$(MAKE) -C src/tools clean
+\ No newline at end of file
+diff --git a/src/lib/Makefile b/src/lib/Makefile
+new file mode 100644
+index 0000000..110092b
+--- /dev/null
++++ b/src/lib/Makefile
+@@ -0,0 +1,51 @@
++# Makefile for libgpiod
++
++LOCAL_TARGET_DYNAMIC := libgpiod
++
++SRCS := \
++	core.c
++
++INCLUDE_DIRS := \
++	../../include \
++	$(LINUX_USER_HEADERS)/include
++
++#generate include directory flags for gcc.
++inc_paths := $(foreach inc,$(filter-out -I%,$(INCLUDE_DIRS)),$(addprefix -I, $(inc))) \
++                $(filter -I%, $(INCLUDE_DIRS))
++#Extra flags to give to the C compiler
++LOCAL_CFLAGS := $(CFLAGS) $(inc_paths) -fPIC -Wall
++#Extra flags to give to the C preprocessor and programs that use it (the C and Fortran compilers).
++LOCAL_CPPFLAGS := $(CPPFLAGS)
++#Extra flags to give to compilers when they are supposed to invoke the linker,‘ld’.
++LOCAL_LDFLAGS := $(LDFLAGS)
++
++LOCAL_DYNAMIC_LDFLAGS := $(LOCAL_LDFLAGS) -shared
++
++OBJS := $(SRCS:%=%.o)
++
++#add dynamic lib name suffix and static lib name suffix.
++target_dynamic := $(if $(LOCAL_TARGET_DYNAMIC),$(addsuffix .so,$(LOCAL_TARGET_DYNAMIC)),)
++
++$(target_dynamic): $(OBJS)
++	$(CC) $+ $(LOCAL_DYNAMIC_LDFLAGS) -o $@
++	@echo ----------------------------
++	@echo "finish target: $@"
++	@echo ----------------------------
++
++.PHONY: all
++all: $(target_dynamic)
++	@echo ===================================
++	@echo build libgpiod $(target_dynamic) done
++	@echo ===================================
++
++.PHONY: clean
++clean:
++	-rm -f $(OBJS) $(OBJS:%=%.d) $(target_dynamic)
++
++$(filter %.c.o, $(OBJS)): %.o: %
++	$(CC) $(LOCAL_CFLAGS) $(LOCAL_CPPFLAGS) -MD -MP -MF $(@:%=%.d) -c -o $@ $<
++
++#add *.h prerequisites
++-include $(OBJS:%=%.d)
++
++
+diff --git a/src/lib/core.c b/src/lib/core.c
+index 9ad5d05..2c28633 100644
+--- a/src/lib/core.c
++++ b/src/lib/core.c
+@@ -1145,5 +1145,6 @@ struct gpiod_line * gpiod_line_iter_next(struct gpiod_line_iter *iter)
+ 
+ const char * gpiod_version_string(void)
+ {
+-	return GPIOD_VERSION_STR;
++	// return GPIOD_VERSION_STR;
++	return "null";
+ }
+diff --git a/src/tools/Makefile b/src/tools/Makefile
+new file mode 100644
+index 0000000..9d8d5a7
+--- /dev/null
++++ b/src/tools/Makefile
+@@ -0,0 +1,103 @@
++# Makefile for libgpiod
++
++SRCS := \
++	gpiodetect.c \
++	gpiofind.c \
++	gpioget.c \
++	gpioinfo.c \
++	gpiomon.c \
++	gpioset.c \
++	tools-common.c
++
++INCLUDE_DIRS := \
++	../../include \
++	$(LINUX_USER_HEADERS)/include
++
++LOCAL_SHARED_LIBS := \
++	libgpiod
++
++LIB_SEARCH_PATHS := \
++	../lib
++
++#generate include directory flags for gcc.
++inc_paths := $(foreach inc,$(filter-out -I%,$(INCLUDE_DIRS)),$(addprefix -I, $(inc))) \
++                $(filter -I%, $(INCLUDE_DIRS))
++#Extra flags to give to the C compiler
++LOCAL_CFLAGS := $(CFLAGS) $(inc_paths) -fPIC -Wall
++#Extra flags to give to the C preprocessor and programs that use it (the C and Fortran compilers).
++LOCAL_CPPFLAGS := $(CPPFLAGS)
++#Extra flags to give to compilers when they are supposed to invoke the linker,‘ld’.
++LOCAL_LDFLAGS := $(LDFLAGS)
++
++OBJS := $(SRCS:%=%.o)
++
++empty:=
++space:= $(empty) $(empty)
++
++LOCAL_BIN_LDFLAGS := $(LOCAL_LDFLAGS) \
++    $(patsubst %,-L%,$(LIB_SEARCH_PATHS)) \
++    -Wl,-rpath-link=$(subst $(space),:,$(strip $(LIB_SEARCH_PATHS))) \
++    -Wl,-Bstatic \
++    -Wl,--start-group $(foreach n, $(LOCAL_STATIC_LIBS), -l$(patsubst lib%,%,$(patsubst %.a,%,$(notdir $(n))))) -Wl,--end-group \
++    -Wl,-Bdynamic \
++    $(foreach y, $(LOCAL_SHARED_LIBS), -l$(patsubst lib%,%,$(patsubst %.so,%,$(notdir $(y)))))
++
++DEPEND_LIBS := $(wildcard $(foreach p, $(patsubst %/,%,$(LIB_SEARCH_PATHS)), \
++                            $(addprefix $(p)/, \
++                              $(foreach y,$(LOCAL_SHARED_LIBS),$(patsubst %,%.so,$(patsubst %.so,%,$(notdir $(y))))) \
++                              $(foreach n,$(LOCAL_STATIC_LIBS),$(patsubst %,%.a,$(patsubst %.a,%,$(notdir $(n))))) \
++                            ) \
++                          ) \
++               )
++
++.PHONY: all
++all: gpiodetect gpiofind gpioinfo gpiomon gpioset gpioget
++	@echo ===================================
++	@echo build libgpiod $(target_dynamic) done
++	@echo ===================================
++
++.PHONY: clean
++clean:
++	-rm -f $(OBJS) $(OBJS:%=%.d) gpiodetect gpiofind gpioinfo gpiomon gpioset gpioget
++
++gpiodetect: $(OBJS) $(DEPEND_LIBS)
++	$(CC) tools-common.c.o  gpiodetect.c.o $(LOCAL_BIN_LDFLAGS) -o $@
++	@echo ----------------------------
++	@echo "finish target: $@"
++	@echo ----------------------------
++
++gpiofind: $(OBJS) $(DEPEND_LIBS)
++	$(CC) tools-common.c.o  gpiofind.c.o $(LOCAL_BIN_LDFLAGS) -o $@
++	@echo ----------------------------
++	@echo "finish target: $@"
++	@echo ----------------------------
++
++gpioinfo: $(OBJS) $(DEPEND_LIBS)
++	$(CC) tools-common.c.o  gpioinfo.c.o $(LOCAL_BIN_LDFLAGS) -o $@
++	@echo ----------------------------
++	@echo "finish target: $@"
++	@echo ----------------------------
++
++gpiomon: $(OBJS) $(DEPEND_LIBS)
++	$(CC) tools-common.c.o  gpiomon.c.o $(LOCAL_BIN_LDFLAGS) -o $@
++	@echo ----------------------------
++	@echo "finish target: $@"
++	@echo ----------------------------
++
++gpioset: $(OBJS) $(DEPEND_LIBS)
++	$(CC) tools-common.c.o  gpioset.c.o $(LOCAL_BIN_LDFLAGS) -o $@
++	@echo ----------------------------
++	@echo "finish target: $@"
++	@echo ----------------------------
++
++gpioget: $(OBJS) $(DEPEND_LIBS)
++	$(CC) tools-common.c.o  gpioget.c.o $(LOCAL_BIN_LDFLAGS) -o $@
++	@echo ----------------------------
++	@echo "finish target: $@"
++	@echo ----------------------------
++
++$(filter %.c.o, $(OBJS)): %.o: %
++	$(CC) $(LOCAL_CFLAGS) $(LOCAL_CPPFLAGS) -MD -MP -MF $(@:%=%.d) -c -o $@ $<
++
++#add *.h prerequisites
++-include $(OBJS:%=%.d)
+-- 
+2.25.1
+

@@ -353,7 +353,7 @@ endef
 
 define Build/Compile/supplicant
 	$(call Build/RunMake,wpa_supplicant, \
-		wpa_cli wpa_supplicant wpa_passphrase\
+		wpa_cli wpa_supplicant \
 	)
 endef
 
@@ -414,7 +414,6 @@ Package/wpad-mesh/install = $(Package/wpad/install)
 define Package/wpa-supplicant/install
 	$(call Install/supplicant,$(1))
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/wpa_supplicant/wpa_supplicant $(1)/usr/sbin/
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/wpa_supplicant/wpa_passphrase $(1)/usr/sbin/
 endef
 Package/wpa-supplicant-mini/install = $(Package/wpa-supplicant/install)
 Package/wpa-supplicant-p2p/install = $(Package/wpa-supplicant/install)

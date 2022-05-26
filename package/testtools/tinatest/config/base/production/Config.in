@@ -9,12 +9,10 @@ if TINATEST_BASE_PRODUCTION
     source mictester/Config.in
     source sdcardtester/Config.in
     source nandtester/Config.in
-    source nortester/Config.in
     source tptester/Config.in
     source pmutester/Config.in
     source udisktester/Config.in
     source keytester/Config.in
-    source powerkeytester/Config.in
     source rtctester/Config.in
     source emmctester/Config.in
     source excodectester/Config.in
@@ -26,7 +24,5 @@ if TINATEST_BASE_PRODUCTION
     source displaytester/Config.in
     source ledstester/Config.in
     source cameratester/Config.in
-    source bt1120tester/Config.in
-    source wifi/Config.in
     source testtrecorder/Config.in
 endif

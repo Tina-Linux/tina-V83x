@@ -15,8 +15,7 @@ check_eth0() {
 get_ip() {
     echo "====== GET IP ======"
 	ip=$(route -n | awk '($1~/^(0.0.0.0)/&&$2!~/^(0.0.0.0)/) {print $2}' | head -n 1)
-	#[ -z "${ip}" ] && return 0 || return 1
-	[ -z "${ip}" ] && return 0
+	[ -z "${ip}" ] && return 0 || return 1
     echo "IP to ping : ${ip}"
     echo "====== GET IP END ======"
 }

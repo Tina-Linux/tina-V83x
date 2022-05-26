@@ -53,19 +53,25 @@ parse_battery_event()
 
 BatteryGetInfo()
 {
-	if [ -d /sys/class/power_supply/battery ]; then
-		present=$(cat /sys/class/power_supply/battery/present)
-		echo "battery present is: "$present
-		if [ $present == "1" ]; then
-			echo "battery test ok"
-			exit 0
+	local count=1
+	while true
+	do
+		if [ -d /sys/class/power_supply/battery ]; then
+			ttrue "Get Battery Info:(count=$count)" \
+				-n `parse_battery_event "battery_present"` \
+				-n `parse_battery_event "status"` \
+				-n `parse_battery_event "capacity"` \
+				-n `parse_battery_event "vol_now"` \
+				-n `parse_battery_event "current_now"` \
+				-n `parse_battery_event "temp"` \
+				-n "Is the expected Battery Information?"
+			[ $? -eq 0 ] && exit 0;
 		else
-			echo "battery test fail"
-			exit 1
+			ttips "Get Battery Info:(count=$count), There isn't battery device!"
 		fi
-	else
-		ttips "Get Battery Info:(count=$count), There isn't battery device!"
-	fi
+		sleep 1
+		count=$(($count+1))
+	done
 }
 
 BatteryListenEvent()
@@ -116,7 +122,16 @@ usage()
    echo
 }
 
+if [ $# != 1 ]; then
+    usage;
+    exit;
+fi
 
-BatteryGetInfo
+case $1 in
+1)BatteryListenEvent;;
+2)BatteryCollectInfo;;
+3)BatteryGetInfo;;
+*)usage;;
+esac
 
 exit 1

@@ -1,6 +1,9 @@
 out/
+log/
 tmp/
 .config
 .config.old
 YuzukiAPP
 softwinner/
+*.d
+linux-4.9.tar.xz

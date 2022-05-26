@@ -33,6 +33,7 @@
 #define ALL_TYPE 0
 #define BMP_TYPE 1
 #define YUV_TYPE 2
+#define JPG_TYPE 3
 
 #define true 1
 #define false 0

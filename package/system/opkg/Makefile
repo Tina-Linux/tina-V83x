@@ -115,10 +115,11 @@ define Package/opkg/Default/install
 	$(INSTALL_DIR) $(1)/bin
 	$(INSTALL_DIR) $(1)/etc/opkg
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_DATA) ./files/distfeeds.conf $(1)/etc/opkg/distfeeds.conf
 	$(INSTALL_DATA) ./files/customfeeds.conf $(1)/etc/opkg/customfeeds.conf
 	$(INSTALL_DATA) ./files/opkg$(2).conf $(1)/etc/opkg.conf
-	$(call FeedSourcesAppend,$(1)/etc/opkg/distfeeds.conf)
-	$(VERSION_SED) $(1)/etc/opkg/distfeeds.conf
+	# $(call FeedSourcesAppend,$(1)/etc/opkg/distfeeds.conf)
+	# $(VERSION_SED) $(1)/etc/opkg/distfeeds.conf
 	$(INSTALL_BIN) ./files/20_migrate-feeds $(1)/etc/uci-defaults/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/opkg-cl $(1)/bin/opkg
 endef

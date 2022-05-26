@@ -206,7 +206,7 @@ int fh_bmp_getsize(char *name,int *x,int *y)
 	*x = size[0] + (size[1]<<8) + (size[2]<<16) + (size[3]<<24);
 	read(fd, size, 4);
 	*y = size[0] + (size[1]<<8) + (size[2]<<16) + (size[3]<<24);
-
+  *x = abs(*x), *y = abs(*y);
 	close(fd);
 	return(FH_ERROR_OK);
 }

@@ -47,6 +47,7 @@ include $(BUILD_DIR)/package.mk
 
 export TARGET_BOARD_PLATFORM
 export LICHEE_PLATFORM_OS:=tina
+
 ifeq ($(CONFIG_imx317),y)
     SENSOR_NAME:=imx317
 else ifeq ($(CONFIG_imx258),y)
@@ -61,6 +62,8 @@ else ifeq ($(CONFIG_imx335),y)
     SENSOR_NAME:=imx335
 else ifeq ($(CONFIG_gc2053),y)
     SENSOR_NAME:=gc2053
+else ifeq ($(CONFIG_sp2305),y)
+    SENSOR_NAME:=sp2305
 else
     SENSOR_NAME:=
 endif

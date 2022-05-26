@@ -35,6 +35,11 @@ config gc2053
 	help
 	  gc2053 is for test.
 
+config sp2305
+	bool "use sensor sp2305"
+	help
+	  sp2305 is for ipc.
+
 endchoice
 
 choice

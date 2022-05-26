@@ -1,7 +1,7 @@
 #!/bin/sh
 
 MOUNT_ETC=0
-MOUNT_OVERLAY=1
+MOUNT_OVERLAY=0
 
 ################################## functions ##################################
 
@@ -327,10 +327,12 @@ set_parts_by_name_hardcode() {
 /bin/mount -t tmpfs tmpfs /tmp
 /bin/mount -t sysfs sys /sys
 /bin/mount -t devtmpfs none /dev
-/bin/mount -t pstore pstore /sys/fs/pstore
+# /bin/mount -t pstore pstore /sys/fs/pstore
+/bin/mount -t debugfs none /sys/kernel/debug
 
 #fw_setenv, fw_printenv need /var/lock
 mkdir -p /var/lock
+mkdir -p /var/run
 
 #common but slow
 set_parts_by_name

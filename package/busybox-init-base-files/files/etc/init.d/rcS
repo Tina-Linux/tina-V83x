@@ -45,6 +45,7 @@ rc_log()
 
 rc_mount_filesystem()
 {
+	local src="$1"
 	local fs_src="$1"
 	local fs_mntpt="$2"
 	# mount filesystem
@@ -59,11 +60,19 @@ rc_mount_filesystem()
 				fi
 				;;
 			*)
-				/usr/sbin/fsck.ext4 -y "$fs_src" &>/dev/null
-				mount -t ext4 "$fs_src" "$fs_mntpt" 2>/dev/null
-				if [ "$?" -ne "0" ]; then
-					mkfs.ext4 -m 0 "$fs_src" >/dev/null
+				if [ x"$src" == x/dev/by-name/cfg ]; then
+					mount -f vfat "$fs_src" "$fs_mntpt" 2>/dev/null
+					if [ "$?" -ne "0" ]; then
+						mkfs.vfat "$fs_src" > /dev/null
+						mount -t vfat "$fs_src" "$fs_mntpt" 2>/dev/null
+					fi
+				else
+					/usr/sbin/fsck.ext4 -y "$fs_src" &>/dev/null
 					mount -t ext4 "$fs_src" "$fs_mntpt" 2>/dev/null
+					if [ "$?" -ne "0" ]; then
+						mkfs.ext4 -m 0 "$fs_src" >/dev/null
+						mount -t ext4 "$fs_src" "$fs_mntpt" 2>/dev/null
+					fi
 				fi
 				;;
 		esac
@@ -75,10 +84,34 @@ rc_mount_filesystem()
 	fi
 }
 
+rc_swap_on()
+{
+	local src="$1"
+	local fs_src="$1"
+	# mount filesystem
+	if [ -e "$fs_src" ]; then
+		[ -L "$fs_src" ] && fs_src=$(readlink "$fs_src")
+		case "$fs_src" in
+			*)
+				if [ x"$src" == x/dev/by-name/swap ]; then
+					swapon $fs_src
+					if [ "$?" -ne "0" ]; then
+						mkswap $fs_src
+						swapon $fs_src
+					fi
+				fi
+				;;
+		esac
+	fi
+}
+
 rc_mount()
 {
-	rc_mount_filesystem "/dev/by-name/UDISK" "/mnt/UDISK"
+	rc_mount_filesystem "/dev/by-name/cfg" "/mnt/cfg"
 # 	rc_mount_filesystem "/dev/by-name/user-res" "/mnt/user"
+	rc_mount_filesystem "/dev/by-name/UDISK" "/mnt/UDISK"
+
+	rc_swap_on "/dev/by-name/swap"
 
 	# enable hotplug
 	echo /sbin/mdev > /proc/sys/kernel/hotplug

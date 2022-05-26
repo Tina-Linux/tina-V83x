@@ -175,7 +175,6 @@ define Package/tslib/config
               Building of dmc_dus3000 raw module (DMC DUS Series support)
 
         config TSLIB_ENABLE_cy8mrln-palmpre
-           bool "Cy8mrln-palmpre raw module"
            default n
            help
               Building of cy8mrln-palmpre raw module

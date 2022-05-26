@@ -47,7 +47,7 @@ define Package/$(PKG_NAME)
   SECTION:=utils
   CATEGORY:=Allwinner
   TITLE:=camerademo test sensor
-  DEPENDS:=+ENABLE_VIN_ISP:libAWIspApi
+  DEPENDS:=+ENABLE_VIN_ISP:libAWIspApi +libjpeg
 endef
 
 # Specify what needs to be done to prepare for building the package.

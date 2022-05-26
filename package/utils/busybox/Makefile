@@ -142,7 +142,7 @@ ifneq ($(CONFIG_BUSYBOX_$(BUSYBOX_SYM)_NTPD),)
 	$(INSTALL_BIN) ./files/sysntpd $(1)/etc/init.d/sysntpd
 	$(INSTALL_BIN) ./files/ntpd-hotplug $(1)/usr/sbin/ntpd-hotplug
 endif
-	$(INSTALL_BIN) ./files/ntpd $(1)/etc/init.d/ntpd
+	$(INSTALL_BIN) ./files/ntpd $(1)/etc/init.d/S52ntpd
 	-rm -rf $(1)/lib64
 
 ifneq ($(CONFIG_SYSTEM_INIT_BUSYBOX),)

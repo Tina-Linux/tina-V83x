@@ -323,7 +323,6 @@ int main(int argc, char *argv[])
 
     key_count=0;
     number_of_keys=mjson_fetch_int("/base/production/keytester/number_of_keys");
-    printf("The number of keys is :%d\n",number_of_keys);
     if(number_of_keys <= 0){
 	    printf("The number of keys is not legal:%d\n",number_of_keys);
 	    goto err;
@@ -433,8 +432,6 @@ int main(int argc, char *argv[])
 						evt[i].value);
 				if(key_count == 0){
 					pt_key_value[key_count++]=evt[i].code;
-                                        if(number_of_keys==1)
-					    goto success;
 				}
 				if((evt[i].value == 0) && judgment_duplicate_values(pt_key_value,evt[i].code,key_count)){
 					pt_key_value[key_count++]=evt[i].code;
@@ -446,7 +443,6 @@ int main(int argc, char *argv[])
 	}
 
 success:
-    if(number_of_keys>1)
     ttrue("all the keys has press ?");
 	free(pt_key_value);
 	return 0;

@@ -7,10 +7,7 @@
 #
 
 include $(TOPDIR)/rules.mk
-ifeq (, ($(wildcard $(TINA_BUILD_TOP)/.config)))
-        include $(TINA_BUILD_TOP)/.config
-endif
-
+include $(TINA_BUILD_TOP)/.config
 
 PKG_NAME:=uvoice-lib
 PKG_VERSION:=1.0.0

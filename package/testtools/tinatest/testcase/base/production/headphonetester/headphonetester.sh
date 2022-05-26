@@ -28,8 +28,6 @@ case "$target" in
         echo "platform: r6"
         amixer cset iface=MIXER,name='head phone volume' $headphone_volume
     ;;
-    v833-*)
-    ;;
     *)
         echo "This test case does not support current platform."
         exit 1

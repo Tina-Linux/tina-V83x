@@ -189,10 +189,11 @@ define Package/libext2fs/install
 		$(1)/usr/lib/
 endef
 
-define Package/libext2fs/install_lib
-	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_BUILD_DIR)/lib/ext2fs/libext2fs.a $(1)/usr/lib/libext2fs_pic.a
-endef
+# bug?
+# define Package/libext2fs/install_lib
+# 	$(INSTALL_DIR) $(1)/usr/lib
+# 	$(CP) $(PKG_BUILD_DIR)/lib/ext2fs/libext2fs.a $(1)/usr/lib/libext2fs_pic.a
+# endef
 
 define Package/tune2fs/install
 	$(INSTALL_DIR) $(1)/usr/sbin
