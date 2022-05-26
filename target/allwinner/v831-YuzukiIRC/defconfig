@@ -2458,10 +2458,6 @@ CONFIG_PACKAGE_usb-gadget=y
 # CONFIG_PACKAGE_wifimanager is not set
 
 #
-# Cortana
-#
-
-#
 # Development
 #
 
