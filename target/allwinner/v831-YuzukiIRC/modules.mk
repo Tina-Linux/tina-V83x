@@ -13,8 +13,7 @@ define KernelPackage/vin-v4l2
   FILES+=$(LINUX_DIR)/drivers/media/v4l2-core/videobuf2-dma-contig.ko
   FILES+=$(LINUX_DIR)/drivers/media/v4l2-core/videobuf2-v4l2.ko
   FILES+=$(LINUX_DIR)/drivers/media/platform/sunxi-vin/vin_io.ko
-  FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/sp2305_mipi.ko
-  FILES+=$(TOPDIR)/target/allwinner/v831-YuzukiIRC/drivers/ov9732_mipi.ko
+  FILES+=$(LINUX_DIR)/drivers/media/platform/sunxi-vin/modules/sensor/ov9732_mipi.ko
   FILES+=$(LINUX_DIR)/drivers/media/platform/sunxi-vin/modules/sensor_power/sensor_power.ko
   FILES+=$(LINUX_DIR)/drivers/media/platform/sunxi-vin/vin_v4l2.ko
   AUTOLOAD:=$(call AutoProbe,videobuf2-core videobuf2-dma-contig videobuf2-memops videobuf2-v4l2 vin_io sp2305_mipi ov9732_mipi sensor_power vin_v4l2)
