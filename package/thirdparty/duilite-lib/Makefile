@@ -7,7 +7,10 @@
 #
 
 include $(TOPDIR)/rules.mk
-include $(TINA_BUILD_TOP)/.config
+
+ifeq (, ($(wildcard $(TINA_BUILD_TOP)/.config)))
+	include $(TINA_BUILD_TOP)/.config
+endif
 
 PKG_NAME:=duilite-lib
 PKG_VERSION:=0.11.0
