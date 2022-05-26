@@ -696,14 +696,14 @@
 
 			lcd_x               = <320>;
 			lcd_y               = <480>;
-			lcd_width           = <108>;
+			lcd_width           = <32>;
 			lcd_height          = <64>;
 			lcd_dclk_freq       = <5>;
 
 			lcd_pwm_used        = <0>;
 
 			lcd_hbp             = <20>;
-			lcd_ht              = <382>;
+			lcd_ht              = <342>;
 			lcd_hspw            = <2>;
 			lcd_vbp             = <2>; // 320
 			lcd_vt              = <486>; // 320
