@@ -31,11 +31,6 @@ The dl folder is very large, with 4.7GiB, so it is uploaded to the network disk.
 
 https://drive.google.com/drive/folders/1PzVQIhMdAj6FnqjhwyWq9vbwgjbGUWSj?usp=sharing
 
-or
-
-链接：https://pan.baidu.com/s/17DilyerV0pBrK7j0lEkhsA 
-提取码：yz8a 
-
 ## Build and Pack
 ```shell
 source build/envsetup.sh
